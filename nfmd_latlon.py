@@ -11,9 +11,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 
-dir_data = "D:/Krishna/projects/vwc_from_radar/fuel_moisture"
+dir_data = "D:/Krishna/projects/vwc_from_radar/data/fuel_moisture"
 os.chdir(dir_data)
-query = pd.read_csv('site_info_query.csv', index_col = 0)
+query = pd.read_csv('site_info_query_10-16-2018.csv', index_col = 0)
 for col in query.columns:
     query[col] = query[col].str.replace(' ','%20')
 
@@ -61,4 +61,4 @@ df.latitude = [float(e[0])+float(e[1])/60+float(e[2])/3600 for e in df.latitude.
 df.longitude = [float(e[0])+float(e[1])/60+float(e[2])/3600 for e in df.longitude.str.split('-')]
 df.longitude *= -1
 df.index.name = 'site'
-df.to_csv("nfmd_queried_latlon.csv")
+df.to_csv("nfmd_queried_latlon_10-16-2018.csv")
