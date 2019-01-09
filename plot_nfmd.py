@@ -18,6 +18,7 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter
 from matplotlib.patches import Polygon
 from pylab import cm
+from dirs import dir_figures
 
 def transform(x,y, center_x, center_y, scale, trans_x, trans_y):
     x = scale*(x-center_x)+ trans_x+center_x
@@ -45,7 +46,7 @@ temp.index = temp.Site
 latlon['State'] = np.NaN
 latlon.update(temp)
 ################################################################################
-### plot of nfmd sites with bubbles
+#%% plot of nfmd sites with bubbles
 #enlarge = 1.
 #latlon.sort_values(by=['observations'], ascending = False, inplace = True)
 ##cmap = 'YlGnBu'
@@ -158,15 +159,20 @@ df.residual = df.residual.abs()
 df = df.loc[df.residual<=2, :]
 #df = df.loc[df.data_points>=10, :]
 latlon = pd.read_csv('data/fuel_moisture/nfmd_spatial.csv', index_col = 0)
+### import 50 sites
+selected_sites = pd.read_pickle('data/cleaned_anomalies_11-29-2018/fm_smoothed').columns
+latlon['color'] = 'lightgrey'
+latlon.loc[selected_sites,'color'] = 'maroon'
+latlon.sort_values('color', inplace = True)
 latlon['data_points'] = df.groupby('Site').obs_date.count()
-latlon = latlon.loc[latlon.data_points>=10,:]
-enlarge = 1.
+#latlon = latlon.loc[latlon.data_points>=10,:]
+enlarge = 1.7
 cmap = 'magma'
 sns.set_style('ticks')
 alpha = 1
-fig, ax = plt.subplots(figsize=(8*enlarge,5*enlarge))
+fig, ax = plt.subplots(figsize=(8*enlarge,7*enlarge))
 
-m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-64,urcrnrlat=49,
+m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=54,
         projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
 m.drawmapboundary(fill_color='lightcyan')
 #-----------------------------------------------------------------------
@@ -186,15 +192,17 @@ for nshape,seg in enumerate(m.states):
     ax.add_patch(poly)
   
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-               s=20,c=latlon.data_points,cmap =cmap ,edgecolor = 'k',\
+               s=200,c=latlon.color.values,cmap =cmap ,edgecolor = 'w',linewidth = 2,\
                     marker='o',alpha = alpha,latlon = True, zorder = 2,\
                     vmin = 0, vmax = 20)
-ax.set_title('Length of data record (number of points $\geq$ 10)')
+#ax.set_title('Length of data record (number of points $\geq$ 10)')
 plt.setp(ax.spines.values(), color='w')
-divider = make_axes_locatable(ax)
-cax = divider.append_axes("right", size="5%", pad=0.08)
-cb=fig.colorbar(plot,ax=ax,cax=cax, ticks = np.linspace(0,20,5))
+#plt.legend()
+#divider = make_axes_locatable(ax)
+#cax = divider.append_axes("right", size="5%", pad=0.08)
+#cb=fig.colorbar(plot,ax=ax,cax=cax, ticks = np.linspace(0,20,5))
 #cax.annotate('$\Delta$ days',xy=(0,1.0), xycoords='axes fraction',\
 #            ha='left')
-
+plt.savefig(os.path.join(dir_figures,'nfmd_sites'), dpi =600,\
+                    bbox_inches="tight")
 plt.show()

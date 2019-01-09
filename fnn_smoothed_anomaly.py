@@ -16,6 +16,7 @@ import keras as k
 import keras.backend as K
 from keras.optimizers import SGD, Adam
 from keras import regularizers
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 ### statistics
 from scipy.stats.stats import pearsonr
 from scipy.stats import gaussian_kde
@@ -30,6 +31,7 @@ import seaborn as sns
 import matplotlib.ticker as mtick
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
+from dirs import dir_data
 
 
 pd.set_option('display.max_columns', 30)
@@ -42,9 +44,9 @@ epochs = int(1e3)
 batch_size = 2**12
 pct_thresh = 20
 response = "fm_anomaly"
-dynamic_features = ["fm_anomaly","vv_am_anomaly","vh_am_anomaly",\
+dynamic_features = ["fm_anomaly","vv_anomaly","vh_anomaly",\
                     "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
-                    'ndvi_anomaly', 'ndwi_anomaly', 'vh_am_ndvi_anomaly', 'vv_am_ndvi_anomaly']
+                    'ndvi_anomaly', 'ndwi_anomaly','vv_ndvi_anomaly','vh_ndvi_anomaly']
 
 static_features = ['slope', 'elevation', 'canopy_height','forest_cover',
                 'silt', 'sand', 'clay', 'latitude', 'longitude']
@@ -56,11 +58,11 @@ def make_df(features, sites):
 
     Df = pd.DataFrame()
     for feature in features:
-        df = pd.read_pickle('data/%s'%feature).loc[:,sites].stack()
+        df = pd.read_pickle('data/cleaned_anomalies_11-29-2018/%s'%feature).loc[:,sites].stack(dropna=False)
         df.name = feature
         Df = pd.concat([Df,df],axis = 'columns')
-    Df.dropna(inplace = True)
-#    Df.head()
+    Df.dropna(subset =['fm_anomaly'],inplace = True)
+    Df.fillna(0, inplace = True)
     Df.index.names= ['date','site']
     Df.reset_index(inplace=True)
    
@@ -69,7 +71,7 @@ def make_df(features, sites):
     Df = Df.join(static_features, on = 'site')
     Df.reset_index(inplace=True, drop = True)
     Df.drop(['site','date'],axis = 1, inplace = True)
-    Df = Df.astype('float16')
+    Df = Df.astype(float)
     return Df
     
 
@@ -99,11 +101,13 @@ def build_data(df, columns, response = response,ignore_multi_spec = False, \
 #           'latitude', 'longitude']
     n_features = len(columns)-1
     df = df.loc[:,columns]
-    df.dropna(inplace = True)
+    df.dropna(subset = ['fm_anomaly'],inplace = True)
+#    df.fillna(method = 'ffill', inplace = True)
+    df.fillna(method = 'bfill',inplace = True)
     dont_norm = df[response]
 #    df = (df - df.mean())/(df.std())    #normalize 
     df[response] = dont_norm
-    train, test = train_test_split(df, train_size = 0.6, test_size = 0.4)
+    train, test = train_test_split(df, train_size = 0.9, test_size = 0.1)
     train_y= train[response]
     train_x= train.drop([response],axis = 'columns')
     test_y= test[response]
@@ -129,6 +133,7 @@ def scheduler(epoch):
         if new_lr<=1e-4:
             return  K.get_value(model.optimizer.lr)
         K.set_value(model.optimizer.lr, new_lr)
+#    print(K.get_value(model.optimizer.lr))
     return K.get_value(model.optimizer.lr)
 
 def build_model(n_features):
@@ -151,13 +156,17 @@ def build_model(n_features):
     return model
 
 def infer_importance(model, train_x, train_y, test_x, test_y, \
-                     retrain = False, iterations =10):
+                     retrain = False, iterations =1, all_features = False):
     pred_y = model.predict(test_x).flatten()
-    rmse = np.sqrt(mean_squared_error(test_y, pred_y))
+    model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
     rmse_diff = pd.DataFrame(index = test_x.columns,\
                              columns = range(iterations))
+    
+    cols_iter = ['vv_anomaly', 'vh_anomaly', 'blue_anomaly', 'green_anomaly', 'red_anomaly', 'nir_anomaly', 'ndvi_anomaly', 'ndwi_anomaly', 'vv_ndvi_anomaly', 'vh_ndvi_anomaly']
+    if all_features:
+        cols_iter =  test_x.columns
     for itr in range(iterations):
-        for feature in test_x.columns:
+        for feature in cols_iter:
             if retrain:
                 sample_train_x = train_x.copy()
                 sample_train_x.loc[:,feature] = 0.
@@ -167,12 +176,13 @@ def infer_importance(model, train_x, train_y, test_x, test_y, \
             sample_test_x.loc[:,feature] = 0.
             sample_pred_y = model.predict(sample_test_x).flatten()
             sample_rmse = np.sqrt(mean_squared_error(test_y, sample_pred_y))
-            rmse_diff.loc[feature, itr] = sample_rmse - rmse
+            rmse_diff.loc[feature, itr] = sample_rmse - model_rmse
     rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
     rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
     rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
+    rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
-    return rmse_diff
+    return rmse_diff, model_rmse
 
 def plot_pred_actual(test_y, pred_y, R2):
     fig, ax = plt.subplots(figsize = (3.5,3.5), dpi = 200)
@@ -215,7 +225,7 @@ def groupwise_rmse(test_y, pred_y, groups):
     return rmse
         
     
-def plot_importance(rmse_diff):
+def plot_importance(rmse_diff, model_rmse):
     Df = pd.DataFrame(rmse_diff)
     Df=Df.sort_values('mean')
     Df=append_color_importance(Df)
@@ -232,6 +242,9 @@ def plot_importance(rmse_diff):
                        Patch(facecolor=brown, edgecolor=None,label='Structure'),\
                         Patch(facecolor=blue, edgecolor=None,label='Microwave')]
     ax.legend(handles=legend_elements,frameon=True, title='Variable Type')
+#    if model_rmse
+    ax.axvline(model_rmse, ls = '--',color = 'k')
+    plt.show()
 #    plt.tight_layout()
 #    print(Df)
     return Df
@@ -243,7 +256,7 @@ def append_color_importance(Df):
     micro=['vv','vv_angle_corr','vh_angle_corr','vh', 'vh/ndvi','vv/ndvi','vh/vv',\
            "vh_pm_anomaly","vh_am_anomaly","vv_pm_anomaly","vv_am_anomaly",\
              "vh_pm_ndvi_anomaly", "vh_am_ndvi_anomaly", "vv_pm_ndvi_anomaly",\
-             "vv_am_ndvi_anomaly"]
+             "vv_am_ndvi_anomaly", 'vv_anomaly','vh_anomaly','vv_ndvi_anomaly','vh_ndvi_anomaly']
     veg=['red','green','blue','swir','nir','ndvi_anomaly', 'ndwi_anomaly',\
          'ndvi', 'ndwi','nirv',"blue_anomaly","green_anomaly","red_anomaly",\
          "nir_anomaly"]
@@ -338,6 +351,8 @@ def color_based_on_species(species):
     colors.loc[colors.isin(fir)] = 8
     colors = colors.convert_objects(convert_numeric=True)
     colors.loc[colors.isnull()] = 9
+    
+    roughness = {}
     return colors
 
 ind_to_species = dict(zip(range(1,10), \
@@ -360,27 +375,61 @@ pure_species_sites = ['Clark Motorway, Malibu',
                  'Tapo Canyon, Simi Valley',
                  'Throckmorton',
                  'Trippet Ranch, Topanga']
-pure_species_sites = ['Tapo Canyon, Simi Valley']
+pure_species_sites = ['Flat Top']
 score = pd.DataFrame(index = pure_species_sites, columns = ['train score','test score'])
 score.index.name = 'site'
-for site in pure_species_sites:
+#for site in pd.read_pickle('data/cleaned_anomalies_11-29-2018/fm_anomaly').columns:
+#    df =make_df(dynamic_features, [site])
+#    #df['vh_pm_anomaly'] = df['fm_anomaly']+10
+#    train_x, train_y, test_x, test_y, n_features =\
+#               build_data(df, dynamic_features+static_features, ignore_multi_spec = False)
+#    #print(len(train_y)+len(test_y))
+#    model = build_model(n_features)
+#    change_lr = k.callbacks.LearningRateScheduler(scheduler)
+#    #tbCallBack = k.callbacks.TensorBoard(log_dir='./tb_log', histogram_freq=0, write_graph=True, write_images=False)
+#    model.fit(train_x,train_y, epochs=epochs, batch_size=batch_size, callbacks=[change_lr], verbose = True)
+#    pred_y = model.predict(test_x).flatten()
+#    score.loc[site]= np.round([r2_score(train_y,model.predict(train_x) ),
+#                                       r2_score(test_y, pred_y)], 2)
+#print(score)
+#score.to_pickle('data/r2scores')
+#rmse_diff = infer_importance(model, train_x, train_y, test_x, test_y, retrain = True)
+#
+feature_imp = pd.DataFrame()
+#for site in pd.read_pickle('data/cleaned_anomalies_11-29-2018/fm_anomaly').columns:
+for site in ['Tapo Canyon, Simi Valley']:
+    print('[INFO]\t Processing site:\t %s'%site)
     df =make_df(dynamic_features, [site])
     #df['vh_pm_anomaly'] = df['fm_anomaly']+10
     train_x, train_y, test_x, test_y, n_features =\
                build_data(df, dynamic_features+static_features, ignore_multi_spec = False)
     #print(len(train_y)+len(test_y))
     model = build_model(n_features)
-    change_lr = k.callbacks.LearningRateScheduler(scheduler)
+    change_lr = LearningRateScheduler(scheduler)
+    filepath = os.path.join(dir_data, 'model_checkpoint/weights_best_%s.hdf5'%s)
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint, change_lr]
     #tbCallBack = k.callbacks.TensorBoard(log_dir='./tb_log', histogram_freq=0, write_graph=True, write_images=False)
-    model.fit(train_x,train_y, epochs=epochs, batch_size=batch_size, callbacks=[change_lr], verbose = True)
+    model.fit(train_x,train_y, validation_split=0.3, epochs=epochs, \
+              batch_size=batch_size, callbacks=callbacks_list, verbose = True)
     pred_y = model.predict(test_x).flatten()
+    if np.isnan(pred_y).any():
+        print('[INFO]\t Unable to Train on site:\t %s'%site)
+        continue
     score.loc[site]= np.round([r2_score(train_y,model.predict(train_x) ),
                                        r2_score(test_y, pred_y)], 2)
-print(score)
-#score.to_pickle('data/r2scores')
-#    rmse_diff = infer_importance(model, train_x, train_y, test_x, test_y, retrain = True)
-
+    rmse_diff, model_rmse = \
+    infer_importance(model, train_x, train_y, test_x, test_y, retrain = True, all_features = True)
+    plot_importance(rmse_diff, model_rmse)
+    rmse_diff.loc['total','mean'] = model_rmse
+    rmse_diff.rename(columns = {'mean':'%s'%site}, inplace =True)
+    feature_imp = pd.concat([feature_imp, rmse_diff['%s'%site]], axis = 1, sort = False)
+    feature_imp = feature_imp.round(4)
+    
+#feature_imp.to_pickle('feature_imp_all_sites')
 ######################################################## make_plots=
-#plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y))
+plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y))
 #plot_importance(rmse_diff)
 #plot_errors_spatially(test_x, test_y, pred_y)
+
+
