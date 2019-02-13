@@ -234,7 +234,7 @@ ax.fill_between(mean.index, mean.values, absolute.values, where=absolute.values>
 ax.set_ylabel('FMC (%)')
 ax.set_xlabel("")
 ax.legend(bbox_to_anchor =(1,1))
-plt.savefig(os.path.join(dir_figures,'anomaly_derivation.tiff'), dpi = 600,\
+plt.savefig(os.path.join(dir_figures,'anomaly_derivation.tiff'), dpi = 72,\
                     bbox_inches="tight")
 
 

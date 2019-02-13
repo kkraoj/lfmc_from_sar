@@ -107,13 +107,13 @@ if __name__ == "__main__":
     ######################################################## make_plots=
     if plot:
         sns.set(font_scale=2.1, style = 'ticks')
-        plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
-                     axis_lim = [0,300],xlabel = "FMC", zoom = 1.5, \
-                     figname=os.path.join(dir_figures, 'pred_actual_raw_FMC.tiff'))
+#        plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
+#                     axis_lim = [0,300],xlabel = "FMC", zoom = 1.5, \
+#                     figname=os.path.join(dir_figures, 'pred_actual_raw_FMC.tiff'), dpi = 72)
         #landcover_wise_pred(test_y, pred_y)
-#        plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (% FMC)",\
-#                        zoom = 1.5, \
-#                     figname=os.path.join(dir_figures, 'importance_raw_FMC.tiff'))
+        plot_importance(rmse_diff, model_rmse, xlabel = "RMSE (% FMC)",\
+                        zoom = 1.5, dpi = 72,\
+                     figname=os.path.join(dir_figures, 'importance_raw_FMC.tiff'))
 #        #plot_errors_spatially(test_x, test_y, pred_y)
 #        sns.set(font_scale=2, style = 'ticks')
-        anomaly = decompose_plot_pred_actual(pred_y, test_y, df)
+#        anomaly = decompose_plot_pred_actual(pred_y, test_y, df, dpi = 72)

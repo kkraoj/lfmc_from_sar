@@ -3,6 +3,8 @@
 Created on Tue Oct 16 04:26:50 2018
 
 @author: kkrao
+
+Script to compile all csv files downloaded using nfmd_download.py into 1 single pandas dataframe
 """
 
 import os

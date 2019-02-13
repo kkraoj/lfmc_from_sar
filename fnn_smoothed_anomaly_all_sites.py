@@ -210,7 +210,7 @@ def color_based_on_lc(fc):
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
                      xlabel = "FMC anomaly", zoom = 1,\
                      figname = None, dpi = 600,ms = 8):
-    fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = 22)
+    fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
     x = test_y
     y = pred_y
@@ -247,7 +247,7 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     
     return ax
     
-def decompose_plot_pred_actual(pred_y, test_y, df):
+def decompose_plot_pred_actual(pred_y, test_y, df, dpi = 600):
     pred_y_series = pd.Series(pred_y, index = test_y.index)
     pred_y_series.name = 'pred_y'
     
@@ -272,14 +272,14 @@ def decompose_plot_pred_actual(pred_y, test_y, df):
     r2 = r2_score(mean.test_y, mean.pred_y)
     plot_pred_actual(mean.test_y, mean.pred_y, r2, rmse, \
                      xlabel = "FMC average", axis_lim=[0,200], zoom = 1,\
-                     cmap = sns.cubehelix_palette(as_cmap=True),ms = 100, \
+                     cmap = sns.cubehelix_palette(as_cmap=True),ms = 100,dpi = dpi,  \
              figname=os.path.join(dir_figures, 'pred_actual_decompose_mean.tiff'))
     
     rmse = np.sqrt(mean_squared_error(anomaly.test_y, anomaly.pred_y))
     r2 = r2_score(anomaly.test_y, anomaly.pred_y)
     plot_pred_actual(anomaly.test_y, anomaly.pred_y, r2, rmse, \
                      xlabel = "FMC anomaly", axis_lim = [-100,100], zoom = 1,\
-                     cmap = sns.cubehelix_palette(as_cmap=True), \
+                     cmap = sns.cubehelix_palette(as_cmap=True),dpi = dpi, \
      figname=os.path.join(dir_figures, 'pred_actual_decompose_anomaly.tiff'))
     return anomaly
     
@@ -335,11 +335,14 @@ def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",
     Df=Df.sort_values('mean')
     Df=append_color_importance(Df)
     Df.index = Df.index.str.lower()
-
-    fig, ax = plt.subplots(figsize = (zoom*3,zoom*8))
+    Df['mean']+=model_rmse
+#    Df.loc[Df.index!='elevation','mean'] = 0
+    Df['mean'] = 0
+    fig, ax = plt.subplots(figsize = (zoom*5,zoom*8), dpi = dpi)
     Df['mean'].plot.barh(width=0.8,color=Df.color,xerr=Df['sd'],\
            error_kw=dict(ecolor='grey', lw=1, capsize=2, capthick=1), ax=ax)
     ax.set_xlabel(xlabel)
+    ax.set_ylabel('Variable hidden')
     green = '#1b9e77'
     brown = '#d95f02'
     blue = '#7570b3'
@@ -565,10 +568,10 @@ if __name__ == "__main__":
     if plot:
             
         plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
-                         zoom = 1.5, \
+                         zoom = 1.5,dpi = 72,  \
              figname=os.path.join(dir_figures, 'pred_actual_anomaly_FMC.tiff'))
-#        ax = plot_importance(rmse_diff, model_rmse, zoom = 1.5, \
-#             figname=os.path.join(dir_figures, 'importance_anomaly_FMC.tiff'),\
-#             xlabel = "RMSE Shift\n (% FMC anomaly)")
+        ax = plot_importance(rmse_diff, model_rmse, zoom = 1.5, \
+             figname=os.path.join(dir_figures, 'importance_anomaly_FMC.tiff'),\
+             xlabel = "RMSE (% FMC anomaly)", dpi = 72)
 
 

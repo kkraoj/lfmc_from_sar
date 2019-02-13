@@ -293,7 +293,7 @@ for site in ["Clark Motorway, Malibu"]:
     ax.tick_params('y', colors='maroon')
 #    ax.set_title(site)
     ax.set_xlabel("")
-    plt.savefig(os.path.join(dir_figures,'fmc_timeseries.tiff'), dpi = 600,\
+    plt.savefig(os.path.join(dir_figures,'fmc_timeseries.tiff'), dpi = 72,\
                     bbox_inches="tight")
     plt.show()
 ########### when FM is present but sar is not
