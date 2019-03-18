@@ -12,7 +12,7 @@ import keras.backend as K
 from dirs import dir_data, dir_codes, dir_figures
 from fnn_smoothed_anomaly_all_sites import make_df, build_data, build_model,\
      infer_importance, plot_pred_actual, plot_importance,\
-     decompose_plot_pred_actual
+     decompose_plot_pred_actual, infer_importance_by_var_category
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     epochs = int(5e3)
     retrain_epochs = int(1e3)
     batch_size = 2**12
-    save_name = 'smoothed_all_sites_8_dec_11_10'
+    save_name = 'smoothed_all_sites_11_mar_2019_with_doy'
     load_model = True
     overwrite = False
     plot = 1
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                     'vv_red_smoothed','vh_red_smoothed',\
                     'vv_nir_smoothed','vh_nir_smoothed',\
                     'vv_blue_smoothed','vh_blue_smoothed',\
-                    'vv_green_smoothed','vh_green_smoothed']
+                    'vv_green_smoothed','vh_green_smoothed', 'doy']
     
     static_features = ['slope', 'elevation', 'canopy_height','forest_cover',
                     'silt', 'sand', 'clay', 'latitude', 'longitude']
@@ -104,12 +104,15 @@ if __name__ == "__main__":
         rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
     pred_y = model.predict(test_x).flatten()
     model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
+#    rmse_diff, model_rmse = infer_importance_by_var_category(model, train_x, train_y, \
+#             test_x, test_y, batch_size = batch_size, retrain_epochs = retrain_epochs, \
+#             change_lr = change_lr, retrain = False)
     ######################################################## make_plots=
     if plot:
         sns.set(font_scale=2.1, style = 'ticks')
-#        plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
-#                     axis_lim = [0,300],xlabel = "FMC", zoom = 1.5, \
-#                     figname=os.path.join(dir_figures, 'pred_actual_raw_FMC.tiff'), dpi = 72)
+        plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
+                     axis_lim = [0,300],xlabel = "FMC", zoom = 1.5, \
+                     figname=os.path.join(dir_figures, 'pred_actual_raw_FMC.tiff'), dpi = 72)
         #landcover_wise_pred(test_y, pred_y)
         plot_importance(rmse_diff, model_rmse, xlabel = "RMSE (% FMC)",\
                         zoom = 1.5, dpi = 72,\

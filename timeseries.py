@@ -69,23 +69,23 @@ def intersect(meas_,obs_, opt_):
     df.loc[df.sum(axis = 1, skipna = False).isnull()]=np.nan
     return df.iloc[:,0], df.iloc[:,1], df.iloc[:,2] 
 
-###import data
-pass_type = 'am'
-obs = pd.read_pickle("sar_%s_500m_angle_corr"%pass_type)
-obs.index = obs.date
-#obs.loc[obs.vh<=-30,'vh'] = np.nan
-#obs.loc[obs.vh>0,'vh'] = np.nan
-#obs.loc[obs.vv<=-20,'vv'] = np.nan
-#obs.loc[obs.vv>0,'vv'] = np.nan
-
-meas = pd.read_pickle('vwc')
-meas.index = meas.date
-meas = meas.loc[meas.date>='2015-01-01',:]
-#meas = meas.loc[meas.percent>=20,:]
-opt = pd.read_pickle("opt_500m_cloudless")
-opt.index = opt.date
-opt.green/=1e4
-opt.dropna(subset = ["green"], inplace = True)
+####import data
+#pass_type = 'am'
+#obs = pd.read_pickle("sar_%s_500m_angle_corr"%pass_type)
+#obs.index = obs.date
+##obs.loc[obs.vh<=-30,'vh'] = np.nan
+##obs.loc[obs.vh>0,'vh'] = np.nan
+##obs.loc[obs.vv<=-20,'vv'] = np.nan
+##obs.loc[obs.vv>0,'vv'] = np.nan
+#
+#meas = pd.read_pickle('vwc')
+#meas.index = meas.date
+#meas = meas.loc[meas.date>='2015-01-01',:]
+##meas = meas.loc[meas.percent>=20,:]
+#opt = pd.read_pickle("opt_500m_cloudless")
+#opt.index = opt.date
+#opt.green/=1e4
+#opt.dropna(subset = ["green"], inplace = True)
 ##################### plotting ts
 #c1 = 'y'
 #c2 = 'maroon'

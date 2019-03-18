@@ -178,7 +178,7 @@ def infer_importance(model, train_x, train_y, test_x, test_y, change_lr,\
             if retrain:
                 sample_train_x = train_x.copy()
                 sample_train_x.loc[:,feature] = 0.
-                model.fit(sample_train_x,train_y, epochs=retrain_epochs, batch_size=batch_size, \
+                model.fit(sample_train_x.astype(float),train_y, epochs=retrain_epochs, batch_size=batch_size, \
                           callbacks=[change_lr], verbose = False)
             sample_test_x = test_x.copy()
             sample_test_x.loc[:,feature] = 0.
@@ -192,6 +192,50 @@ def infer_importance(model, train_x, train_y, test_x, test_y, change_lr,\
 #    print(rmse_diff)
     return rmse_diff, model_rmse
 
+def infer_importance_by_var_category(model, train_x, train_y, test_x, test_y, change_lr,\
+                     retrain = False, iterations =1, retrain_epochs = int(1e3),\
+                     batch_size = int(2e12)):
+    pred_y = model.predict(test_x).flatten()
+    model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
+    categories = ['optical','microwave']
+    rmse_diff = pd.DataFrame(index = categories,\
+                             columns = range(iterations))
+    
+    micro=['vv','vv_angle_corr','vh_angle_corr','vh', 'vh/ndvi','vv/ndvi','vh/vv',\
+           "vh_pm","vh_am","vv_pm","vv_am",\
+             "vh_pm_ndvi", "vh_am_ndvi", "vv_pm_ndvi",\
+             "vv_am_ndvi", 'vv_ndvi',\
+             'vh_ndvi', 'vh_red', 'vv_red','vh_blue', 'vv_blue',\
+             'vh_nir', 'vv_nir',\
+             'vh_green', 'vv_green']
+    opt=['red','green','blue','swir','nir',
+         'ndvi', 'ndwi','nirv']
+    micro = micro+[x+"_smoothed" for x in micro]+[x+"_anomaly" for x in micro]
+    opt = opt+[x+"_smoothed" for x in opt]+[x+"_anomaly" for x in opt]
+    for itr in range(iterations):
+        for category in categories:
+            if category=='optical':
+                features = [x for x in opt if x in train_x.columns]
+            else:
+                features = [x for x in micro if x in train_x.columns]
+                
+            if retrain:
+                sample_train_x = train_x.copy()
+                sample_train_x.loc[:,features] = 0.
+                model.fit(sample_train_x,train_y, epochs=retrain_epochs, batch_size=batch_size, \
+                          callbacks=[change_lr], verbose = False)
+            sample_test_x = test_x.copy()
+            sample_test_x.loc[:,features] = 0.
+            sample_pred_y = model.predict(sample_test_x).flatten()
+            sample_rmse = np.sqrt(mean_squared_error(test_y, sample_pred_y))
+            rmse_diff.loc[category, itr] = sample_rmse - model_rmse
+            print('Model RMSE = %0.4f \t RMSE loss due to %s = %0.4f'%(model_rmse, category, rmse_diff.loc[category, itr]) )
+    rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
+    rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
+    rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
+    rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
+#    print(rmse_diff)
+    return rmse_diff, model_rmse
 
 def color_based_on_lc(fc):
     
@@ -337,7 +381,7 @@ def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",
     Df.index = Df.index.str.lower()
     Df['mean']+=model_rmse
 #    Df.loc[Df.index!='elevation','mean'] = 0
-    Df['mean'] = 0
+#    Df['mean'] = 0
     fig, ax = plt.subplots(figsize = (zoom*5,zoom*8), dpi = dpi)
     Df['mean'].plot.barh(width=0.8,color=Df.color,xerr=Df['sd'],\
            error_kw=dict(ecolor='grey', lw=1, capsize=2, capthick=1), ax=ax)
@@ -362,6 +406,8 @@ def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",
     plt.show()
     return ax
 
+
+
 def append_color_importance(Df):
     green = '#1b9e77'
     brown = '#d95f02'
@@ -378,7 +424,7 @@ def append_color_importance(Df):
          'ndvi', 'ndwi','nirv']
     micro = micro+[x+"_smoothed" for x in micro]+[x+"_anomaly" for x in micro]
     veg = veg+[x+"_smoothed" for x in veg]+[x+"_anomaly" for x in veg]
-    topo=['slope', 'elevation', 'canopy_height','latitude', 
+    topo=['slope', 'elevation', 'canopy_height','latitude', "doy",
           'longitude','silt', 'sand', 'clay', 'incidence_angle',"forest_cover"]
     Df['color']=None
     Df.loc[Df.index.isin(micro),'color']=blue
@@ -504,12 +550,12 @@ if __name__ == "__main__":
     ############################ inputs
     seed = 7
     np.random.seed(seed)
-    epochs = int(5e3)
+    epochs = int(1e3)
     retrain_epochs =int(1e3)
     batch_size = 2**12
     overwrite = False
     load_model = True
-    save_name = 'anomaly_all_sites_8_dec_11_09'
+    save_name = 'anomaly_all_sites_11_mar_2019_with_doy'
 #    train_further = 0
     plot = 1
     response = "fm_anomaly"
@@ -520,7 +566,7 @@ if __name__ == "__main__":
                         'vv_red_anomaly','vh_red_anomaly',\
                         'vv_nir_anomaly','vh_nir_anomaly',\
                         'vv_blue_anomaly','vh_blue_anomaly',\
-                        'vv_green_anomaly','vh_green_anomaly']
+                        'vv_green_anomaly','vh_green_anomaly',"doy"]
     ## only opt
     #dynamic_features = ["fm_anomaly",\
     #                    "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
@@ -560,18 +606,21 @@ if __name__ == "__main__":
           batch_size=batch_size, callbacks=callbacks_list, verbose = True)
         rmse_diff, model_rmse = infer_importance(model, train_x, train_y, \
              test_x, test_y, batch_size = batch_size, retrain_epochs = retrain_epochs, \
-             change_lr = change_lr, retrain = True)
+             change_lr = change_lr, retrain = True, iterations = 10)
         rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
     pred_y = model.predict(test_x).flatten()
     model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
+#    rmse_diff, model_rmse = infer_importance_by_var_category(model, train_x, train_y, \
+#             test_x, test_y, batch_size = batch_size, retrain_epochs = retrain_epochs, \
+#             change_lr = change_lr, retrain = False)
     ######################################################## make_plots=
     if plot:
             
         plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
                          zoom = 1.5,dpi = 72,  \
              figname=os.path.join(dir_figures, 'pred_actual_anomaly_FMC.tiff'))
-        ax = plot_importance(rmse_diff, model_rmse, zoom = 1.5, \
-             figname=os.path.join(dir_figures, 'importance_anomaly_FMC.tiff'),\
-             xlabel = "RMSE (% FMC anomaly)", dpi = 72)
+#        ax = plot_importance(rmse_diff, model_rmse, zoom = 1.5, \
+#             figname=os.path.join(dir_figures, 'importance_anomaly_FMC.tiff'),\
+#             xlabel = "RMSE (% FMC anomaly)", dpi = 72)
 
 
