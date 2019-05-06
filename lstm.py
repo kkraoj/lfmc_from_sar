@@ -17,7 +17,7 @@ from pandas import concat
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error, r2_score
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint
@@ -183,16 +183,16 @@ test_Xr = test_X.reshape((test_X.shape[0], lag+1, len(all_inputs)))
  
 #%% design network
 
-EPOCHS = int(3e3)
+EPOCHS = int(1.5e3)
 BATCHSIZE = int(2e10)
 DROPOUT = 0.3
-LOAD_MODEL = False
-SAVENAME = 'lstm_base_3_may_2019'
-OVERWRITE = True
+LOAD_MODEL = True
+SAVENAME = 'initial_30_apr_2019'
+OVERWRITE = False
 
 RETRAINEPOCHS = int(1e3)
 
-filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/weights_%s.hdf5'%SAVENAME)
+filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
@@ -200,7 +200,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     model = Sequential()
     model.add(LSTM(40, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, return_sequences=True))
     model.add(LSTM(50, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
+#    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
     #model.add(LSTM(10 dropout = DROPOUT, return_sequences=True))
     #model.add(LSTM(6, dropout = DROPOUT, return_sequences=True))
     #model.add(LSTM(6, dropout = DROPOUT, return_sequences=True))
@@ -213,14 +213,13 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     # fit network
     return model
     
-model = build_model()
-checkpoint = ModelCheckpoint(filepath, save_best_only=True)
-callbacks_list = [checkpoint]
+
 
 if  LOAD_MODEL&os.path.isfile(filepath):
-    model.load_weights(filepath)
+    model = load_model(filepath)
+#    model.load_weights(filepath)
     # Compile model (required to make predictions)
-    model.compile(loss='mse', optimizer='adam')    
+#    model.compile(loss='mse', optimizer='adam')    
 #    rmse_diff = pd.read_pickle(os.path.join(dir_codes, \
 #                'model_checkpoint/LSTM/rmse_diff_%s'%SAVENAME))
     print('[INFO] \t Model loaded')
@@ -229,8 +228,12 @@ else:
         if not(OVERWRITE):
             raise  Exception('[INFO] File path already exists. Try Overwrite = True or change file name')
         print('[INFO] \t Retraining Model...')
+    model = build_model()
+    checkpoint = ModelCheckpoint(filepath, save_best_only=True)
+    callbacks_list = [checkpoint]
     history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
-                        validation_data=(test_Xr, test_y), verbose=2, shuffle=False, callbacks=callbacks_list)
+                        validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
+                        callbacks=callbacks_list)
 #    rmse_diff, model_rmse = infer_importance(model,train_Xr, train_y,test_Xr, test_y,\
 #         batch_size = BATCHSIZE, retrain_epochs = RETRAINEPOCHS, \
 #         retrain = True, iterations = 10)        
@@ -264,8 +267,8 @@ print('Dev RMSE: %.3f' % rmse)
 
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
-plot_pred_actual(inv_y, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
-                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey')
+plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
+                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0.6)
 
 #%% persistence error
 current = dataset.loc[:,['percent','site','date']]
@@ -278,7 +281,8 @@ both = pd.merge(current,previous, on = ['site','date'], how = 'left')
 both.dropna(inplace = True)
 persistence_rmse = sqrt(mean_squared_error(both.percent_x, both.percent_y))
 print('Persistence RMSE: %.3f' % persistence_rmse)  
-##%% plot predicted timeseries
+
+#%% plot predicted timeseries
 #train_frame = train.copy()
 #train_frame.iloc[:,:len(all_inputs)+1] = scaler.inverse_transform(train.iloc[:,:len(all_inputs)+1])
 #train_frame = train_frame.iloc[:,:len(all_inputs)+1]
@@ -331,3 +335,16 @@ def infer_importance(model, train_Xr, train_y, test_Xr, test_y, pred_frame,
     rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
     return rmse_diff, model_rmse
+
+#%% data availability
+sns.set(font_scale=0.9, style = 'ticks')    
+dataset = dataset_with_nans.dropna(subset = ['percent'])
+fig, ax = plt.subplots(figsize = (2,6))
+(dataset.count()/dataset.shape[0]).sort_values().plot.barh(ax = ax, color = 'k')
+ax.set_xlabel('Fraction valid')
+  
+sns.set(font_scale=0.7, style = 'ticks')    
+fig, ax = plt.subplots(figsize = (2,6))
+(dataset.groupby('site').vv.count()/dataset.groupby('site').percent.count()).sort_values().plot.barh(ax = ax, color = 'k')
+ax.set_xlabel('Fraction valid')  
+

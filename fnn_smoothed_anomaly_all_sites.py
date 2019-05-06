@@ -253,7 +253,7 @@ def color_based_on_lc(fc):
     
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
                      xlabel = "FMC anomaly", zoom = 1,\
-                     figname = None, dpi = 600,ms = 8, mec =''):
+                     figname = None, dpi = 600,ms = 8, mec ='', mew = 0):
     fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
     x = test_y
@@ -262,8 +262,10 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     #y = model.predict(train_x).flatten()
     xy = np.vstack([x,y])
     z = gaussian_kde(xy)(xy)
+    idx = z.argsort()
+    x, y, z = x[idx], y[idx], z[idx]
 #    groups = color_based_on_lc(df.loc[test_x.index,'forest_cover'])
-    plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap)
+    plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap, linewidth = mew)
     
     ax.set_xlim(axis_lim)
     ax.set_ylim(axis_lim)

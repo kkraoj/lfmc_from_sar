@@ -1,0 +1,4 @@
+*.pyc
+/model_checkpoint/*
+/plots/*
+/__pycache__/*
