@@ -10,7 +10,7 @@ fuel on clicking the "Download Fuel Moisture Data" bubble in the homepage
 If you want only a subset of the fuel moisture replace the respective "for" 
 loops with the chosen option for subsetting. 
 
-Once all the data is downloaded, refer to nfmd_compile.py to compile the individual ASCII fiels into a pandas dataframe. 
+Once all the data is downloaded, refer to nfmd_compile.py to compile the individual ASCII fields into a pandas dataframe. 
 """
 from selenium import webdriver
 from selenium.webdriver.common.by import By

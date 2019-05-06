@@ -200,5 +200,13 @@ from dirs import dir_data
 #doy = df.apply(lambda subset: subset.index.dayofyear)
 #doy.to_pickle('doy')
 ##### saved day of year as a dataframe for input
+#################make dataframe of DOYsfor all sites
+os.chdir(os.path.join(dir_data, 'timeseries'))
+
+var = "vv_smoothed"
+df = pd.read_pickle(var)
+doy = df.apply(lambda subset: subset.index.dayofyear)
+doy.to_pickle('doy')
+#### saved day of year as a dataframe for input
 
 

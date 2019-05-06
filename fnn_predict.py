@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Sep 10 18:59:11 2018
+Created on Mon Mar 18 13:15:16 2019
 
 @author: kkrao
 """
+
 ## computation
 import os
 import numpy as np
@@ -25,6 +26,8 @@ from sklearn.model_selection import cross_val_score, train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_squared_error, r2_score
+from scipy import optimize
+from scipy.optimize import least_squares
 ### plotting
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Polygon
@@ -34,26 +37,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 
 
-def seasonal_anomaly(absolute,save = False, return_mean = False):
-    """
-    index should be datetime
-    
-    """
-    mean = absolute.groupby(absolute.index.dayofyear).mean()   
-    mean = mean.loc[absolute.index.dayofyear]
-    mean.reset_index(drop = True, inplace = True)
-    mean.index = absolute.index
-    anomaly = absolute - mean
-    anomaly.index.name = absolute.index.name+'_anomaly'
-    if save:
-        anomaly.to_pickle('cleaned_anomalies_11-29-2018/%s'%anomaly.index.name)
-    if return_mean:
-        return anomaly, mean
-    else:
-        return anomaly
 
-def make_df(dynamic_features, static_features, response = 'fm_anomaly',\
-            data_loc = 'cleaned_anomalies_11-29-2018/',sites=None):
+pd.set_option('display.max_columns', 30)
+sns.set(font_scale=2.1, style = 'ticks')
+    
+
+def make_df(dynamic_features, static_features,\
+            data_loc = 'timeseries/',sites=None):
 
     Df = pd.DataFrame()
     
@@ -64,8 +54,8 @@ def make_df(dynamic_features, static_features, response = 'fm_anomaly',\
         df = df.loc[:,sites].stack(dropna=False)
         df.name = feature
         Df = pd.concat([Df,df],axis = 'columns')
-    Df.dropna(subset =[response],inplace = True)
     Df.fillna(0, inplace = True)
+    
     Df.index.names= ['date','site']
     Df.reset_index(inplace=True)
     Df.site = Df.site.values
@@ -74,73 +64,13 @@ def make_df(dynamic_features, static_features, response = 'fm_anomaly',\
         static_features_subset = static_features_all.loc[:,static_features]
         Df = Df.join(static_features_subset, on = 'site')
     Df.reset_index(inplace=True, drop = True)
+    Df.date = pd.to_datetime(Df.date)
 #    Df.drop(['site','date'],axis = 1, inplace = True)
     Df = Df.infer_objects()
 #    Df.apply(pd.to_numeric, errors='ignore')
+    #### ignore single species sites
     return Df
-    
-
-def build_data(df, columns, response = 'fm_anomaly',ignore_multi_spec = False):
-#    filter =
-#        (df.residual.abs() <=delta_days)\
-#        &(~df.Fuel.isin(['10-Hour', '100-Hour', '1000-Hour']))\
-#        &(df.ndvi>=0.1)\
-#        &(df.percent<=1000)\
-#        &(df.percent>=40)\
-#        &(df.residual_opt<=delta_days)
-#    df = df.loc[filter,:]
-#    if ignore_multi_spec:
-#        df = ignore_multi_spec_fun(df, pct_thresh = pct_thresh)
-#    columns = ['vv','percent','vh','red','green','blue','swir', 'nir',\
-#               'ndvi', 'ndwi','nirv','slope', 'elevation', 'canopy_height',
-#                'silt', 'sand', 'clay', 'incidence_angle', 'vh/ndvi',\
-#               'latitude', 'longitude', 'vh/vv','vv/ndvi']
-#    columns = ['vv_angle_corr','percent','vh_angle_corr','swir',\
-#              'slope', 'elevation', 'canopy_height',
-#                'silt', 'sand', 'clay', 'incidence_angle', 'vh/ndvi',\
-#               'latitude', 'longitude', 'vh/vv','vv/ndvi']
-#    columns = ['percent',\
-#          'slope', 'elevation', 'canopy_height',
-#            'silt', 'sand', 'clay',\
-#           'latitude', 'longitude']
-    n_features = len(columns)-1
-    df = df.loc[:,columns]
-    df.dropna(subset = [response],inplace = True)
-    df.fillna(method = 'bfill', axis = 0,inplace = True)
-    df.fillna(method = 'ffill', axis = 0, inplace = True)
-#    df.fillna(0, inplace = True)
-    dont_norm = df[response].copy()
-#    df = (df - df.mean())/(df.std())    #normalize 
-#    print(df.shape)    
-    df.loc[:,response] = dont_norm
-    train, test = train_test_split(df, train_size = 0.8, test_size = 0.2)
-    train_y= train[response]
-    train_x= train.drop([response],axis = 'columns')
-    test_y= test[response]
-    test_x= test.drop([response],axis = 'columns')
-#    print(df.head())
-    return train_x, train_y, test_x, test_y, n_features
-    
-def ignore_multi_spec_fun(df, pct_thresh = 20): 
-    to_select = pd.DataFrame()
-    for site in df.Site.unique():
-        d = df.loc[df.Site==site,:]
-        for date in d.meas_date.unique():
-            x = d.loc[d.meas_date == date,:]
-            if x.percent.max() - x.percent.min()<= pct_thresh:
-                to_select = to_select.append(x)
-    return to_select
-
-
-def scheduler(epoch):
-    lr_decay = 0.9
-    if epoch%100 == 0:
-        old_lr = K.get_value(model.optimizer.lr)
-        new_lr = old_lr*lr_decay
-        if new_lr<=1e-4:
-            return  K.get_value(model.optimizer.lr)
-        K.set_value(model.optimizer.lr, new_lr)
-    return K.get_value(model.optimizer.lr)
+        
 
 def build_model(n_features):
 	# create model
@@ -237,23 +167,11 @@ def infer_importance_by_var_category(model, train_x, train_y, test_x, test_y, ch
 #    print(rmse_diff)
     return rmse_diff, model_rmse
 
-def color_based_on_lc(fc):
-    
 
-    group_dict = {20: 0,
-           30: 0,
-           70: 1,
-           100:2,
-           110:3,
-           120:3,
-           130:3,
-           140:4}
-    groups = [group_dict[x] for x in fc.values]
-    return groups
-    
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
-                     xlabel = "FMC anomaly", zoom = 1,\
-                     figname = None, dpi = 600,ms = 8, mec =''):
+                      zoom = 1,\
+                     figname = None, dpi = 600,ms = 8,\
+                     xlabel = None, ylabel= None):
     fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
     x = test_y
@@ -263,19 +181,22 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     xy = np.vstack([x,y])
     z = gaussian_kde(xy)(xy)
 #    groups = color_based_on_lc(df.loc[test_x.index,'forest_cover'])
-    plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap)
+    plot = ax.scatter(x,y, c=z, s=ms, edgecolor='', cmap = cmap)
     
-    ax.set_xlim(axis_lim)
-    ax.set_ylim(axis_lim)
+    
     ax.plot(axis_lim,axis_lim, lw =.5, color = 'grey')
     ax.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-    ax.set_ylabel('Predicted '+xlabel)
-    ax.set_xlabel('Actual '+xlabel)
+#    ax.set_ylabel('$\sum w_i\ x\ FMC_i$')
+#    ax.set_xlabel('$\hat{FMC}$')
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    ax.set_xlim(axis_lim)
+    ax.set_ylim(axis_lim)
     ax.set_yticks(ax.get_xticks())
 #    ax.set_xticks([-50,0,50,100])
 #    ax.set_yticks([-50,0,50,100])
-    ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$'%(np.floor(R2*100)/100, model_rmse), \
+    ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$'%(np.floor(R2*100)/100, model_rmse), \
                 xy=(0.05, 0.97), xycoords='axes fraction',\
                 ha='left',va='top')
 #    divider = make_axes_locatable(ax)
@@ -284,66 +205,13 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
 #    ticklabels = groupwise_rmse(test_y, pred_y, groups)
 #    cax.set_yticklabels(ticklabels.values())
 ##    cax.set_ylabel('Canopy height (m)')
+    
     if not(figname is None):
         plt.savefig(os.path.join(dir_figures,figname), dpi = dpi,\
                     bbox_inches="tight")
     plt.show()
     
     return ax
-    
-def decompose_plot_pred_actual(pred_y, test_y, df, dpi = 600):
-    pred_y_series = pd.Series(pred_y, index = test_y.index)
-    pred_y_series.name = 'pred_y'
-    
-    temp_df = pd.DataFrame({'pred_y':pred_y, 'test_y':test_y})
-    temp_df = temp_df.join(df.loc[:,['site','date']])
-    mean = temp_df.copy()
-    mean = mean.groupby('site').mean()
-    anomaly = temp_df.copy()
-    anomaly.index = temp_df.date
-    fm = pd.read_pickle(os.path.join(dir_data, \
-                     'cleaned_anomalies_11-29-2018/fm_smoothed'))
-    _,fm = seasonal_anomaly(fm, return_mean = True)
-    for site in anomaly.site.unique():
-        sub = anomaly.loc[anomaly.site==site,:].copy()
-        sub = sub.join(fm.loc[:,site])
-        sub.pred_y-=sub[site]
-        sub.test_y-=sub[site]
-        anomaly.loc[anomaly.site==site,:]= sub.copy()
-    
-    
-    rmse = np.sqrt(mean_squared_error(mean.test_y, mean.pred_y))
-    r2 = r2_score(mean.test_y, mean.pred_y)
-    plot_pred_actual(mean.test_y, mean.pred_y, r2, rmse, \
-                     xlabel = "FMC average", axis_lim=[0,200], zoom = 1,\
-                     cmap = sns.cubehelix_palette(as_cmap=True),ms = 100,dpi = dpi,  \
-             figname=os.path.join(dir_figures, 'pred_actual_decompose_mean.tiff'))
-    
-    rmse = np.sqrt(mean_squared_error(anomaly.test_y, anomaly.pred_y))
-    r2 = r2_score(anomaly.test_y, anomaly.pred_y)
-    plot_pred_actual(anomaly.test_y, anomaly.pred_y, r2, rmse, \
-                     xlabel = "FMC anomaly", axis_lim = [-100,100], zoom = 1,\
-                     cmap = sns.cubehelix_palette(as_cmap=True),dpi = dpi, \
-     figname=os.path.join(dir_figures, 'pred_actual_decompose_anomaly.tiff'))
-    return anomaly
-    
-def groupwise_rmse(test_y, pred_y, groups):
-    ind_to_forest = {0: 'crop',
-           0: 'crop',
-           1: 'closed needleleaf',
-           2:'mixed forest',
-           3:'shrub',
-           3:'shrub',
-           3:'shrub',
-           4:'grass'}
-    rmse={}
-    for group in range(5):
-        sub1 = test_y[groups==group]
-        sub2 = pred_y[groups==group]
-        rmse[group] = ind_to_forest[group]+\
-           r', rmse = %02d'%np.sqrt(mean_squared_error(sub1,sub2))
-    return rmse
-
 
 def rename_importance_chart_labels(ax):
     labels =  [item.get_text() for item in ax.get_yticklabels(which='both')]
@@ -474,153 +342,166 @@ def plot_usa(enlarge = 1.):
         ax.add_patch(poly)
     return fig, ax, m
 
-def landcover_wise_pred(test_y, pred_y):
-    lc_dict = {20: 'crop',
-           30: 'crop',
-           70: 'closed needleleaf',
-           100:'mixed forest',
-           110:'shrub',
-           120:'shrub',
-           130:'shrub',
-           140:'grass'}
-    pred_y = pd.Series(pred_y, index = test_y.index)
-    r2_df = pd.DataFrame([test_y, pred_y, \
-                          df.loc[test_y.index,'forest_cover'].map(lc_dict)], \
-        index = ['true','pred', 'forest_cover']).T
-    for group in r2_df.forest_cover.unique():
-        sub = r2_df.loc[r2_df.forest_cover==group,['true','pred']].astype(float)
-        ax = plot_pred_actual(sub.true, sub.pred, r2_score(sub.true, sub.pred), cmap = "YlOrRd_r")
-        ax.set_title(group)
-
-
-def color_based_on_species(species):
-    colors = species.copy()
-    sagebrush=['Sagebrush, Silver','Sagebrush, Mountain Big',  'Sagebrush, Basin Big',
-    'Sagebrush, California', 'Sagebrush, Black','Sagebrush, Wyoming Big', 
-    'Sagebrush, Sand','Sagebrush, Bigelows', 'Sage, Black']
-    pine = ['Pine, Ponderosa','Pine, Lodgepole','Pine, Interior Ponderosa',
-     'Pine, Loblolly']
-    chamise = ['Chamise, Old Growth','Chamise','Chamise, New Growth']
-    manzanita = ['Manzanita, Whiteleaf','Manzanita, Eastwoods','Manzanita, Pinemat',
-        'Manzanita, Greenleaf','Manzanita, Pointleaf']
-    oak = ['Oak, Texas Red','Oak, Live','Oak, Gambel', 'Oak, Sonoran Scrub',
-         'Oak, Water','Tanoak','Oak, California Live','Oak, Gray', 'Oak, Emory']
-    juniper = [ 'Juniper, Redberry','Juniper, Rocky Mountain',  'Juniper, Utah',
-       'Juniper, Ashe','Juniper, Creeping','Juniper, Oneseed', 'Juniper, Alligator',
-       'Juniper, Western']
-    ceonothus = ['Ceanothus, Whitethorn','Ceanothus, Bigpod', 'Ceanothus, Redstem',
-       'Ceanothus, Desert', 'Ceanothus, Buckbrush','Ceanothus, Deerbrush',       
-         'Ceanothus, Hoaryleaf',   'Ceanothus, Snowbrush']
-    fir = ['Fir, California Red','Douglas-Fir', 'Fir, Subalpine',   'Fir, Grand',
-              'Douglas-Fir, Coastal','Douglas-Fir, Rocky Mountain',  'Fir, White']
-    others = ['Mesquite, Honey', 'Bitterbrush, Desert',
-        'Red Shank','Pinyon, Twoneedle', 'Cedar, Incense', 'Pinyon, Mexican',
-       'Pinyon, Singleleaf',  'Bitterbrush, Antelope',
-       'Buckwheat, Eastern Mojave', 'Snowberry, Mountain',
-        'Spruce, Engelmann', 'Chinquapin, Bush',
-        'Tamarisk', 'Sage, Purple',
-       'Coyotebrush', 'Redcedar, Eastern',  'Forage kochia',
-       'Snowberry, Western', 'Fescue, Arizona',  'Maple, Rocky Mountain',
-       'Yaupon', 'Duff (DC)','Bluestem, Little',
-       'Pinegrass',  'Sumac, Evergreen',  'Ninebark, Pacific']
+def multiplying_function(weights,percent, pred):
+    return weights*percent-pred
     
-    colors.loc[colors.isin(sagebrush)] = 1
-    colors.loc[colors.isin(pine)] = 2
-    colors.loc[colors.isin(chamise)] = 3
-    colors.loc[colors.isin(manzanita)] = 4
-    colors.loc[colors.isin(oak)] = 5
-    colors.loc[colors.isin(juniper)] = 6
-    colors.loc[colors.isin(ceonothus)] = 7
-    colors.loc[colors.isin(fir)] = 8
-    colors = colors.convert_objects(convert_numeric=True)
-    colors.loc[colors.isnull()] = 9
-    return colors
+    
 
-def ind_to_species():
-    ind_to_species = dict(zip(range(1,10), \
-                ['sagebrush', 'pine','chamise','manzanita','oak','juniper','ceonothus',\
-                 'fir','others']\
-                             ))        
-    return ind_to_species
+def solve_for_weights(true_sub):
+    no_of_weights = len(true_sub.fuel.unique())
+       # data provided
+    x0 = np.repeat(0.,no_of_weights)
+    bounds=((0, 1),)*no_of_weights
+    X = true_sub.pivot(values = 'percent',columns = 'fuel')
+    X = X.fillna(X.mean()) ### important assumption. missing fmc replaced by mean
+#    X.dropna(inplace = True)
+    #sort columns alphabatically so that weight can be mapped to species later
+    X = X.reindex(sorted(X.columns), axis=1)
+    target = true_sub.groupby(true_sub.index).pred.mean()
+    target = target.loc[X.index]
+
+    def loss(x):
+        return mean_squared_error(target,X.dot(x))**0.5
+    cons = {'type':'eq',
+            'fun':lambda x: 1 - np.sum(x)}
+    
+    opt = {'disp':False}
+    
+    res = optimize.minimize(loss, x0, constraints=cons,
+                                 method='SLSQP', options=opt, bounds = bounds)
+    ## return optimization result, target FMC (FMC predicted from model),
+    ## True measured FMC multiplied by weights, simply averaged FMC with weights = 1/n
+    
+    return res, target, X.dot(res.x), X.mean(axis = 1)
+
+
 ####################################################################    ######
-if __name__ == "__main__": 
-    pd.set_option('display.max_columns', 30)
-    sns.set(font_scale=2.1, style = 'ticks')
-    
+#if __name__ == "__main__": 
     ############################ inputs
-    seed = 7
-    np.random.seed(seed)
-    epochs = int(1e3)
-    retrain_epochs =int(1e3)
-    batch_size = 2**12
-    overwrite = False
-    load_model = True
-    save_name = 'anomaly_all_sites_11_mar_2019_with_doy'
+seed = 7
+np.random.seed(seed)
+retrain_epochs =int(1e3)
+save_name = 'smoothed_all_sites_11_mar_2019_with_doy'
 #    train_further = 0
-    plot = 1
-    response = "fm_anomaly"
-    dynamic_features = ["fm_anomaly","vv_anomaly","vh_anomaly",\
-                        "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
-                        'ndvi_anomaly', 'ndwi_anomaly',\
-                        'vv_ndvi_anomaly','vh_ndvi_anomaly',\
-                        'vv_red_anomaly','vh_red_anomaly',\
-                        'vv_nir_anomaly','vh_nir_anomaly',\
-                        'vv_blue_anomaly','vh_blue_anomaly',\
-                        'vv_green_anomaly','vh_green_anomaly',"doy"]
-    ## only opt
-    #dynamic_features = ["fm_anomaly",\
-    #                    "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
-    #                    'ndvi_anomaly', 'ndwi_anomaly',\
-    #                    ]
-    static_features = ['slope', 'elevation', 'canopy_height','forest_cover',
-                    'silt', 'sand', 'clay', 'latitude', 'longitude']
-    
+plot = False
+dynamic_features = ["vv_smoothed","vh_smoothed",\
+                "blue_smoothed","green_smoothed","red_smoothed","nir_smoothed",\
+                'ndvi_smoothed', 'ndwi_smoothed',\
+                'vv_ndvi_smoothed','vh_ndvi_smoothed',\
+                'vv_red_smoothed','vh_red_smoothed',\
+                'vv_nir_smoothed','vh_nir_smoothed',\
+                'vv_blue_smoothed','vh_blue_smoothed',\
+                'vv_green_smoothed','vh_green_smoothed', 'doy']
+static_features = ['slope', 'elevation', 'canopy_height','forest_cover',
+                'silt', 'sand', 'clay', 'latitude', 'longitude']
+os.chdir(dir_data)
+df =make_df(dynamic_features, static_features = static_features)
 
-    os.chdir(dir_data)
-    df =make_df(dynamic_features, static_features = static_features)
-    #df['vh_pm_anomaly'] = df['fm_anomaly']+10
-    train_x, train_y, test_x, test_y, n_features =\
-               build_data(df, dynamic_features+static_features, ignore_multi_spec = False)
-    #print(len(train_y)+len(test_y))
-    
-    model = build_model(n_features)
-    change_lr = LearningRateScheduler(scheduler)
-    filepath = os.path.join(dir_codes, 'model_checkpoint/weights_%s.hdf5'%save_name)
-    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=False, mode='max')
-    callbacks_list = [checkpoint, change_lr]
-    #tbCallBack = k.callbacks.TensorBoard(log_dir='./tb_log', histogram_freq=0, write_graph=True, write_images=False)
-    if  load_model&os.path.isfile(filepath):
-        model.load_weights(filepath)
-        # Compile model (required to make predictions)
-        model.compile(loss='mse', optimizer='sgd', metrics=['accuracy'])    
-        rmse_diff = pd.read_pickle(os.path.join(dir_codes, \
-                    'model_checkpoint/rmse_diff_%s'%save_name))
-        print('[INFO] \t Model loaded')
+model = build_model(n_features = len(dynamic_features)+len(static_features))
+filepath = os.path.join(dir_codes, 'model_checkpoint/weights_%s.hdf5'%save_name)
+model.load_weights(filepath)
+# Compile model (required to make predictions)
+model.compile(loss='mse', optimizer='sgd', metrics=['accuracy'])    
+#print('[INFO] \t Model loaded')
+df['pred'] = model.predict(df.drop(['site','date'],axis = 1)).flatten()
+df.date = pd.to_datetime(df.date)
+pred_sites = df.site.unique()
+
+
+###########################################################################
+true = pd.read_pickle("df_vwc_historic")
+true.date = pd.to_datetime(true.date)
+true = true.loc[true.meas_date.dt.year>=2015]
+true = true.loc[~true.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour'])] 
+true = true[~true.fuel.str.contains("Duff")] ###dropping all dead DMC
+true = true[~true.fuel.str.contains("Dead")] ###dropping all dead DMC
+true = true[~true.fuel.str.contains("DMC")] ###dropping all dead DMC
+no_of_species_in_sites = true.groupby('site').fuel.unique().apply(lambda series: len(series))
+sites_with_leq_4_species = no_of_species_in_sites.loc[(no_of_species_in_sites<=4)].index
+true = true.loc[true.site.isin(sites_with_leq_4_species)]
+true.index = pd.to_datetime(true.meas_date)
+ctr_found = 0
+ctr_notfound = 0
+ctr_more_than_1_fuels = 0
+
+
+W = pd.DataFrame(index = true.site.unique(), columns = ['W1','W2','W3','W4','RMSE'])
+W = W.sort_index()
+col_list = ['site','date','S1','S2','S3','S4','W1','W2','W3','W4','FMC_weighted','FMC_mean','FMC_hat','RMSE']
+optimized_df = pd.DataFrame(columns = col_list)
+for site in true.site.unique():
+    if site in pred_sites:
+#            print('[INFO] Site found')
+        ctr_found+=1
+        true_sub = true.loc[true.site==site,['site','date','fuel','percent']]
+        pred_sub = df.loc[df.site==site,['date','pred']].copy()
+        true_sub = true_sub.set_index('date').join(pred_sub.set_index('date'))
+#            print('[INFO] No. of fuels = %d'%len(true_sub.fuel.unique()))
+        if len(true_sub.fuel.unique())>1:
+            ctr_more_than_1_fuels+=1
+            res, FMC_hat, FMC_weighted, FMC_mean = solve_for_weights(true_sub)
+            w = res.x
+            rmse = res.fun
+            if len(w)<4:
+                w = np.append(w, np.repeat(np.nan, 4-len(w)))
+            w = np.append(w, rmse)
+            W.loc[site] = w
+            ##### fill outputs of optimization in optimized df
+            FMC_hat.name = 'FMC_hat'
+            FMC_weighted.name = 'FMC_weighted'
+            FMC_mean.name = 'FMC_mean'
+#            break
+            _odf = pd.concat([FMC_hat, FMC_weighted, FMC_mean], axis=1)
+            _odf = _odf.reindex(columns = col_list)                
+            _odf['date'] = _odf.index
+            _odf['site'] = site
+            _odf.loc[:,['W1','W2','W3','W4','RMSE']] = w 
+            species = sorted(true_sub.fuel.unique())
+            if len(species)<4:
+                species = species+['nan']*(4-len(species))
+            _odf.loc[:,['S1','S2','S3','S4']] = species
+            optimized_df = optimized_df.append(_odf, ignore_index = True)
+            print('[INFO]\tWeights computed for site\t%s'%site)
     else:
-        if os.path.isfile(filepath):
-            if not(overwrite):
-                print('[INFO] File path already exists. Try Overwrite = True or change file name')
-                raise
-        print('[INFO] \t Retraining Model...')
-        model.fit(train_x,train_y, validation_data = (test_x, test_y),  epochs=epochs, \
-          batch_size=batch_size, callbacks=callbacks_list, verbose = True)
-        rmse_diff, model_rmse = infer_importance(model, train_x, train_y, \
-             test_x, test_y, batch_size = batch_size, retrain_epochs = retrain_epochs, \
-             change_lr = change_lr, retrain = True, iterations = 10)
-        rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
-    pred_y = model.predict(test_x).flatten()
-    model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
-#    rmse_diff, model_rmse = infer_importance_by_var_category(model, train_x, train_y, \
-#             test_x, test_y, batch_size = batch_size, retrain_epochs = retrain_epochs, \
-#             change_lr = change_lr, retrain = False)
-    ######################################################## make_plots=
-    if plot:
-            
-        plot_pred_actual(test_y, pred_y, r2_score(test_y, pred_y), model_rmse,\
-                         zoom = 1.5,dpi = 72,  \
-             figname=os.path.join(dir_figures, 'pred_actual_anomaly_FMC.tiff'))
-#        ax = plot_importance(rmse_diff, model_rmse, zoom = 1.5, \
-#             figname=os.path.join(dir_figures, 'importance_anomaly_FMC.tiff'),\
-#             xlabel = "RMSE (% FMC anomaly)", dpi = 72)
+        ctr_notfound+=1
+#            print('[INFO] Site NOT found')
 
+W = W.infer_objects()       
+W.dropna(how = 'all', inplace = True)
+#W.to_pickle("mixed_species/mixed_species_weights")
+#optimized_df.to_pickle('mixed_species/optimization_results')     
+    
+   
+####### hist of RMSE
+#sns.set(font_scale=1.5, style = 'ticks')
+#fig, ax = plt.subplots(figsize = (3,3))
+#W.hist(column = 'RMSE', ax = ax, bins = 50, density = True)
+#ax.set_xlabel('RMSE')
+#ax.set_ylabel('Probability Density')
+#ax.set_xlim(0,10)
+############## pred FMC vs optimized FMC
+ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
+                 r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
+                mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
+                xlabel = '$\hat{FMC}$', ylabel ='$\sum w_i\ x\ FMC_i$' ,\
+                     zoom = 1.5,dpi = 150, axis_lim = [0,300])    
 
+############## pred FMC vs mean FMC (simple averaged)
+ax = plot_pred_actual(optimized_df['FMC_mean'], optimized_df['FMC_hat'], \
+                 r2_score(optimized_df['FMC_mean'], optimized_df['FMC_hat']),\
+                 mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
+                     zoom = 1.5,dpi = 150, axis_lim = [0,300], \
+                     xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
+
+######## weights plot
+
+Wmax = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().max(1)
+Wmin = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().min(1)
+fig, ax = plt.subplots(figsize = (3,3))
+sns.kdeplot(Wmin, Wmax,cmap="Blues", shade=True, ax = ax, shade_lowest = False,n_levels=100)
+ax.scatter(Wmin, Wmax, edgecolor = 'k', s = 15, facecolor = 'b')
+ax.set_xlim(-0.1,1.1)
+ax.set_ylim(-0.1,1.1)
+ax.set_xlabel('min($w_i$)')
+ax.set_ylabel('max($w_i$)')
+#######

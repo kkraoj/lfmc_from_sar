@@ -69,34 +69,34 @@ def intersect(meas_,obs_, opt_):
     df.loc[df.sum(axis = 1, skipna = False).isnull()]=np.nan
     return df.iloc[:,0], df.iloc[:,1], df.iloc[:,2] 
 
-####import data
-#pass_type = 'am'
-#obs = pd.read_pickle("sar_%s_500m_angle_corr"%pass_type)
-#obs.index = obs.date
-##obs.loc[obs.vh<=-30,'vh'] = np.nan
-##obs.loc[obs.vh>0,'vh'] = np.nan
-##obs.loc[obs.vv<=-20,'vv'] = np.nan
-##obs.loc[obs.vv>0,'vv'] = np.nan
-#
-#meas = pd.read_pickle('vwc')
-#meas.index = meas.date
-#meas = meas.loc[meas.date>='2015-01-01',:]
-##meas = meas.loc[meas.percent>=20,:]
-#opt = pd.read_pickle("opt_500m_cloudless")
-#opt.index = opt.date
+###import data
+pass_type = 'am'
+obs = pd.read_pickle("sar_%s_500m_angle_corr"%pass_type)
+obs.index = obs.date
+#obs.loc[obs.vh<=-30,'vh'] = np.nan
+#obs.loc[obs.vh>0,'vh'] = np.nan
+#obs.loc[obs.vv<=-20,'vv'] = np.nan
+#obs.loc[obs.vv>0,'vv'] = np.nan
+
+meas = pd.read_pickle('vwc')
+meas.index = meas.date
+meas = meas.loc[meas.date>='2015-01-01',:]
+#meas = meas.loc[meas.percent>=20,:]
+opt = pd.read_pickle("opt_500m_cloudless")
+opt.index = opt.date
 #opt.green/=1e4
-#opt.dropna(subset = ["green"], inplace = True)
-##################### plotting ts
-#c1 = 'y'
-#c2 = 'maroon'
-#c3= 'g'
-#ctr = 0
-#var = "vh"
-#sites=[]
-#corrs = []
-#R_scores = pd.DataFrame()
-#plot_ = True
-#for site in obs.site.unique():
+opt.dropna(subset = ["green"], inplace = True)
+#################### plotting ts
+c1 = 'y'
+c2 = 'maroon'
+c3= 'g'
+ctr = 0
+var = "vh"
+sites=[]
+corrs = []
+R_scores = pd.DataFrame()
+plot_ = True
+#for site in ["Iron Springs Bench"]:
 ###for site in ['Black Cedar']:
 #    if check_data_availability(meas, obs, opt):
 #        continue
@@ -113,11 +113,11 @@ def intersect(meas_,obs_, opt_):
 #    if plot_:     
 #
 #        ####plotting begins        
-#        fig, ax = plt.subplots(figsize = (4,1.5))
+#        fig, ax = plt.subplots(figsize = (4,1.5), dpi = 200)
 #        ax2 = ax.twinx()
 #        ax3 = ax.twinx()
 #        ### points
-#        obs_sub[var].plot(ax = ax, marker = 'o', ms = 3, ls='none', c= c1,mfc = "none",mew = 0.2,  mec = "y", label = 'loess')
+#        obs_sub[var].plot(ax = ax, marker = 'o', ms = 3, ls='none', c= c1,mfc = "none",mew = 0.9,  mec = "y", label = 'loess')
 #        meas_sub.percent.sort_values().astype(np.int).plot(ax = ax2, marker = 'o', ms = 3, ls='none', mfc = "none",mew = 0.2,  c = c2,mec = c2, label = 'fm', lw = 1.5)
 #        opt_sub.green.plot(ax=ax3,  marker = 'o', ms = 2, ls='none', mfc = "none",mew = 0.2,  mec = c3, label = 'loess')
 #        #### lines
@@ -146,7 +146,7 @@ def intersect(meas_,obs_, opt_):
 #    R_scores = R_scores.append(pd.DataFrame(corr, index = [site],columns = ['test score']))
 #print('Total sites = %s'%ctr)
 #print('Mean Correlation = %0.2f'%np.mean(corrs))
-#R_scores.to_pickle('rscores')
+##R_scores.to_pickle('rscores')
 
 
 ###################### computing anomalies
@@ -162,29 +162,31 @@ def seasonal_anomaly(absolute,save = False, return_mean = False):
     anomaly = absolute - mean
     anomaly.index.name = absolute.index.name+'_anomaly'
     if save:
-        anomaly.to_pickle('cleaned_anomalies_11-29-2018/%s'%anomaly.index.name)
+        anomaly.to_pickle('timeseries/%s'%anomaly.index.name)
     if return_mean:
         return anomaly, mean
     else:
         return anomaly
 #
-####smooth data and introduce gaps, and make anomaly
+###smooth data and introduce gaps, and make anomaly
 #for param in ['vh','vv','green','red','blue','green','ndwi','ndvi','nir','fm']:    
 #    smooth = pd.DataFrame()
 #    for site in obs.site.unique():
+#        print('[INFO]\tProcessing for site:\t%s'%site)
 #        obs_sub = obs.loc[obs.site==site,:].copy()
-#        if len(obs_sub.loc[obs_sub.index>='2017-01-01',:])<20  or site not in meas.site.values:
-#            continue
-#        elif site in meas.site.values:
-#            meas_sub  = meas.loc[meas.site==site,:]
-#            if len(meas_sub.fuel.unique())>1:
-#                ##### select fuel with most readings
-#                meas_sub = meas_sub.loc[meas_sub.fuel==meas_sub.fuel.value_counts().idxmax(),:]
-#            if len(meas_sub.index.year.unique())<=2\
-#                or ~(meas_sub.groupby(meas_sub.index.year).apply(lambda df: len(df))>=10).all():
-#    #            or len(meas_sub.fuel.unique())>1:
-#    #            or ~(meas_sub.groupby(meas_sub.index.month).apply(lambda df: len(df))>=10).all():
-#                continue
+#        meas_sub  = meas.loc[meas.site==site,:]
+##        if len(obs_sub.loc[obs_sub.index>='2017-01-01',:])<20  or site not in meas.site.values:
+##            continue
+##        elif site in meas.site.values:
+##            meas_sub  = meas.loc[meas.site==site,:]
+##            if len(meas_sub.fuel.unique())>1:
+##                ##### select fuel with most readings
+##                meas_sub = meas_sub.loc[meas_sub.fuel==meas_sub.fuel.value_counts().idxmax(),:]
+##            if len(meas_sub.index.year.unique())<=2\
+##                or ~(meas_sub.groupby(meas_sub.index.year).apply(lambda df: len(df))>=10).all():
+##    #            or len(meas_sub.fuel.unique())>1:
+##    #            or ~(meas_sub.groupby(meas_sub.index.month).apply(lambda df: len(df))>=10).all():
+##                continue
 #        opt_sub  = opt.loc[opt.site==site,:]
 #        raw = None
 #        if param in ['vh','vv']:
@@ -193,31 +195,32 @@ def seasonal_anomaly(absolute,save = False, return_mean = False):
 #        elif param in ['green','red','blue','green','ndwi','ndvi','nir']:
 #            raw = opt_sub
 #            smooth = pd.concat([smooth,interpolate(raw, var = param).to_frame(site)], axis = 1) 
-#        else:
-#            raw = meas_sub
-#            smooth = pd.concat([smooth,interpolate(raw, var = 'percent').to_frame(site)], axis = 1) 
+##        else:
+##            raw = meas_sub
+##            smooth = pd.concat([smooth,interpolate(raw, var = 'percent').to_frame(site)], axis = 1) 
 #    smooth.index.name = param
-#    smooth.to_pickle('cleaned_anomalies_11-29-2018/%s_smoothed'%param)   
+#    smooth.to_pickle('timeseries/%s_smoothed'%param)   
 #    anomaly = seasonal_anomaly(smooth,save =True)
 #    
-#### add vh/ndvi anomaly
+### add vh/ndvi anomaly
 #for param in ['vh','vv']:
-#    ndvi = pd.read_pickle('cleaned_anomalies_11-29-2018/ndvi_smoothed')
+#    ndvi = pd.read_pickle('timeseries/ndvi_smoothed')
 #    ndvi[ndvi<0.2] = np.nan
-#    smooth = pd.read_pickle('cleaned_anomalies_11-29-2018/%s_smoothed'%param)
+#    smooth = pd.read_pickle('timeseries/%s_smoothed'%param)
 #    smooth/=ndvi
 #    smooth.index.name = '%s_ndvi'%param
+#    smooth.to_pickle('timeseries/%s_smoothed'%smooth.index.name)
 #    anomaly = seasonal_anomaly(smooth,save =True)
-##    
+###    
 ##### add vh/opt anomaly
 #for opt_band in ['red','blue','green','nir']:
 #    for param in ['vh','vv']:
-#        ndvi = pd.read_pickle('cleaned_anomalies_11-29-2018/%s_smoothed'%opt_band)
+#        ndvi = pd.read_pickle('timeseries/%s_smoothed'%opt_band)
 #        ndvi/=1e4
 #        ndvi[ndvi<0.05] = np.nan
-#        smooth = pd.read_pickle('cleaned_anomalies_11-29-2018/%s_smoothed'%param)/ndvi
+#        smooth = pd.read_pickle('timeseries/%s_smoothed'%param)/ndvi
 #        smooth.index.name = '%s_%s'%(param,opt_band)
-#        smooth.to_pickle('cleaned_anomalies_11-29-2018/%s_smoothed'%smooth.index.name)
+#        smooth.to_pickle('timeseries/%s_smoothed'%smooth.index.name)
 #        anomaly = seasonal_anomaly(smooth,save =True)
 
 ########anomaly TS
@@ -256,46 +259,46 @@ def seasonal_anomaly(absolute,save = False, return_mean = False):
 #    plt.show()
 
 #######smooth TS
-#vh_a = pd.read_pickle('cleaned_anomalies_11-29-2018/vh_smoothed')
-#fm_a = pd.read_pickle('cleaned_anomalies_11-29-2018/fm_smoothed')
-##fm_a = fm_a.loc[(fm_a.index.year>=2015)&(fm_a.index<='2018-06-01'),:]
-#for site in vh_a.columns:
-#    fig, ax = plt.subplots(figsize = (4,1.5))
-#    vh_a.loc[:,site].plot(ax = ax, ms = 3, ls='-', mfc = "none",mew = 0.5,  c = "y",mec = "y", label = 'vh',lw = 1)
-#    ax2 = ax.twinx()
-#    fm_a.loc[:,site].plot(ax = ax2, ms = 3, ls='-', mfc = "none",mew = 0.5,  c = "maroon",mec = "maroon", label = 'vh')
-#
-#    ax.set_ylabel('$\sigma_{VH}$ smooth(dB)', color = 'y')
-#    ax.tick_params('y', colors='y')
-#    ax2.set_ylabel('FM smooth(%)', color = 'maroon')
-#    ax2.tick_params('y', colors='maroon')
-#    ax.set_title(site)
-#    plt.show()
-    
-######smooth FM
-zoom = 2
-sns.set(font_scale=zoom, style = 'ticks')
+vh_a = pd.read_pickle('cleaned_anomalies_11-29-2018/vh_smoothed')
 fm_a = pd.read_pickle('cleaned_anomalies_11-29-2018/fm_smoothed')
 #fm_a = fm_a.loc[(fm_a.index.year>=2015)&(fm_a.index<='2018-06-01'),:]
-for site in ["Clark Motorway, Malibu"]:
-#for site in fm_a.columns:
-    fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*1.5))
-    fm_a.loc[:,site].plot(ax = ax, ms = 3, lw = 3, ls='-', mfc = "none",\
-            mew = 0.5,  c = "k",mec = "maroon", label = 'vh')
-    ax.scatter(x=meas.loc[meas.site==site,'percent'].index,\
-               y=meas.loc[meas.site==site,'percent'] ,marker = 'o', \
-               s = 100,c= "maroon", edgecolor = 'grey', \
-               label = 'loess')
-#    meas.loc[meas.site==site,'percent'].plot(ax = ax, )
-    
-    
-    ax.set_ylabel('FMC (%)', color = 'maroon')
-    ax.tick_params('y', colors='maroon')
-#    ax.set_title(site)
-    ax.set_xlabel("")
-    plt.savefig(os.path.join(dir_figures,'fmc_timeseries.tiff'), dpi = 72,\
-                    bbox_inches="tight")
+for site in vh_a.columns:
+    fig, ax = plt.subplots(figsize = (4,1.5))
+    vh_a.loc[:,site].plot(ax = ax, ms = 3, ls='-', mfc = "none",mew = 0.5,  c = "y",mec = "y", label = 'vh',lw = 1)
+    ax2 = ax.twinx()
+    fm_a.loc[:,site].plot(ax = ax2, ms = 3, ls='-', mfc = "none",mew = 0.5,  c = "maroon",mec = "maroon", label = 'vh')
+
+    ax.set_ylabel('$\sigma_{VH}$ smooth(dB)', color = 'y')
+    ax.tick_params('y', colors='y')
+    ax2.set_ylabel('FM smooth(%)', color = 'maroon')
+    ax2.tick_params('y', colors='maroon')
+    ax.set_title(site)
     plt.show()
+    
+#######smooth FM
+#zoom = 2
+#sns.set(font_scale=zoom, style = 'ticks')
+#fm_a = pd.read_pickle('cleaned_anomalies_11-29-2018/fm_smoothed')
+##fm_a = fm_a.loc[(fm_a.index.year>=2015)&(fm_a.index<='2018-06-01'),:]
+#for site in ["Clark Motorway, Malibu"]:
+##for site in fm_a.columns:
+#    fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*1.5))
+#    fm_a.loc[:,site].plot(ax = ax, ms = 3, lw = 3, ls='-', mfc = "none",\
+#            mew = 0.5,  c = "k",mec = "maroon", label = 'vh')
+#    ax.scatter(x=meas.loc[meas.site==site,'percent'].index,\
+#               y=meas.loc[meas.site==site,'percent'] ,marker = 'o', \
+#               s = 100,c= "maroon", edgecolor = 'grey', \
+#               label = 'loess')
+##    meas.loc[meas.site==site,'percent'].plot(ax = ax, )
+#    
+#    
+#    ax.set_ylabel('FMC (%)', color = 'maroon')
+#    ax.tick_params('y', colors='maroon')
+##    ax.set_title(site)
+#    ax.set_xlabel("")
+#    plt.savefig(os.path.join(dir_figures,'fmc_timeseries.tiff'), dpi = 72,\
+#                    bbox_inches="tight")
+#    plt.show()
 ########### when FM is present but sar is not
 #vh = ~pd.read_pickle('cleaned_anomalies_11-29-2018/vh_smoothed').isnull()
 #

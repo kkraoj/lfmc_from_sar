@@ -253,7 +253,7 @@ def color_based_on_lc(fc):
     
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
                      xlabel = "FMC anomaly", zoom = 1,\
-                     figname = None, dpi = 600,ms = 8, mec =''):
+                     figname = None, dpi = 600,ms = 8):
     fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
     x = test_y
@@ -263,7 +263,7 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     xy = np.vstack([x,y])
     z = gaussian_kde(xy)(xy)
 #    groups = color_based_on_lc(df.loc[test_x.index,'forest_cover'])
-    plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap)
+    plot = ax.scatter(x,y, c=z, s=ms, edgecolor='', cmap = cmap)
     
     ax.set_xlim(axis_lim)
     ax.set_ylim(axis_lim)
@@ -555,18 +555,18 @@ if __name__ == "__main__":
     batch_size = 2**12
     overwrite = False
     load_model = True
-    save_name = 'anomaly_all_sites_11_mar_2019_with_doy'
+    save_name = 'rnn_19-mar-2019'
 #    train_further = 0
     plot = 1
-    response = "fm_anomaly"
-    dynamic_features = ["fm_anomaly","vv_anomaly","vh_anomaly",\
-                        "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
-                        'ndvi_anomaly', 'ndwi_anomaly',\
-                        'vv_ndvi_anomaly','vh_ndvi_anomaly',\
-                        'vv_red_anomaly','vh_red_anomaly',\
-                        'vv_nir_anomaly','vh_nir_anomaly',\
-                        'vv_blue_anomaly','vh_blue_anomaly',\
-                        'vv_green_anomaly','vh_green_anomaly',"doy"]
+    response = "fm_smoothed"
+    dynamic_features = ["fm_smoothed","vv_smoothed","vh_smoothed",\
+                    "blue_smoothed","green_smoothed","red_smoothed","nir_smoothed",\
+                    'ndvi_smoothed', 'ndwi_smoothed',\
+                    'vv_ndvi_smoothed','vh_ndvi_smoothed',\
+                    'vv_red_smoothed','vh_red_smoothed',\
+                    'vv_nir_smoothed','vh_nir_smoothed',\
+                    'vv_blue_smoothed','vh_blue_smoothed',\
+                    'vv_green_smoothed','vh_green_smoothed', 'doy']
     ## only opt
     #dynamic_features = ["fm_anomaly",\
     #                    "blue_anomaly","green_anomaly","red_anomaly","nir_anomaly",\
