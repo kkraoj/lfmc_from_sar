@@ -150,12 +150,13 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 RELOADINPUT = True
 INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
 LAG = 4
+IMPUTE = False
 
-EPOCHS = int(2e3)
+EPOCHS = int(2e4)
 BATCHSIZE = 2048
 DROPOUT = 0.1
 LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_07_may_2019_small'
+SAVENAME = 'quality_pure+all_same_07_may_2019_small_impute'
 OVERWRITE = True
 RETRAIN = True
 
@@ -172,12 +173,24 @@ else:
     dataset_with_nans = make_df()    
     dataset_with_nans.to_pickle(INPUTNAME)
     
-##apply min max scaling
-dataset = dataset_with_nans.dropna()
+
+if IMPUTE:
+    ###no point in imputing if imputing 15 features only .
+    ##make sure FMC dat exists
+    dataset = dataset_with_nans.dropna(subset = ['percent'])
+    keep_inds = dataset.isnull().sum(1) <= 20 # at most 2 nans
+    keep_inds = keep_inds[keep_inds]
+    len(keep_inds)
+    dataset = dataset.loc[keep_inds.index]
+    dataset.interpolate(inplace = True)
+else:    
+    dataset = dataset_with_nans.dropna()
+    
 # integer encode forest cover
 encoder = LabelEncoder()
 dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
 # normalize features
+##apply min max scaling
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(dataset.drop(['site','date'],axis = 1).values)
 rescaled = dataset.copy()
