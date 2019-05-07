@@ -208,7 +208,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
     model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, return_sequences=True))
-    model.add(LSTM(15, dropout = DROPOUT, recurrent_dropout=DROPOUT))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))   
@@ -304,24 +304,24 @@ train_frame = train_frame.join(reframed.loc[:,['site','date']])
 
 frame = train_frame.append(pred_frame, sort = True)
 #
-#for site in pred_frame.site.unique():
-#    sub = frame.loc[frame.site==site]
-##    print(sub.shape)
-#    sub.index = sub.date
-#    if sub['percent(t)_hat'].count()<7:
-#        continue
-#    fig, ax = plt.subplots(figsize = (6,2))
-#    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-#             marker = 'o', label = 'actual', color = 'grey')
-#    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-#             marker = 'o', label = 'predicted',color = 'fuchsia', ms = 8)
-#    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
-#    ax.set_ylabel('FMC(%)')
-#    ax.set_xlabel('')
-#    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
-#    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
-#    ax.set_title(site)
-#    plt.show()
+for site in pred_frame.site.unique():
+    sub = frame.loc[frame.site==site]
+#    print(sub.shape)
+    sub.index = sub.date
+    if sub['percent(t)_hat'].count()<7:
+        continue
+    fig, ax = plt.subplots(figsize = (6,2))
+    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
+             marker = 'o', label = 'actual', color = 'grey')
+    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'grey', ax = ax,\
+             marker = 'o', label = 'predicted',color = 'fuchsia', ms = 8)
+    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
+    ax.set_ylabel('FMC(%)')
+    ax.set_xlabel('')
+    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
+    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
+    ax.set_title(site)
+    plt.show()
 #%% sensitivity
 
 def infer_importance(model, train_Xr, train_y, test_Xr, test_y, pred_frame,
@@ -399,14 +399,39 @@ def infer_importance(model, train_Xr, train_y, test_Xr, test_y, pred_frame,
 
 #%%individual sites error
 
-#### sites which have less training data
-#site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-#site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-#                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-#site_rmse = site_rmse.join(site_train_length)
-#
-#fig, ax = plt.subplots()
-#site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-#                       edgecolor = 'grey', lw = 1)
-#ax.set_xlabel('No. of training examples available per site')
-#ax.set_ylabel('Site specific RMSE')
+### sites which have less training data
+site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+site_rmse = site_rmse.join(site_train_length)
+
+fig, ax = plt.subplots()
+site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+                       edgecolor = 'grey', lw = 1)
+ax.set_xlabel('No. of training examples available per site')
+ax.set_ylabel('Site specific RMSE')
+sns.set(font_scale=0.9, style = 'ticks')
+site = 'TPEC_Presidio_TX'
+alpha = 0.3
+#for site in ['TPEC_Presidio_TX', 'CAF Truchas 1' ,'Panter','Los Alamos',\
+#             'ponderosa','Los Robles, Thousand Oaks','San Marcos','Reyes Creek']:
+for site in frame.site.unique():
+    site_df = frame.loc[frame.site==site]
+    if site_df.shape[0]<7:
+        continue
+    site_df.index = site_df.date
+    fig, ax = plt.subplots(figsize = (4,2))
+    site_df.loc[:,['percent(t)']].plot(marker = 'o', ax = ax, color = 'steelblue')
+    site_df.loc[:,['percent(t)_hat']].plot(marker = 'o', ax = ax, \
+                   color = 'steelblue', mec = 'orange')
+    ax2 = ax.twinx()
+    site_df.loc[:,['green(t)']].plot(marker = 'o', ax = ax2, color = 'g', alpha = alpha)
+    ax3 = ax.twinx()
+    site_df.loc[:,['vv(t)']].plot(marker = 'o', ax = ax3, color = 'm', alpha = alpha)
+    
+    ax.set_title(site)
+    ax.legend(bbox_to_anchor = [1.2,1], loc = 'upper left')
+    ax2.legend(bbox_to_anchor = [1.2,0.55], loc = 'center left')
+    ax3.legend(bbox_to_anchor = [1.2,0.4], loc = 'center left')
+    plt.show()
+    
