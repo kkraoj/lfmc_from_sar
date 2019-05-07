@@ -151,11 +151,11 @@ RELOADINPUT = True
 INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
 LAG = 4
 
-EPOCHS = int(2e3)
+EPOCHS = int(2e4)
 BATCHSIZE = 2048
 DROPOUT = 0.1
 LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_07_may_2019_small'
+SAVENAME = 'quality_pure+all_same_07_may_2019_small_v2'
 OVERWRITE = True
 RETRAIN = True
 
@@ -208,7 +208,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
     model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))
+    model.add(LSTM(15, dropout = DROPOUT, recurrent_dropout=DROPOUT))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))   
