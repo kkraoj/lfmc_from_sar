@@ -155,9 +155,9 @@ EPOCHS = int(2e4)
 BATCHSIZE = 2048
 DROPOUT = 0.1
 LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_07_may_2019_small_v2'
-OVERWRITE = True
-RETRAIN = True
+SAVENAME = 'quality_pure+all_same_07_may_2019_small'
+OVERWRITE = False
+RETRAIN = False
 
 RETRAINEPOCHS = int(1e3)
 ###############################################################################
@@ -173,30 +173,44 @@ else:
     dataset_with_nans.to_pickle(INPUTNAME)
     
 ##apply min max scaling
-dataset = dataset_with_nans.dropna()
-# integer encode forest cover
-encoder = LabelEncoder()
-dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
-# normalize features
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled = scaler.fit_transform(dataset.drop(['site','date'],axis = 1).values)
-rescaled = dataset.copy()
-rescaled.loc[:,dataset.drop(['site','date'],axis = 1).columns] = scaled
-reframed = series_to_supervised(rescaled, LAG,  dropnan = True)
-reframed.reset_index(drop = True, inplace = True)
-#print(reframed.head())
- 
-# split into train and test sets
-train = reframed.loc[reframed.date.dt.year<2018].drop(['site','date'], axis = 1)
-test = reframed.loc[reframed.date.dt.year>=2018].drop(['site','date'], axis = 1)
-#print(train.shape)
-#print(test.shape)
-# split into input and outputs
-train_X, train_y = train.drop(['percent(t)'], axis = 1).values, train['percent(t)'].values
-test_X, test_y = test.drop(['percent(t)'], axis = 1).values, test['percent(t)'].values
-# reshape input to be 3D [samples, timesteps, features]
-train_Xr = train_X.reshape((train_X.shape[0], LAG+1, len(all_inputs)))
-test_Xr = test_X.reshape((test_X.shape[0], LAG+1, len(all_inputs)))
+
+def split_train_test(dataset_with_nans,inputs = None ):
+    if inputs != None:
+        dataset = dataset_with_nans.dropna().loc[:,['site','date', 'percent']+inputs]
+    else:
+        dataset = dataset_with_nans.dropna()
+    # integer encode forest cover
+    encoder = LabelEncoder()
+    dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
+    # normalize features
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled = scaler.fit_transform(dataset.drop(['site','date'],axis = 1).values)
+    rescaled = dataset.copy()
+    rescaled.loc[:,dataset.drop(['site','date'],axis = 1).columns] = scaled
+    reframed = series_to_supervised(rescaled, LAG,  dropnan = True)
+    reframed.reset_index(drop = True, inplace = True)
+    #print(reframed.head())
+     
+    # split into train and test sets
+    train = reframed.loc[reframed.date.dt.year<2018].drop(['site','date'], axis = 1)
+    test = reframed.loc[reframed.date.dt.year>=2018].drop(['site','date'], axis = 1)
+    #print(train.shape)
+    #print(test.shape)
+    # split into input and outputs
+    train_X, train_y = train.drop(['percent(t)'], axis = 1).values, train['percent(t)'].values
+    test_X, test_y = test.drop(['percent(t)'], axis = 1).values, test['percent(t)'].values
+    # reshape input to be 3D [samples, timesteps, features]
+    if inputs==None: #checksum
+        inputs = all_inputs
+    train_Xr = train_X.reshape((train_X.shape[0], LAG+1, len(inputs)))
+    test_Xr = test_X.reshape((test_X.shape[0], LAG+1, len(inputs)))
+    return dataset, rescaled, reframed, \
+            train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+            scaler
+dataset, rescaled, reframed, \
+    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+    scaler = split_train_test(dataset_with_nans)
+
 #print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
  
 #%% design network
@@ -208,7 +222,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
     model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, return_sequences=True))
-    model.add(LSTM(15, dropout = DROPOUT, recurrent_dropout=DROPOUT))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))   
@@ -244,10 +258,7 @@ if RETRAIN or not(LOAD_MODEL):
                         validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
                         callbacks=callbacks_list)
     model = load_model(filepath) # once trained, load best model
-#    rmse_diff, model_rmse = infer_importance(model,train_Xr, train_y,test_Xr, test_y,\
-#         batch_size = BATCHSIZE, retrain_epochs = RETRAINEPOCHS, \
-#         retrain = True, iterations = 10)        
-#    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
+
     #%% plot history
     fig, ax = plt.subplots(figsize = (4,4))
     ax.plot(history.history['loss'], label='train')
@@ -324,32 +335,44 @@ frame = train_frame.append(pred_frame, sort = True)
 #    plt.show()
 #%% sensitivity
 
-def infer_importance(model, train_Xr, train_y, test_Xr, test_y, pred_frame,
-                     retrain = True, iterations =1, retrain_epochs = int(1e3),\
-                     batch_size = int(2e12)):
-    pred_y = model.predict(test_Xr).flatten()
-    model_rmse = np.sqrt(mean_squared_error(test_y, pred_y))
-    rmse_diff = pd.DataFrame(index = pred_frame.drop(['percent(t)','percent(t)_hat','site','drop'], axis = 1).columns,\
+def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
+                     batch_size = BATCHSIZE):
+    model_rmse = rmse
+    rmse_diff = pd.DataFrame(index = ['microwave','optical'],\
                              columns = range(iterations))
     for itr in range(iterations):
-        for feature in rmse_diff.index:
-            if retrain:
-                sample_train_x = train_Xr.copy()
-                sample_train_x.loc[:,feature] = 0.
-                model.fit(sample_train_x.astype(float),train_y, epochs=retrain_epochs, batch_size=batch_size, \
-                          verbose = False)
-            sample_test_x = test_Xr.copy()
-            sample_test_x.loc[:,feature] = 0.
-            sample_pred_y = model.predict(sample_test_x).flatten()
+        for feature_set in rmse_diff.index:
+            print('[INFO] Fitting model for %s inputs only'%feature_set)
+            if feature_set =='microwave':
+                dataset, rescaled, reframed, \
+                train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+                scaler = \
+                split_train_test(dataset_with_nans, \
+                                 inputs = list(set(all_inputs)-set(optical_inputs)))
+            elif feature_set=='optical': 
+                dataset, rescaled, reframed, \
+                train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+                scaler = \
+                split_train_test(dataset_with_nans, \
+                     inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs)))
+            model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
+
+            history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
+                                batch_size=batch_size,\
+                    validation_data=(test_Xr, test_y), verbose=2, shuffle=False)
+            sample_pred_y = model.predict(test_Xr).flatten()
             sample_rmse = np.sqrt(mean_squared_error(test_y, sample_pred_y))
-            rmse_diff.loc[feature, itr] = sample_rmse - model_rmse
+            rmse_diff.loc[feature_set, itr] = sample_rmse - model_rmse
     rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
     rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
     rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
     rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
-    return rmse_diff, model_rmse
+    return rmse_diff
 
+rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
+print(rmse_diff)
+#    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
 #%% data availability bar plot across features
     
 
