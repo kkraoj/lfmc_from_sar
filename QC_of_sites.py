@@ -26,7 +26,13 @@ def clean_fmc(df, quality = 'pure species'):
         choose = good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['only 1'])),'site']
     elif quality =='medium':
         choose = good_sites.loc[(good_sites.include==1),'site']
+    elif quality =='pure+all same':
+        choose = good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['only 1', 'all same'])),'site']
+    else :
+        raise ValueError('Unknown quality paraneter. Please check input')
     df = df.loc[df.site.isin(choose)]   
+
+    
     
     return df
     
