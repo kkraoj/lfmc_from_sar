@@ -207,6 +207,7 @@ def split_train_test(dataset_with_nans,inputs = None ):
     return dataset, rescaled, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
             scaler
+            
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
     scaler = split_train_test(dataset_with_nans)
@@ -270,27 +271,30 @@ if RETRAIN or not(LOAD_MODEL):
     plt.show()
 #%% 
 #Predictions
-yhat = model.predict(test_Xr)
-#test_X = test_X.reshape((test_X.shape[0], (LAG+1)*test_X.shape[2]))
-# invert scaling for forecast
-inv_yhat = concatenate((yhat, test_X[:,-len(all_inputs):]), axis=1)
-inv_yhat = scaler.inverse_transform(inv_yhat)
-inv_yhat = inv_yhat[:,0]
-# invert scaling for actual
-pred_frame = test.copy()
-pred_frame.iloc[:,:len(all_inputs)+1] = scaler.inverse_transform(test.iloc[:,:len(all_inputs)+1])
-pred_frame = pred_frame.iloc[:,:len(all_inputs)+1]
-pred_frame = pred_frame.join(reframed.loc[:,['site','date']])
-inv_y = pred_frame['percent(t)']
-pred_frame['percent(t)_hat'] = inv_yhat
-# calculate RMSE
-rmse = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent(t)_hat'] ))
+def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
+    
+    yhat = model.predict(test_Xr)
+    #test_X = test_X.reshape((test_X.shape[0], (LAG+1)*test_X.shape[2]))
+    # invert scaling for forecast
+    inv_yhat = concatenate((yhat, test_X[:,-len(inputs):]), axis=1)
+    inv_yhat = scaler.inverse_transform(inv_yhat)
+    inv_yhat = inv_yhat[:,0]
+    # invert scaling for actual
+    pred_frame = test.copy()
+    pred_frame.iloc[:,:len(inputs)+1] = scaler.inverse_transform(test.iloc[:,:len(inputs)+1])
+    pred_frame = pred_frame.iloc[:,:len(inputs)+1]
+    pred_frame = pred_frame.join(reframed.loc[:,['site','date']])
+    inv_y = pred_frame['percent(t)']
+    pred_frame['percent(t)_hat'] = inv_yhat
+    # calculate RMSE
+    rmse = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent(t)_hat'] ))
+    return inv_y, inv_yhat, pred_frame, rmse
 
-
+inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, reframed, scaler, all_inputs)
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
-plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
-                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
+#plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
+#                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
 
 #%% persistence error
 current = pred_frame.loc[:,['percent(t)','site','date']]
@@ -337,32 +341,35 @@ frame = train_frame.append(pred_frame, sort = True)
 
 def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
                      batch_size = BATCHSIZE):
-    model_rmse = rmse
+
     rmse_diff = pd.DataFrame(index = ['microwave','optical'],\
                              columns = range(iterations))
     for itr in range(iterations):
-        for feature_set in rmse_diff.index:
+        for feature_set in rmse_diff.index.values:
             print('[INFO] Fitting model for %s inputs only'%feature_set)
             if feature_set =='microwave':
+                inputs = list(set(all_inputs)-set(optical_inputs))
                 dataset, rescaled, reframed, \
                 train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
                 scaler = \
                 split_train_test(dataset_with_nans, \
-                                 inputs = list(set(all_inputs)-set(optical_inputs)))
-            elif feature_set=='optical': 
+                                 inputs = inputs )
+            elif feature_set=='optical':           
+                inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
                 dataset, rescaled, reframed, \
                 train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
                 scaler = \
                 split_train_test(dataset_with_nans, \
-                     inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs)))
+                     inputs = inputs)
             model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
 
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
                     validation_data=(test_Xr, test_y), verbose=2, shuffle=False)
-            sample_pred_y = model.predict(test_Xr).flatten()
-            sample_rmse = np.sqrt(mean_squared_error(test_y, sample_pred_y))
-            rmse_diff.loc[feature_set, itr] = sample_rmse - model_rmse
+            _,_,_, sample_rmse  = predict(model, test_Xr, test_X,\
+                                          test, reframed, scaler, inputs)
+            
+            rmse_diff.loc[feature_set, itr] = sample_rmse - rmse
     rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
     rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
     rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
