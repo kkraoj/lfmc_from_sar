@@ -430,20 +430,59 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #%%individual sites error
 
 ### sites which have less training data
-site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
-site_rmse = site_rmse.join(site_train_length)
-site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific RMSE')
+#site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+#site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+#                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+#site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
+#site_rmse = site_rmse.join(site_train_length)
+#site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
+#fig, ax = plt.subplots()
+#site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+#                       edgecolor = 'grey', lw = 1)
+#ax.set_xlabel('No. of training examples available per site')
+#ax.set_ylabel('Site specific RMSE')
+#
+#fig, ax = plt.subplots()
+#site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+#                       edgecolor = 'grey', lw = 1)
+#ax.set_xlabel('No. of training examples available per site')
+#ax.set_ylabel('Site specific NRMSE')
+#
 
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific NRMSE')
+#%% seasonal cycle rmsd
+#os.chdir(dir_data)
+#df = pd.read_pickle('fmc_04-29-2019')
+#df.date = pd.to_datetime(df.date)
+#df.loc[df.percent>=1000,'percent'] = np.nan
+#seasonal_mean = pd.DataFrame(index = range(1, 13))
+#for site in df.site.unique():
+#    df_sub = df.loc[df.site==site]
+#    seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
+#    seasonality_site = seasonality_site.groupby(seasonality_site.date.dt.month).percent.mean().rename(site)
+#    seasonal_mean = seasonal_mean.join(seasonality_site)
+#seasonal_mean.to_pickle('seasonal_mean_all_sites')
+seasonal_mean = pd.read_pickle('seasonal_mean_all_sites')
+
+pred_frame['mod'] = pred_frame.date.dt.month
+pred_frame['percent_seasonal_mean'] = np.nan
+for site in pred_frame.site.unique():
+    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)']]
+    df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = 'mod')
+    pred_frame.update(df_sub)
+    pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+rmsd = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent_seasonal_mean'] ))
+print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
+####rmsd by site
+#for site in pred_frame.site.unique():
+#    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+#    rmsd = sqrt(mean_squared_error(df_sub['percent(t)'],df_sub['percent_seasonal_mean']))
+#    print('[INFO] RMSD for site \t {}= \t {:.2f}'.format(site, rmsd))
+#### choose some high rmsd site and check calculation
+#site = 'D11_Miller_Gulch'
+#df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+#df_sub
+#seasonal_mean[site]
+#to_plot = df.loc[df.site==site,['date','percent']]
+#to_plot.index = to_plot.date
+#to_plot.percent.plot()
+#to_plot.index.min()
