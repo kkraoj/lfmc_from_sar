@@ -293,8 +293,33 @@ def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
 inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, reframed, scaler, all_inputs)
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
-#plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
-#                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
+plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
+                         zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
+
+#%% split predict plot into pure and mixed species sites
+
+#### plot only pure species point
+#
+#sites = pd.read_excel('fuel_moisture/NFMD_sites_QC.xls', index_col = 0)
+#pure_species_sites = sites.loc[(sites.include==1)&(sites.comment.isin(['only 1'])),'site']
+#x = pred_frame.loc[pred_frame.site.isin(pure_species_sites),'percent(t)'].values
+#y = pred_frame.loc[pred_frame.site.isin(pure_species_sites),'percent(t)_hat'].values
+#plot_pred_actual(x, y,\
+#        r2_score(x, y), \
+#        sqrt(mean_squared_error(x, y)), \
+#        ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+#        xlabel = "FMC", mec = 'grey', mew = 0)
+#
+#####plot mixed species points as well
+#mixed_species_sites = sites.loc[(sites.include==1)&(sites.comment.isin(['all same'])),'site']
+#x = pred_frame.loc[pred_frame.site.isin(mixed_species_sites),'percent(t)'].values
+#y = pred_frame.loc[pred_frame.site.isin(mixed_species_sites),'percent(t)_hat'].values
+#plot_pred_actual(x, y,\
+#        r2_score(x, y), \
+#        sqrt(mean_squared_error(x, y)), \
+#        ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+#        xlabel = "FMC", mec = 'grey', mew = 0)
+#
 
 #%% persistence error
 current = pred_frame.loc[:,['percent(t)','site','date']]
