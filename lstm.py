@@ -159,7 +159,7 @@ SAVENAME = 'quality_pure+all_same_07_may_2019_small'
 OVERWRITE = False
 RETRAIN = False
 
-RETRAINEPOCHS = int(1e3)
+RETRAINEPOCHS = int(1e4)
 ###############################################################################
 
 #%%modeling
@@ -365,7 +365,7 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
-                    validation_data=(test_Xr, test_y), verbose=2, shuffle=False)
+                    validation_data=(test_Xr, test_y), verbose=0, shuffle=False)
             _,_,_, sample_rmse  = predict(model, test_Xr, test_X,\
                                           test, reframed, scaler, inputs)
             
@@ -377,8 +377,8 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #    print(rmse_diff)
     return rmse_diff
 
-rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
-print(rmse_diff)
+#rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
+#print(rmse_diff)
 #    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
 #%% data availability bar plot across features
     
@@ -429,14 +429,21 @@ print(rmse_diff)
 
 #%%individual sites error
 
-#### sites which have less training data
-#site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-#site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-#                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-#site_rmse = site_rmse.join(site_train_length)
-#
-#fig, ax = plt.subplots()
-#site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-#                       edgecolor = 'grey', lw = 1)
-#ax.set_xlabel('No. of training examples available per site')
-#ax.set_ylabel('Site specific RMSE')
+### sites which have less training data
+site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
+site_rmse = site_rmse.join(site_train_length)
+site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
+fig, ax = plt.subplots()
+site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+                       edgecolor = 'grey', lw = 1)
+ax.set_xlabel('No. of training examples available per site')
+ax.set_ylabel('Site specific RMSE')
+
+fig, ax = plt.subplots()
+site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+                       edgecolor = 'grey', lw = 1)
+ax.set_xlabel('No. of training examples available per site')
+ax.set_ylabel('Site specific NRMSE')
