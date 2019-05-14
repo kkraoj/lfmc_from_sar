@@ -23,6 +23,7 @@ from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint
 from keras import regularizers
 import matplotlib.pyplot as plt
+import keras.backend as K
 
 from dirs import dir_data, dir_codes
 os.chdir(dir_codes)
@@ -66,7 +67,7 @@ static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
                     'silt', 'sand', 'clay']
 
 all_inputs = static_inputs+dynamic_inputs
-
+inputs = all_inputs
 def make_df():
     ####FMC
     df = pd.read_pickle('fmc_04-29-2019')
@@ -150,7 +151,7 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 ###############################################################################
 RELOADINPUT = True
 INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
-LAG = 4
+LAG = 3
 
 EPOCHS = int(5e3)
 BATCHSIZE = 2048
@@ -214,7 +215,7 @@ def split_train_test(dataset_with_nans,inputs = None):
             
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler = split_train_test(dataset_with_nans, inputs = all_inputs)
+    scaler = split_train_test(dataset_with_nans, inputs = inputs)
 
 #print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
  
@@ -250,10 +251,14 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     #model.add(LSTM(10, input_shape=(train_Xr.shape[1], train_Xr.shape[2]), dropout = 0.3))
 #    model.add(Dense(6))
     model.add(Dense(1))
-    model.compile(loss='mse', optimizer='adam')
+    model.compile(loss=rmse_loss_function, optimizer='adam')
     # fit network
     return model
     
+def rmse_loss_function(y_true,y_pred):
+    loss = K.sqrt(K.mean(K.square(y_pred - y_true))) 
+    return loss
+
 checkpoint = ModelCheckpoint(filepath, save_best_only=True)
 callbacks_list = [checkpoint]
 
@@ -306,7 +311,7 @@ def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
     rmse = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent(t)_hat'] ))
     return inv_y, inv_yhat, pred_frame, rmse
 
-inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, reframed, scaler, all_inputs)
+inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
 plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
@@ -358,8 +363,8 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 #%% plot predicted timeseries
 
 train_frame = train.copy()
-train_frame.iloc[:,:len(all_inputs)+1] = scaler.inverse_transform(train.iloc[:,:len(all_inputs)+1])
-train_frame = train_frame.iloc[:,:len(all_inputs)+1]
+train_frame.iloc[:,:len(inputs)+1] = scaler.inverse_transform(train.iloc[:,:len(inputs)+1])
+train_frame = train_frame.iloc[:,:len(inputs)+1]
 train_frame = train_frame.join(reframed.loc[:,['site','date']])
 frame = train_frame.append(pred_frame, sort = True)
 #
@@ -372,9 +377,9 @@ for site in pred_frame.site.unique():
 #        continue
     fig, ax = plt.subplots(figsize = (6,2))
     sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-             marker = 'o', label = 'actual', color = 'grey')
-    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-             marker = 'o', label = 'predicted',color = 'fuchsia', ms = 8)
+             marker = 'o', label = 'actual', color = 'None', mew =2)
+    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'fuchsia', ax = ax,\
+             marker = 'o', label = 'predicted',color = 'None', mew= 2)
     ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
     ax.set_ylabel('FMC(%)')
     ax.set_xlabel('')
@@ -393,14 +398,14 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
         for feature_set in rmse_diff.index.values:
             print('[INFO] Fitting model for %s inputs only'%feature_set)
             if feature_set =='microwave':
-                inputs = list(set(all_inputs)-set(optical_inputs))
+                inputs = list(set(inputs)-set(optical_inputs))
                 dataset, rescaled, reframed, \
                 train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
                 scaler = \
                 split_train_test(dataset_with_nans, \
                                  inputs = inputs )
             elif feature_set=='optical':           
-                inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
+                inputs = list(set(inputs)-set(microwave_inputs)-set(mixed_inputs))
                 dataset, rescaled, reframed, \
                 train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
                 scaler = \
@@ -517,6 +522,9 @@ for site in frame.site.unique():
     frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
 rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
+print('[INFO] RMSE: %.3f' % rmse) 
+#print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
+print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
     
 ####rmsd by site
 #for site in pred_frame.site.unique():
