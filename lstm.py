@@ -150,17 +150,19 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 ###############################################################################
 RELOADINPUT = True
 INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
-LAG = 3
+LAG = 4
 
-EPOCHS = int(5e3)
+EPOCHS = int(20e3)
 BATCHSIZE = 2048
-DROPOUT = 0
-LOAD_MODEL = False
-SAVENAME = 'quality_pure+all_same_13_may_2019_small_lag_12'
+DROPOUT = 0.1
+LOAD_MODEL = True
+SAVENAME = 'quality_pure+all_same_7_may_2019_small'
 OVERWRITE = True
-RETRAIN = False
+RETRAIN = True
 
 RETRAINEPOCHS = int(5e3)
+
+SAVEFIG = True
 ###############################################################################
 
 #%%modeling
@@ -188,11 +190,11 @@ def split_train_test(dataset_with_nans,inputs = None):
     rescaled.loc[:,dataset.drop(['site','date'],axis = 1).columns] = scaled
     reframed = series_to_supervised(rescaled, LAG,  dropnan = True)
     #### dropping sites with at least 7 training points
-    sites_to_keep = pd.value_counts(reframed.loc[reframed.date.dt.year<2018, 'site'])
-    sites_to_keep = sites_to_keep[sites_to_keep>=24].index
+#    sites_to_keep = pd.value_counts(reframed.loc[reframed.date.dt.year<2018, 'site'])
+#    sites_to_keep = sites_to_keep[sites_to_keep>=24].index
+#    reframed = reframed.loc[reframed.site.isin(sites_to_keep)]
     
-    reframed = reframed.loc[reframed.site.isin(sites_to_keep)]
-    print('[INFO] Training on %d sites'%len(reframed.site.unique()))
+    print('[INFO] Dataset has %d sites'%len(reframed.site.unique()))
     ####    
     reframed.reset_index(drop = True, inplace = True)
     #print(reframed.head())
@@ -226,22 +228,22 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 Areg = regularizers.l2(1e-4)
 Breg = regularizers.l2(1e-4)
-Kreg = regularizers.l2(1e-4)
-Rreg = regularizers.l2(1e-4)
+Kreg = regularizers.l2(1e-5)
+Rreg = regularizers.l2(1e-5)
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
     model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
-                   return_sequences=True, \
-                   activity_regularizer = Areg, \
-                   bias_regularizer= Breg,\
-                   kernel_regularizer = Kreg, \
-                   recurrent_regularizer = Rreg))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, \
-                   activity_regularizer = Areg, \
-                   bias_regularizer= Breg,\
-                   kernel_regularizer = Kreg, \
-                   recurrent_regularizer = Rreg))
+                   return_sequences=True))#, \
+#                   activity_regularizer = Areg, \
+#                   bias_regularizer= Breg,\
+#                   kernel_regularizer = Kreg, \
+#                   recurrent_regularizer = Rreg))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))#, \
+#                   activity_regularizer = Areg, \
+#                   bias_regularizer= Breg,\
+#                   kernel_regularizer = Kreg, \
+#                   recurrent_regularizer = Rreg))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))   
@@ -253,8 +255,8 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
 #    model.add(Dense(6))
     model.add(Dense(1))
 #    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
-    optim = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
-    model.compile(loss='mse', optimizer=optim)
+#    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
+    model.compile(loss='mse', optimizer='adam')
     # fit network
     return model
 
@@ -365,25 +367,29 @@ train_frame = train_frame.iloc[:,:len(inputs)+1]
 train_frame = train_frame.join(reframed.loc[:,['site','date']])
 frame = train_frame.append(pred_frame, sort = True)
 #
-sns.set(font_scale=0.9, style = 'ticks')  
-for site in pred_frame.site.unique():
-    sub = frame.loc[frame.site==site]
-#    print(sub.shape)
-    sub.index = sub.date
-#    if sub['percent(t)_hat'].count()<7:
-#        continue
-    fig, ax = plt.subplots(figsize = (6,2))
-    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-             marker = 'o', label = 'actual', color = 'None', mew =2)
-    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'fuchsia', ax = ax,\
-             marker = 'o', label = 'predicted',color = 'None', mew= 2)
-    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
-    ax.set_ylabel('FMC(%)')
-    ax.set_xlabel('')
-    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
-    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
-    ax.set_title(site)
-    plt.show()
+#sns.set(font_scale=0.9, style = 'ticks')  
+#for site in pred_frame.site.unique():
+#    sub = frame.loc[frame.site==site]
+##    print(sub.shape)
+#    sub.index = sub.date
+##    if sub['percent(t)_hat'].count()<7:
+##        continue
+#    fig, ax = plt.subplots(figsize = (6,2))
+#    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
+#             marker = 'o', label = 'actual', color = 'None', mew =2)
+#    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'fuchsia', ax = ax,\
+#             marker = 'o', label = 'predicted',color = 'None', mew= 2)
+#    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
+#    ax.set_ylabel('FMC(%)')
+#    ax.set_xlabel('')
+#    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
+#    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
+#    ax.set_title(site)
+
+#    if SAVEFIG:
+#        os.chdir(dir_codes)
+#        fig.savefig('plots/%s.jpg'%site)
+#    plt.show()
 #%% sensitivity
 
 def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
@@ -510,19 +516,26 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #seasonal_mean.to_pickle('seasonal_mean_all_sites')
     
 seasonal_mean = pd.read_pickle('seasonal_mean_all_sites')
-frame['mod'] = frame.date.dt.month
-frame['percent_seasonal_mean'] = np.nan
-for site in frame.site.unique():
-    df_sub = frame.loc[frame.site==site,['site','date','mod','percent(t)']]
+pred_frame['mod'] = pred_frame.date.dt.month
+pred_frame['percent_seasonal_mean'] = np.nan
+for site in pred_frame.site.unique():
+    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)']]
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = 'mod')
-    frame.update(df_sub)
-    frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
-rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
+    pred_frame.update(df_sub)
+    pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+rmsd = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
 print('[INFO] RMSE: %.3f' % rmse) 
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
 print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
-    
+
+
+#x = pred_frame['percent(t)']
+#y = pred_frame['percent_seasonal_mean']
+#plot_pred_actual(x.values, y.values, r2_score(x, y), rmsd, ms = 30,\
+#                 zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
+#
+##    
 ####rmsd by site
 #for site in pred_frame.site.unique():
 #    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
