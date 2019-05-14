@@ -21,9 +21,8 @@ from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint
-from keras import regularizers
+from keras import regularizers, optimizers
 import matplotlib.pyplot as plt
-import keras.backend as K
 
 from dirs import dir_data, dir_codes
 os.chdir(dir_codes)
@@ -190,8 +189,10 @@ def split_train_test(dataset_with_nans,inputs = None):
     reframed = series_to_supervised(rescaled, LAG,  dropnan = True)
     #### dropping sites with at least 7 training points
     sites_to_keep = pd.value_counts(reframed.loc[reframed.date.dt.year<2018, 'site'])
-    sites_to_keep = sites_to_keep[sites_to_keep>=7].index
+    sites_to_keep = sites_to_keep[sites_to_keep>=24].index
+    
     reframed = reframed.loc[reframed.site.isin(sites_to_keep)]
+    print('[INFO] Training on %d sites'%len(reframed.site.unique()))
     ####    
     reframed.reset_index(drop = True, inplace = True)
     #print(reframed.head())
@@ -251,13 +252,11 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     #model.add(LSTM(10, input_shape=(train_Xr.shape[1], train_Xr.shape[2]), dropout = 0.3))
 #    model.add(Dense(6))
     model.add(Dense(1))
-    model.compile(loss=rmse_loss_function, optimizer='adam')
+#    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
+    optim = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
+    model.compile(loss='mse', optimizer=optim)
     # fit network
     return model
-    
-def rmse_loss_function(y_true,y_pred):
-    loss = K.sqrt(K.mean(K.square(y_pred - y_true))) 
-    return loss
 
 checkpoint = ModelCheckpoint(filepath, save_best_only=True)
 callbacks_list = [checkpoint]
@@ -316,8 +315,6 @@ inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, refra
 sns.set(font_scale=1.5, style = 'ticks')
 plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
                          zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
-
-
 
 #
 #%% split predict plot into pure and mixed species sites
