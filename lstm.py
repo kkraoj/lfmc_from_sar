@@ -157,8 +157,8 @@ BATCHSIZE = 2048
 DROPOUT = 0.1
 LOAD_MODEL = True
 SAVENAME = 'quality_pure+all_same_7_may_2019_small'
-OVERWRITE = True
-RETRAIN = True
+OVERWRITE = False
+RETRAIN = False
 
 RETRAINEPOCHS = int(5e3)
 
@@ -374,7 +374,7 @@ frame = train_frame.append(pred_frame, sort = True)
 #    sub.index = sub.date
 ##    if sub['percent(t)_hat'].count()<7:
 ##        continue
-#    fig, ax = plt.subplots(figsize = (6,2))
+#    fig, ax = plt.subplots(figsize = (4,1.5))
 #    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
 #             marker = 'o', label = 'actual', color = 'None', mew =2)
 #    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'fuchsia', ax = ax,\
@@ -385,13 +385,13 @@ frame = train_frame.append(pred_frame, sort = True)
 #    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
 #    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
 #    ax.set_title(site)
-
+#
 #    if SAVEFIG:
 #        os.chdir(dir_codes)
-#        fig.savefig('plots/%s.jpg'%site)
+#        fig.savefig('plots/%s.jpg'%site, bbox_inches='tight')
 #    plt.show()
 #%% sensitivity
-
+os.chdir(dir_data)
 def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
                      batch_size = BATCHSIZE):
 
@@ -482,25 +482,37 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 
 #%%individual sites error
 
-### sites which have less training data
-#site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-#site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-#                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-#site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
-#site_rmse = site_rmse.join(site_train_length)
-#site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
-#fig, ax = plt.subplots()
-#site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-#                       edgecolor = 'grey', lw = 1)
-#ax.set_xlabel('No. of training examples available per site')
-#ax.set_ylabel('Site specific RMSE')
-#
-#fig, ax = plt.subplots()
-#site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
-#                       edgecolor = 'grey', lw = 1)
-#ax.set_xlabel('No. of training examples available per site')
-#ax.set_ylabel('Site specific NRMSE')
-#
+## sites which have less training data
+site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
+site_rmse = site_rmse.join(site_train_length)
+site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
+fig, ax = plt.subplots()
+site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+                       edgecolor = 'grey', lw = 1)
+ax.set_xlabel('No. of training examples available per site')
+ax.set_ylabel('Site specific RMSE')
+
+fig, ax = plt.subplots()
+site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+                       edgecolor = 'grey', lw = 1)
+ax.set_xlabel('No. of training examples available per site')
+ax.set_ylabel('Site specific NRMSE')
+
+
+#%% ignoring very poor sites
+low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=20].index
+
+x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
+y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
+plot_pred_actual(x, y,\
+        r2_score(x, y), \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+        xlabel = "FMC", mec = 'grey', mew = 0)
+
 
 #%% seasonal cycle rmsd
 #os.chdir(dir_data)
