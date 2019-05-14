@@ -21,6 +21,7 @@ from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint
+from keras import regularizers
 import matplotlib.pyplot as plt
 
 from dirs import dir_data, dir_codes
@@ -151,15 +152,15 @@ RELOADINPUT = True
 INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
 LAG = 4
 
-EPOCHS = int(2e4)
+EPOCHS = int(5e3)
 BATCHSIZE = 2048
-DROPOUT = 0.1
-LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_07_may_2019_small'
-OVERWRITE = False
+DROPOUT = 0
+LOAD_MODEL = False
+SAVENAME = 'quality_pure+all_same_13_may_2019_small_lag_12'
+OVERWRITE = True
 RETRAIN = False
 
-RETRAINEPOCHS = int(1e4)
+RETRAINEPOCHS = int(5e3)
 ###############################################################################
 
 #%%modeling
@@ -172,11 +173,9 @@ else:
     dataset_with_nans = make_df()    
     dataset_with_nans.to_pickle(INPUTNAME)
     
-##apply min max scaling
-
-def split_train_test(dataset_with_nans,inputs = None ):
+def split_train_test(dataset_with_nans,inputs = None):
     if inputs != None:
-        dataset = dataset_with_nans.dropna().loc[:,['site','date', 'percent']+inputs]
+        dataset = dataset_with_nans.loc[:,['site','date', 'percent']+inputs].dropna()
     else:
         dataset = dataset_with_nans.dropna()
     # integer encode forest cover
@@ -188,6 +187,11 @@ def split_train_test(dataset_with_nans,inputs = None ):
     rescaled = dataset.copy()
     rescaled.loc[:,dataset.drop(['site','date'],axis = 1).columns] = scaled
     reframed = series_to_supervised(rescaled, LAG,  dropnan = True)
+    #### dropping sites with at least 7 training points
+    sites_to_keep = pd.value_counts(reframed.loc[reframed.date.dt.year<2018, 'site'])
+    sites_to_keep = sites_to_keep[sites_to_keep>=7].index
+    reframed = reframed.loc[reframed.site.isin(sites_to_keep)]
+    ####    
     reframed.reset_index(drop = True, inplace = True)
     #print(reframed.head())
      
@@ -210,7 +214,7 @@ def split_train_test(dataset_with_nans,inputs = None ):
             
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler = split_train_test(dataset_with_nans)
+    scaler = split_train_test(dataset_with_nans, inputs = all_inputs)
 
 #print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
  
@@ -218,12 +222,24 @@ dataset, rescaled, reframed, \
 
 filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
-
+Areg = regularizers.l2(1e-4)
+Breg = regularizers.l2(1e-4)
+Kreg = regularizers.l2(1e-4)
+Rreg = regularizers.l2(1e-4)
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                   return_sequences=True, \
+                   activity_regularizer = Areg, \
+                   bias_regularizer= Breg,\
+                   kernel_regularizer = Kreg, \
+                   recurrent_regularizer = Rreg))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, \
+                   activity_regularizer = Areg, \
+                   bias_regularizer= Breg,\
+                   kernel_regularizer = Kreg, \
+                   recurrent_regularizer = Rreg))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, return_sequences=True))
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))   
@@ -264,7 +280,7 @@ if RETRAIN or not(LOAD_MODEL):
     fig, ax = plt.subplots(figsize = (4,4))
     ax.plot(history.history['loss'], label='train')
     ax.plot(history.history['val_loss'], label='dev')
-#    ax.set_ylim(0.004,0.02)
+    ax.set_ylim(0,0.05)
     ax.legend()
     ax.set_xlabel('epochs')
     ax.set_ylabel('mse')
@@ -296,6 +312,9 @@ sns.set(font_scale=1.5, style = 'ticks')
 plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
                          zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
 
+
+
+#
 #%% split predict plot into pure and mixed species sites
 
 #### plot only pure species point
@@ -322,17 +341,18 @@ plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 3
 #
 
 #%% persistence error
-current = pred_frame.loc[:,['percent(t)','site','date']]
-current.index = current.date
-previous = current.shift(freq = '1M')
-previous.date = previous.index
-previous.reset_index(drop = True, inplace = True)
-current.reset_index(drop = True, inplace = True)
-both = pd.merge(current,previous, on = ['site','date'], how = 'left')
-both.dropna(inplace = True)
-persistence_rmse = sqrt(mean_squared_error(both['percent(t)_x'], both['percent(t)_y']))
+#current = pred_frame.loc[:,['percent(t)','site','date']]
+#current.index = current.date
+#previous = current.shift(freq = '1M')
+#previous.date = previous.index
+#previous.reset_index(drop = True, inplace = True)
+#current.reset_index(drop = True, inplace = True)
+#both = pd.merge(current,previous, on = ['site','date'], how = 'left')
+#both.dropna(inplace = True)
+#persistence_rmse = sqrt(mean_squared_error(both['percent(t)_x'], both['percent(t)_y']))
+
 print('[INFO] RMSE: %.3f' % rmse) 
-print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
+#print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
 print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
 #%% plot predicted timeseries
@@ -341,27 +361,27 @@ train_frame = train.copy()
 train_frame.iloc[:,:len(all_inputs)+1] = scaler.inverse_transform(train.iloc[:,:len(all_inputs)+1])
 train_frame = train_frame.iloc[:,:len(all_inputs)+1]
 train_frame = train_frame.join(reframed.loc[:,['site','date']])
-
 frame = train_frame.append(pred_frame, sort = True)
 #
-#for site in pred_frame.site.unique():
-#    sub = frame.loc[frame.site==site]
-##    print(sub.shape)
-#    sub.index = sub.date
+sns.set(font_scale=0.9, style = 'ticks')  
+for site in pred_frame.site.unique():
+    sub = frame.loc[frame.site==site]
+#    print(sub.shape)
+    sub.index = sub.date
 #    if sub['percent(t)_hat'].count()<7:
 #        continue
-#    fig, ax = plt.subplots(figsize = (6,2))
-#    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-#             marker = 'o', label = 'actual', color = 'grey')
-#    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'grey', ax = ax,\
-#             marker = 'o', label = 'predicted',color = 'fuchsia', ms = 8)
-#    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
-#    ax.set_ylabel('FMC(%)')
-#    ax.set_xlabel('')
-#    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
-#    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
-#    ax.set_title(site)
-#    plt.show()
+    fig, ax = plt.subplots(figsize = (6,2))
+    sub.plot(y = 'percent(t)', linestyle = '', markeredgecolor = 'grey', ax = ax,\
+             marker = 'o', label = 'actual', color = 'grey')
+    sub.plot(y = 'percent(t)_hat', linestyle = '', markeredgecolor = 'grey', ax = ax,\
+             marker = 'o', label = 'predicted',color = 'fuchsia', ms = 8)
+    ax.legend(loc = 'lower center',bbox_to_anchor=[0.5, -0.7], ncol=2)
+    ax.set_ylabel('FMC(%)')
+    ax.set_xlabel('')
+    ax.axvspan(sub.index.min(), '2018-01-01', alpha=0.1, color='grey')
+    ax.axvspan( '2018-01-01',sub.index.max(), alpha=0.1, color='fuchsia')
+    ax.set_title(site)
+    plt.show()
 #%% sensitivity
 
 def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
@@ -486,17 +506,18 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #    seasonality_site = seasonality_site.groupby(seasonality_site.date.dt.month).percent.mean().rename(site)
 #    seasonal_mean = seasonal_mean.join(seasonality_site)
 #seasonal_mean.to_pickle('seasonal_mean_all_sites')
+    
 seasonal_mean = pd.read_pickle('seasonal_mean_all_sites')
-
-pred_frame['mod'] = pred_frame.date.dt.month
-pred_frame['percent_seasonal_mean'] = np.nan
-for site in pred_frame.site.unique():
-    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)']]
+frame['mod'] = frame.date.dt.month
+frame['percent_seasonal_mean'] = np.nan
+for site in frame.site.unique():
+    df_sub = frame.loc[frame.site==site,['site','date','mod','percent(t)']]
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = 'mod')
-    pred_frame.update(df_sub)
-    pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
-rmsd = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent_seasonal_mean'] ))
+    frame.update(df_sub)
+    frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
+    
 ####rmsd by site
 #for site in pred_frame.site.unique():
 #    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
