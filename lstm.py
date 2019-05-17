@@ -151,12 +151,13 @@ LAG = 4
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
 DROPOUT = 0.1
-LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_7_may_2019_small'
-OVERWRITE = False
+LOAD_MODEL = False
+SAVENAME = 'quality_pure+all_same_17_may_2019_small_one_hot'
+OVERWRITE = True
 RETRAIN = False
+ONEHOT = True
 
-RETRAINEPOCHS = int(5e3)
+RETRAINEPOCHS = int(2)
 
 SAVEFIG = True
 ###############################################################################
@@ -177,8 +178,14 @@ def split_train_test(dataset_with_nans,inputs = None):
     else:
         dataset = dataset_with_nans.dropna()
     # integer encode forest cover
-    encoder = LabelEncoder()
-    dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
+    if ONEHOT:
+        one_hot = pd.get_dummies(dataset['forest_cover'], prefix = 'forest_cover')
+        dataset = dataset.join(one_hot).drop('forest_cover',axis = 1)
+        encoder = None
+        inputs = [x for x in inputs if x != 'forest_cover'] + list(one_hot.columns)
+    else:
+        encoder = LabelEncoder()
+        dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
     # normalize features
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled = scaler.fit_transform(dataset.drop(['site','date'],axis = 1).values)
@@ -210,11 +217,11 @@ def split_train_test(dataset_with_nans,inputs = None):
     test_Xr = test_X.reshape((test_X.shape[0], LAG+1, len(inputs)))
     return dataset, rescaled, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-            scaler, encoder
+            scaler, encoder, inputs
             
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler, encoder = split_train_test(dataset_with_nans, inputs = inputs)
+    scaler, encoder, inputs = split_train_test(dataset_with_nans, inputs = inputs)
 
 #print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
  
@@ -400,14 +407,14 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
                 inputs = list(set(inputs)-set(optical_inputs))
                 _, _, reframed, \
                 train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
-                scaler,_ = \
+                scaler,_ , inputs = \
                 split_train_test(dataset_with_nans, \
                                  inputs = inputs )
             elif feature_set=='optical':           
                 inputs = list(set(inputs)-set(microwave_inputs)-set(mixed_inputs))
                 _, _, reframed, \
                 train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
-                scaler,_ = \
+                scaler,_ ,inputs= \
                 split_train_test(dataset_with_nans, \
                      inputs = inputs)
             model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
@@ -426,7 +433,7 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #    print(rmse_diff)
     return rmse_diff
 
-#rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
+rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
 #print(rmse_diff)
 #    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
 #%% data availability bar plot across features
@@ -479,23 +486,23 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #%%individual sites error
 
 ## sites which have less training data
-site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
-site_rmse = site_rmse.join(site_train_length)
-site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific RMSE')
+# site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+# site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+#                   df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+# site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
+# site_rmse = site_rmse.join(site_train_length)
+# site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific RMSE')
 
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific NRMSE')
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific NRMSE')
 
 
 #%% ignoring very poor sites
@@ -560,23 +567,23 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 #to_plot.index.min()
 
 #%% Histogram of forest cover in the study area
-lc_dict = {14: 'crop',
-           20: 'crop',
-           30: 'crop',
-           50: 'closed broadleaf deciduous',
-           70: 'closed needleleaf evergreen',
-           90: 'mixed forest',
-           100:'mixed forest',
-           110:'shrub',
-           120:'shrub',
-           130:'shrub',
-           140:'grass',
-           150:'sparse vegetation',
-           160:'regularly flooded forest'}
-hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
-hist.apply(lambda item: item.index = lc)
-hist.index = hist.index.to_series().map(lc_dict)
+# lc_dict = {14: 'crop',
+#            20: 'crop',
+#            30: 'crop',
+#            50: 'closed broadleaf deciduous',
+#            70: 'closed needleleaf evergreen',
+#            90: 'mixed forest',
+#            100:'mixed forest',
+#            110:'shrub',
+#            120:'shrub',
+#            130:'shrub',
+#            140:'grass',
+#            150:'sparse vegetation',
+#            160:'regularly flooded forest'}
+# hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
+# hist.apply(lambda item: item.index = lc)
+# hist.index = hist.index.to_series().map(lc_dict)
 
-fig, ax = plt.subplots(figsize = (4,4))
-hist.plot(kind = 'bar', ax = ax)
-ax.set_ylabel('No. of sites')
+# fig, ax = plt.subplots(figsize = (4,4))
+# hist.plot(kind = 'bar', ax = ax)
+# ax.set_ylabel('No. of sites')
