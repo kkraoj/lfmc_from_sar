@@ -156,7 +156,7 @@ SAVENAME = 'quality_pure+all_same_7_may_2019_small'
 OVERWRITE = False
 RETRAIN = False
 
-RETRAINEPOCHS = int(5e3)
+RETRAINEPOCHS = int(10e3)
 
 SAVEFIG = True
 ###############################################################################
@@ -306,12 +306,13 @@ def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
     pred_frame['percent(t)_hat'] = inv_yhat
     # calculate RMSE
     rmse = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent(t)_hat'] ))
-    return inv_y, inv_yhat, pred_frame, rmse
+    r2 = r2_score(inv_y, inv_yhat)
+    return inv_y, inv_yhat, pred_frame, rmse, r2
 
-inv_y, inv_yhat, pred_frame, rmse  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
-plot_pred_actual(inv_y.values, inv_yhat, r2_score(inv_y, inv_yhat), rmse, ms = 30,\
+plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
                          zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
 
 #
@@ -388,23 +389,25 @@ frame = train_frame.append(pred_frame, sort = True)
 #    plt.show()
 #%% sensitivity
 os.chdir(dir_data)
-def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
+def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
                      batch_size = BATCHSIZE):
 
     rmse_diff = pd.DataFrame(index = ['microwave','optical'],\
+                             columns = range(iterations))
+    r2_diff = pd.DataFrame(index = ['microwave','optical'],\
                              columns = range(iterations))
     for itr in range(iterations):
         for feature_set in rmse_diff.index.values:
             print('[INFO] Fitting model for %s inputs only'%feature_set)
             if feature_set =='microwave':
-                inputs = list(set(inputs)-set(optical_inputs))
+                inputs = list(set(all_inputs)-set(optical_inputs))
                 _, _, reframed, \
                 train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
                 scaler,_ = \
                 split_train_test(dataset_with_nans, \
                                  inputs = inputs )
             elif feature_set=='optical':           
-                inputs = list(set(inputs)-set(microwave_inputs)-set(mixed_inputs))
+                inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
                 _, _, reframed, \
                 train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
                 scaler,_ = \
@@ -415,19 +418,26 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
                     validation_data=(test_Xr, test_y), verbose=0, shuffle=False)
-            _,_,_, sample_rmse  = predict(model, test_Xr, test_X,\
+            _,_,_, sample_rmse, sample_r2  = predict(model, test_Xr, test_X,\
                                           test, reframed, scaler, inputs)
             
             rmse_diff.loc[feature_set, itr] = sample_rmse - rmse
+            r2_diff.loc[feature_set, itr] = sample_r2 - r2
     rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
     rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
     rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
     rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
+    
+    r2_diff['mean'] = r2_diff.mean(axis = 'columns')
+    r2_diff['sd'] = r2_diff.drop('mean',axis = 'columns').std(axis = 'columns')
+    r2_diff.drop(range(iterations),axis = 'columns', inplace = True)
+    r2_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
-    return rmse_diff
+    return rmse_diff, r2_diff
 
-#rmse_diff = infer_importance(rmse, retrain_epochs = RETRAINEPOCHS,iterations = 1)
-#print(rmse_diff)
+# rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
+# print(rmse_diff)
+# print(r2_diff)
 #    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
 #%% data availability bar plot across features
     
