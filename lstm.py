@@ -10,10 +10,6 @@ import pandas as pd
 import numpy as np
 from math import sqrt
 from numpy import concatenate
-from matplotlib import pyplot
-from pandas import read_csv
-from pandas import DataFrame
-from pandas import concat
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error, r2_score
@@ -214,11 +210,11 @@ def split_train_test(dataset_with_nans,inputs = None):
     test_Xr = test_X.reshape((test_X.shape[0], LAG+1, len(inputs)))
     return dataset, rescaled, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-            scaler
+            scaler, encoder
             
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler = split_train_test(dataset_with_nans, inputs = inputs)
+    scaler, encoder = split_train_test(dataset_with_nans, inputs = inputs)
 
 #print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
  
@@ -402,16 +398,16 @@ def infer_importance(rmse, iterations =1, retrain_epochs = RETRAINEPOCHS,\
             print('[INFO] Fitting model for %s inputs only'%feature_set)
             if feature_set =='microwave':
                 inputs = list(set(inputs)-set(optical_inputs))
-                dataset, rescaled, reframed, \
-                train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-                scaler = \
+                _, _, reframed, \
+                train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
+                scaler,_ = \
                 split_train_test(dataset_with_nans, \
                                  inputs = inputs )
             elif feature_set=='optical':           
                 inputs = list(set(inputs)-set(microwave_inputs)-set(mixed_inputs))
-                dataset, rescaled, reframed, \
-                train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-                scaler = \
+                _, _, reframed, \
+                train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
+                scaler,_ = \
                 split_train_test(dataset_with_nans, \
                      inputs = inputs)
             model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
@@ -503,7 +499,7 @@ ax.set_ylabel('Site specific NRMSE')
 
 
 #%% ignoring very poor sites
-low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=20].index
+low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=40].index
 
 x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
 y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
@@ -513,7 +509,7 @@ plot_pred_actual(x, y,\
         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
         xlabel = "FMC", mec = 'grey', mew = 0)
 
-
+high_rmse_sites = set(site_rmse.index) - set(low_rmse_sites)
 #%% seasonal cycle rmsd
 #os.chdir(dir_data)
 #df = pd.read_pickle('fmc_04-29-2019')
@@ -562,3 +558,25 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 #to_plot.index = to_plot.date
 #to_plot.percent.plot()
 #to_plot.index.min()
+
+#%% Histogram of forest cover in the study area
+lc_dict = {14: 'crop',
+           20: 'crop',
+           30: 'crop',
+           50: 'closed broadleaf deciduous',
+           70: 'closed needleleaf evergreen',
+           90: 'mixed forest',
+           100:'mixed forest',
+           110:'shrub',
+           120:'shrub',
+           130:'shrub',
+           140:'grass',
+           150:'sparse vegetation',
+           160:'regularly flooded forest'}
+hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
+hist.apply(lambda item: item.index = lc)
+hist.index = hist.index.to_series().map(lc_dict)
+
+fig, ax = plt.subplots(figsize = (4,4))
+hist.plot(kind = 'bar', ax = ax)
+ax.set_ylabel('No. of sites')
