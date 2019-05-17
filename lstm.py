@@ -560,23 +560,24 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 #to_plot.index.min()
 
 #%% Histogram of forest cover in the study area
-lc_dict = {14: 'crop',
-           20: 'crop',
-           30: 'crop',
-           50: 'closed broadleaf deciduous',
-           70: 'closed needleleaf evergreen',
-           90: 'mixed forest',
-           100:'mixed forest',
-           110:'shrub',
-           120:'shrub',
-           130:'shrub',
-           140:'grass',
-           150:'sparse vegetation',
-           160:'regularly flooded forest'}
-hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
-hist.apply(lambda item: item.index = lc)
-hist.index = hist.index.to_series().map(lc_dict)
 
-fig, ax = plt.subplots(figsize = (4,4))
-hist.plot(kind = 'bar', ax = ax)
-ax.set_ylabel('No. of sites')
+# lc_dict = {14: 'crop',
+#            20: 'crop',
+#            30: 'crop',
+#            50: 'closed broadleaf deciduous',
+#            70: 'closed needleleaf evergreen',
+#            90: 'mixed forest',
+#            100:'mixed forest',
+#            110:'shrub',
+#            120:'shrub',
+#            130:'shrub',
+#            140:'grass',
+#            150:'sparse vegetation',
+#            160:'regularly flooded forest'}
+# hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
+# hist.apply(lambda item: item.index = lc)
+# hist.index = hist.index.to_series().map(lc_dict)
+
+# fig, ax = plt.subplots(figsize = (4,4))
+# hist.plot(kind = 'bar', ax = ax)
+# ax.set_ylabel('No. of sites')
