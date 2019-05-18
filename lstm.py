@@ -388,37 +388,37 @@ frame = train_frame.append(pred_frame, sort = True)
 #        fig.savefig('plots/%s.jpg'%site, bbox_inches='tight')
 #    plt.show()
 
-sns.set(font_scale=0.9, style = 'ticks')  
-alpha = 0.3
-for site in pred_frame.site.unique()[:1]:
-    sub = frame.loc[frame.site==site]
-#    print(sub.shape)
-    sub.index = sub.date
-#    if sub['percent(t)_hat'].count()<7:
-#        continue
-    fig, ax = plt.subplots(figsize = (4,1.5))
-    l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
-            zorder = 99, markeredgecolor = 'grey',\
-            marker = 'o', label = 'actual FMC', color = 'None', mew =2)
-    l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
-            zorder = 100, markeredgecolor = 'fuchsia', \
-            marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
-    ax.set_ylabel('FMC(%)')
-    ax.set_xlabel('')
+# sns.set(font_scale=0.9, style = 'ticks')  
+# alpha = 0.2
+# for site in high_rmse_sites:
+#     sub = frame.loc[frame.site==site]
+# #    print(sub.shape)
+#     sub.index = sub.date
+# #    if sub['percent(t)_hat'].count()<7:
+# #        continue
+#     fig, ax = plt.subplots(figsize = (4,1.5))
+#     l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
+#             zorder = 99, markeredgecolor = 'grey',\
+#             marker = 'o', label = 'actual FMC', color = 'None', mew =2)
+#     l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
+#             zorder = 100, markeredgecolor = 'fuchsia', \
+#             marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
+#     ax.set_ylabel('FMC(%)')
+#     ax.set_xlabel('')
     
-    ax2 = ax.twinx()
-    l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
-                    marker = 'o', label = 'green', color = 'g')
-    ax3 = ax.twinx()
-    l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
-                   marker = 'o', label = 'vv',color = 'orange')    
-    ax.set_title(site)
-    ls = l1+l2+l3+l4
-    labs = [l.get_label() for l in ls]
-    ax.tick_params(axis='x', rotation=45)
-    ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
-              ncol=2)
-    plt.show()
+#     ax2 = ax.twinx()
+#     l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
+#                     marker = 'o', label = 'green', color = 'g')
+#     ax3 = ax.twinx()
+#     l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
+#                    marker = 'o', label = 'vv',color = 'orange')    
+#     ax.set_title(site)
+#     ls = l1+l2+l3+l4
+#     labs = [l.get_label() for l in ls]
+#     ax.tick_params(axis='x', rotation=45)
+#     ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
+#               ncol=2)
+#     plt.show()
 
 #%% sensitivity
 os.chdir(dir_data)
@@ -552,7 +552,7 @@ plot_pred_actual(x, y,\
         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
         xlabel = "FMC", mec = 'grey', mew = 0)
 
-high_rmse_sites = set(site_rmse.index) - set(low_rmse_sites)
+high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 #%% seasonal cycle rmsd
 #os.chdir(dir_data)
 #df = pd.read_pickle('fmc_04-29-2019')
