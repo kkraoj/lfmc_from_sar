@@ -151,8 +151,8 @@ LAG = 4
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
 DROPOUT = 0.1
-LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_7_may_2019_small'
+LOAD_MODEL = False
+SAVENAME = 'quality_pure+all_same_17_may_2019_small_mae'
 OVERWRITE = False
 RETRAIN = False
 
@@ -252,7 +252,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     model.add(Dense(1))
 #    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
 #    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
-    model.compile(loss='mse', optimizer='adam')
+    model.compile(loss='mae', optimizer='adam')
     # fit network
     return model
 
