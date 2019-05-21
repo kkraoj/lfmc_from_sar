@@ -151,9 +151,9 @@ LAG = 4
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
 DROPOUT = 0.15
-LOAD_MODEL = False
-SAVENAME = 'quality_pure+all_same_17_may_2019_small_optim_inv_2'
-OVERWRITE = True
+LOAD_MODEL = True
+SAVENAME = 'quality_pure+all_same_7_may_2019_small'
+OVERWRITE = False
 RETRAIN = False
 
 LOSS = 'mse'
