@@ -562,11 +562,11 @@ low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=40].index
 
 x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
 y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
-plot_pred_actual(x, y,\
-        r2_score(x, y), \
-        sqrt(mean_squared_error(x, y)), \
-        ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
-        xlabel = "FMC", mec = 'grey', mew = 0)
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+#         xlabel = "FMC", mec = 'grey', mew = 0)
 
 high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 
