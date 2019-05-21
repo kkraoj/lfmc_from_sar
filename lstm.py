@@ -16,7 +16,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras import regularizers, optimizers
 import matplotlib.pyplot as plt
 
@@ -152,9 +152,11 @@ EPOCHS = int(20e3)
 BATCHSIZE = 2048
 DROPOUT = 0.1
 LOAD_MODEL = False
-SAVENAME = 'quality_pure+all_same_17_may_2019_small_mae'
-OVERWRITE = False
+SAVENAME = 'quality_pure+all_same_17_may_2019_small_optim_inv_2'
+OVERWRITE = True
 RETRAIN = False
+
+LOSS = 'mse'
 
 RETRAINEPOCHS = int(20e3)
 
@@ -180,7 +182,7 @@ def split_train_test(dataset_with_nans,inputs = None):
     encoder = LabelEncoder()
     dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
     # normalize features
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler(feature_range=(0,1))
     scaled = scaler.fit_transform(dataset.drop(['site','date'],axis = 1).values)
     rescaled = dataset.copy()
     rescaled.loc[:,dataset.drop(['site','date'],axis = 1).columns] = scaled
@@ -224,8 +226,22 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 Areg = regularizers.l2(1e-4)
 Breg = regularizers.l2(1e-4)
-Kreg = regularizers.l2(1e-5)
-Rreg = regularizers.l2(1e-5)
+Kreg = regularizers.l2(1e-4)
+Rreg = regularizers.l2(1e-4)
+
+# root mean squared error (rmse) for regression
+def rmse(y_true, y_pred):
+    from keras import backend
+    return backend.sqrt(backend.mean(backend.square(y_pred - y_true), axis=-1))
+
+# coefficient of determination (R^2) for regression
+def r_square(y_true, y_pred):
+    from keras import backend as K
+    SS_res =  K.sum(K.square(y_true - y_pred)) 
+    SS_tot = K.sum(K.square(y_true - K.mean(y_true))) 
+    return (1 - SS_res/(SS_tot + K.epsilon()))
+
+
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
@@ -252,12 +268,13 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     model.add(Dense(1))
 #    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
 #    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
-    model.compile(loss='mae', optimizer='adam')
+    model.compile(loss=LOSS, optimizer='Nadam')
     # fit network
     return model
 
 checkpoint = ModelCheckpoint(filepath, save_best_only=True)
-callbacks_list = [checkpoint]
+earlystopping=EarlyStopping(patience=1000, verbose=1, mode='auto')
+callbacks_list = [checkpoint, earlystopping]
 
 if  LOAD_MODEL&os.path.isfile(filepath):
     model = load_model(filepath)
@@ -276,7 +293,7 @@ if RETRAIN or not(LOAD_MODEL):
     history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
                         validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
                         callbacks=callbacks_list)
-    model = load_model(filepath) # once trained, load best model
+    # model = load_model(filepath) # once trained, load best model
 
     #%% plot history
     fig, ax = plt.subplots(figsize = (4,4))
@@ -285,7 +302,7 @@ if RETRAIN or not(LOAD_MODEL):
     ax.set_ylim(0,0.05)
     ax.legend()
     ax.set_xlabel('epochs')
-    ax.set_ylabel('mse')
+    ax.set_ylabel(LOSS)
     plt.show()
 #%% 
 #Predictions
@@ -411,7 +428,7 @@ frame = train_frame.append(pred_frame, sort = True)
 #                     marker = 'o', label = 'green', color = 'g')
 #     ax3 = ax.twinx()
 #     l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
-#                    marker = 'o', label = 'vv',color = 'orange')    
+#                     marker = 'o', label = 'vv',color = 'orange')    
 #     ax.set_title(site)
 #     ls = l1+l2+l3+l4
 #     labs = [l.get_label() for l in ls]
@@ -528,17 +545,17 @@ site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_s
 site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
 site_rmse = site_rmse.join(site_train_length)
 site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific RMSE')
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific RMSE')
 
-fig, ax = plt.subplots()
-site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
-                       edgecolor = 'grey', lw = 1)
-ax.set_xlabel('No. of training examples available per site')
-ax.set_ylabel('Site specific NRMSE')
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific NRMSE')
 
 
 #%% ignoring very poor sites
@@ -546,13 +563,14 @@ low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=40].index
 
 x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
 y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
-plot_pred_actual(x, y,\
-        r2_score(x, y), \
-        sqrt(mean_squared_error(x, y)), \
-        ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
-        xlabel = "FMC", mec = 'grey', mew = 0)
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+#         xlabel = "FMC", mec = 'grey', mew = 0)
 
 high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
+
 #%% seasonal cycle rmsd
 #os.chdir(dir_data)
 #df = pd.read_pickle('fmc_04-29-2019')
