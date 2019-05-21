@@ -150,7 +150,7 @@ LAG = 4
 
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
-DROPOUT = 0.1
+DROPOUT = 0.15
 LOAD_MODEL = False
 SAVENAME = 'quality_pure+all_same_17_may_2019_small_optim_inv_2'
 OVERWRITE = True
@@ -226,21 +226,8 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 Areg = regularizers.l2(1e-4)
 Breg = regularizers.l2(1e-4)
-Kreg = regularizers.l2(1e-4)
-Rreg = regularizers.l2(1e-4)
-
-# root mean squared error (rmse) for regression
-def rmse(y_true, y_pred):
-    from keras import backend
-    return backend.sqrt(backend.mean(backend.square(y_pred - y_true), axis=-1))
-
-# coefficient of determination (R^2) for regression
-def r_square(y_true, y_pred):
-    from keras import backend as K
-    SS_res =  K.sum(K.square(y_true - y_pred)) 
-    SS_tot = K.sum(K.square(y_true - K.mean(y_true))) 
-    return (1 - SS_res/(SS_tot + K.epsilon()))
-
+Kreg = regularizers.l2(1e-5)
+Rreg = regularizers.l2(1e-5)
 
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
@@ -369,9 +356,9 @@ plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
 #both.dropna(inplace = True)
 #persistence_rmse = sqrt(mean_squared_error(both['percent(t)_x'], both['percent(t)_y']))
 
-print('[INFO] RMSE: %.3f' % rmse) 
+# print('[INFO] RMSE: %.3f' % rmse) 
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
-print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
+# print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
 #%% plot predicted timeseries
 
