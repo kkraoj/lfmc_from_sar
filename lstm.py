@@ -113,7 +113,7 @@ def make_df():
     for num in microwave_inputs:
         for den in optical_inputs:
             master['%s_%s'%(num, den)] = master[num]/master[den]
-    master['vh_vv'] = master['vh']/master['vv']
+    master['vh_vv'] = master['vh']-master['vv']
     master.reset_index(drop = True, inplace = True)
     return master    
         
@@ -144,23 +144,25 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 #
 #%%  
 ###############################################################################
-RELOADINPUT = True
-INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
-LAG = 4
 
+INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
+SAVENAME = 'quality_pure+all_same_7_may_2019_small_train_test_tailor_split'
+
+##input options 
+RELOADINPUT = True
+LOAD_MODEL = False
+OVERWRITE = True
+RETRAIN = False
+SAVEFIG = False
+##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
 DROPOUT = 0.15
-LOAD_MODEL = True
-SAVENAME = 'quality_pure+all_same_7_may_2019_small'
-OVERWRITE = False
-RETRAIN = False
-
+TRAINRATIO = 0.7
 LOSS = 'mse'
-
+LAG = 4
 RETRAINEPOCHS = int(20e3)
 
-SAVEFIG = False
 ###############################################################################
 
 #%%modeling
@@ -198,8 +200,17 @@ def split_train_test(dataset_with_nans,inputs = None):
     #print(reframed.head())
      
     # split into train and test sets
-    train = reframed.loc[reframed.date.dt.year<2018].drop(['site','date'], axis = 1)
-    test = reframed.loc[reframed.date.dt.year>=2018].drop(['site','date'], axis = 1)
+    # train = reframed.loc[reframed.date.dt.year<2018].drop(['site','date'], axis = 1)
+    # test = reframed.loc[reframed.date.dt.year>=2018].drop(['site','date'], axis = 1)
+    #### split train test as 70% of time series of each site rather than blanket 2018 cutoff
+    train_ind=[]
+    for site in reframed.site.unique():
+        sub = reframed.loc[reframed.site==site]
+        sub = sub.sort_values(by = 'date')
+        train_ind = train_ind+list(sub.index[:int(sub.shape[0]*TRAINRATIO)])
+    train = reframed.loc[train_ind].drop(['site','date'], axis = 1)
+    test = reframed.loc[~reframed.index.isin(train_ind)].drop(['site','date'], axis = 1)
+    
     #print(train.shape)
     #print(test.shape)
     # split into input and outputs
@@ -238,6 +249,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
 #                   recurrent_regularizer = Rreg))
+    # model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))#, \
 #                   activity_regularizer = Areg, \
 #                   bias_regularizer= Breg,\
@@ -392,37 +404,37 @@ frame = train_frame.append(pred_frame, sort = True)
 #        fig.savefig('plots/%s.jpg'%site, bbox_inches='tight')
 #    plt.show()
 
-# sns.set(font_scale=0.9, style = 'ticks')  
-# alpha = 0.2
-# for site in high_rmse_sites:
-#     sub = frame.loc[frame.site==site]
-# #    print(sub.shape)
-#     sub.index = sub.date
-# #    if sub['percent(t)_hat'].count()<7:
-# #        continue
-#     fig, ax = plt.subplots(figsize = (4,1.5))
-#     l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
-#             zorder = 99, markeredgecolor = 'grey',\
-#             marker = 'o', label = 'actual FMC', color = 'None', mew =2)
-#     l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
-#             zorder = 100, markeredgecolor = 'fuchsia', \
-#             marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
-#     ax.set_ylabel('FMC(%)')
-#     ax.set_xlabel('')
+sns.set(font_scale=0.9, style = 'ticks')  
+alpha = 0.2
+for site in ['Rome Overlook']:
+    sub = frame.loc[frame.site==site]
+#    print(sub.shape)
+    sub.index = sub.date
+#    if sub['percent(t)_hat'].count()<7:
+#        continue
+    fig, ax = plt.subplots(figsize = (4,1.5))
+    l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
+            zorder = 99, markeredgecolor = 'grey',\
+            marker = 'o', label = 'actual FMC', color = 'None', mew =2)
+    l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
+            zorder = 100, markeredgecolor = 'fuchsia', \
+            marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
+    ax.set_ylabel('FMC(%)')
+    ax.set_xlabel('')
     
-#     ax2 = ax.twinx()
-#     l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
-#                     marker = 'o', label = 'green', color = 'g')
-#     ax3 = ax.twinx()
-#     l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
-#                     marker = 'o', label = 'vv',color = 'orange')    
-#     ax.set_title(site)
-#     ls = l1+l2+l3+l4
-#     labs = [l.get_label() for l in ls]
-#     ax.tick_params(axis='x', rotation=45)
-#     ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
-#               ncol=2)
-#     plt.show()
+    ax2 = ax.twinx()
+    l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
+                    marker = 'o', label = 'green', color = 'g')
+    ax3 = ax.twinx()
+    l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
+                    marker = 'o', label = 'vv',color = 'orange')    
+    ax.set_title(site)
+    ls = l1+l2+l3+l4
+    labs = [l.get_label() for l in ls]
+    ax.tick_params(axis='x', rotation=45)
+    ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
+              ncol=2)
+    plt.show()
 
 #%% sensitivity
 os.chdir(dir_data)
