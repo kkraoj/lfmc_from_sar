@@ -833,14 +833,14 @@ sns.set(font_scale=1.2, style = 'ticks')
 ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
                 mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
-                     zoom = 1.5,dpi = 150, axis_lim = [75,150], ms = 20,\
+                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
                      xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
 ############## pred FMC vs mean FMC (simple averaged)
 ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
                  mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
-                     zoom = 1.5,dpi = 150, axis_lim = [75,150], ms = 20, \
+                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
                      ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
 
 ######## weights plot
