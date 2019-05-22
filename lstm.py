@@ -43,7 +43,8 @@ lc_dict = {14: 'crop',
             150:'sparse vegetation',
             160:'regularly flooded forest'}
 
-def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2018-12-31', window = '30d', max_gap = '120d'):
+def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2018-12-31', \
+                resolution = '15d',window = '30d', max_gap = '60d'):
     df = df.copy()
     df.index = df.date
     df.dropna(subset = [var], inplace = True)
@@ -56,7 +57,7 @@ def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2018-12-31',
     gap_start = df.loc[(df.delta>=max_gap).shift(-1).fillna(False)].index
     for start, end in zip(gap_start, gap_end):
         z.loc[start:end] = np.nan
-    z =z.reindex(pd.date_range(start=ts_start, end=ts_end, freq='1M'))
+    z =z.reindex(pd.date_range(start=ts_start, end=ts_end, freq=resolution))
     z = pd.DataFrame(z)
     z.dropna(inplace = True)
     z['site'] = df.site[0]
@@ -143,7 +144,7 @@ def series_to_supervised(df, n_in=1, dropnan=False):
     agg.rename(columns = {'site(t)':'site','date(t)':'date'},inplace = True)
     for i in range(n_in, 0, -1): 
         
-        shifted = df_to_shift.shift(freq = '%dM'%i)
+        shifted = df_to_shift.shift(freq = '%dd'%(i*15))
 #        shifted.date = shifted.index ##updating new date
         shifted.drop(['percent', 'date'],inplace = True, axis = 1) # removing lagged fmc
         for col in shifted.columns:
@@ -159,11 +160,12 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 #%%  
 ###############################################################################
 
-INPUTNAME = 'lstm_input_data_pure+all_same_21_may_2019_vv_vh'
-SAVENAME = 'quality_pure+all_same_7_may_2019_small_train_test_tailor_split'
+INPUTNAME = 'lstm_input_data_pure+all_same_22_may_2019_win_15d_gap_60d'
+SAVENAME = 'quality_pure+all_same_22_may_2019_win_15d'
 
 ##input options 
-RELOADINPUT = True
+RELOADINPUT = False
+OVERWRITEINPUT = True
 LOAD_MODEL = True
 OVERWRITE = True
 RETRAIN = True
@@ -171,11 +173,11 @@ SAVEFIG = False
 DROPCROPS = True
 ##modeling options
 EPOCHS = int(20e3)
-BATCHSIZE = 2048
+BATCHSIZE = int(2e5)
 DROPOUT = 0.15
 TRAINRATIO = 0.7
 LOSS = 'mse'
-LAG = 4
+LAG = 7
 RETRAINEPOCHS = int(20e3)
 
 ###############################################################################
@@ -185,7 +187,7 @@ RETRAINEPOCHS = int(20e3)
 if RELOADINPUT:
     dataset_with_nans = pd.read_pickle(INPUTNAME)
 else:
-    if os.path.isfile(INPUTNAME):
+    if os.path.isfile(INPUTNAME) and not(OVERWRITEINPUT):
         raise  Exception('[INFO] Input File already exists. Try different INPUTNAME')
     dataset_with_nans = make_df()    
     dataset_with_nans.to_pickle(INPUTNAME)
@@ -422,37 +424,37 @@ frame = train_frame.append(pred_frame, sort = True)
 #        fig.savefig('plots/%s.jpg'%site, bbox_inches='tight')
 #    plt.show()
 
-sns.set(font_scale=0.9, style = 'ticks')  
-alpha = 0.2
-for site in high_rmse_sites:
-    sub = frame.loc[frame.site==site]
-#    print(sub.shape)
-    sub.index = sub.date
-#    if sub['percent(t)_hat'].count()<7:
-#        continue
-    fig, ax = plt.subplots(figsize = (4,1.5))
-    l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
-            zorder = 99, markeredgecolor = 'grey',\
-            marker = 'o', label = 'actual FMC', color = 'None', mew =2)
-    l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
-            zorder = 100, markeredgecolor = 'fuchsia', \
-            marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
-    ax.set_ylabel('FMC(%)')
-    ax.set_xlabel('')
+# sns.set(font_scale=0.9, style = 'ticks')  
+# alpha = 0.2
+# for site in high_rmse_sites:
+#     sub = frame.loc[frame.site==site]
+# #    print(sub.shape)
+#     sub.index = sub.date
+# #    if sub['percent(t)_hat'].count()<7:
+# #        continue
+#     fig, ax = plt.subplots(figsize = (4,1.5))
+#     l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
+#             zorder = 99, markeredgecolor = 'grey',\
+#             marker = 'o', label = 'actual FMC', color = 'None', mew =2)
+#     l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
+#             zorder = 100, markeredgecolor = 'fuchsia', \
+#             marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
+#     ax.set_ylabel('FMC(%)')
+#     ax.set_xlabel('')
     
-    ax2 = ax.twinx()
-    l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
-                    marker = 'o', label = 'green', color = 'g')
-    ax3 = ax.twinx()
-    l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
-                    marker = 'o', label = 'vv',color = 'orange')    
-    ax.set_title(site)
-    ls = l1+l2+l3+l4
-    labs = [l.get_label() for l in ls]
-    ax.tick_params(axis='x', rotation=45)
-    ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
-              ncol=2)
-    plt.show()
+#     ax2 = ax.twinx()
+#     l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
+#                     marker = 'o', label = 'green', color = 'g')
+#     ax3 = ax.twinx()
+#     l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
+#                     marker = 'o', label = 'vv',color = 'orange')    
+#     ax.set_title(site)
+#     ls = l1+l2+l3+l4
+#     labs = [l.get_label() for l in ls]
+#     ax.tick_params(axis='x', rotation=45)
+#     ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
+#               ncol=2)
+#     plt.show()
 
 #%% sensitivity
 os.chdir(dir_data)
