@@ -165,8 +165,8 @@ SAVENAME = 'quality_pure+all_same_7_may_2019_small_train_test_tailor_split'
 ##input options 
 RELOADINPUT = True
 LOAD_MODEL = True
-OVERWRITE = False
-RETRAIN = False
+OVERWRITE = True
+RETRAIN = True
 SAVEFIG = False
 DROPCROPS = True
 ##modeling options
@@ -647,20 +647,21 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 # hist.plot(kind = 'bar', ax = ax)
 # ax.set_ylabel('No. of sites')
 
-
+#%%
 ## site based heatmap
+# rank = pred_frame.groupby('site').mean().drop(['percent_seasonal_mean','mod','percent(t)_hat'],axis = 1)
+# for col in rank.columns:
+#     if col[-3]=='-':
+#         rank.drop(col, axis = 1, inplace = True)
+# rank.columns = rank.columns.str[:-3]
+# rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
+# rank = rank.join(site_rmse)
+# # rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
+# rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
+# # rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
+# # rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
+# rank = rank.rename(columns = {'percent':'fmc'})
+# sns.set(font_scale=0.5, style = 'ticks')  
+# axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (6,4))
 
-rank = pred_frame.groupby('site').mean().drop(['percent_seasonal_mean','mod','percent(t)_hat'],axis = 1)
-for col in rank.columns:
-    if col[-3]=='-':
-        rank.drop(col, axis = 1, inplace = True)
-rank.columns = rank.columns.str[:-3]
-rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
-rank = rank.join(site_rmse)
-# rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
-rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
-# rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
-# rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
-rank = rank.rename(columns = {'percent':'fmc'})
-sns.set(font_scale=0.5, style = 'ticks')  
-axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (6,4))
+#%% 
