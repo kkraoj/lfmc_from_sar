@@ -29,6 +29,20 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 pd.set_option('display.max_columns', 10)
 
+lc_dict = {14: 'crop',
+            20: 'crop',
+            30: 'crop',
+            50: 'closed broadleaf deciduous',
+            70: 'closed needleleaf evergreen',
+            90: 'mixed forest',
+            100:'mixed forest',
+            110:'shrub',
+            120:'shrub',
+            130:'shrub',
+            140:'grass',
+            150:'sparse vegetation',
+            160:'regularly flooded forest'}
+
 def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2018-12-31', window = '30d', max_gap = '120d'):
     df = df.copy()
     df.index = df.date
@@ -145,15 +159,16 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 #%%  
 ###############################################################################
 
-INPUTNAME = 'lstm_input_data_pure+all_same_07_may_2019'
+INPUTNAME = 'lstm_input_data_pure+all_same_21_may_2019_vv_vh'
 SAVENAME = 'quality_pure+all_same_7_may_2019_small_train_test_tailor_split'
 
 ##input options 
 RELOADINPUT = True
-LOAD_MODEL = False
-OVERWRITE = True
+LOAD_MODEL = True
+OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
+DROPCROPS = True
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = 2048
@@ -180,6 +195,9 @@ def split_train_test(dataset_with_nans,inputs = None):
         dataset = dataset_with_nans.loc[:,['site','date', 'percent']+inputs].dropna()
     else:
         dataset = dataset_with_nans.dropna()
+    if DROPCROPS:
+        crop_classes = [item[0] for item in lc_dict.items() if item[1] == 'crop']
+        dataset = dataset.loc[~dataset.forest_cover.isin(crop_classes)]
     # integer encode forest cover
     encoder = LabelEncoder()
     dataset['forest_cover'] = encoder.fit_transform(dataset['forest_cover'].values)
@@ -207,7 +225,7 @@ def split_train_test(dataset_with_nans,inputs = None):
     for site in reframed.site.unique():
         sub = reframed.loc[reframed.site==site]
         sub = sub.sort_values(by = 'date')
-        train_ind = train_ind+list(sub.index[:int(sub.shape[0]*TRAINRATIO)])
+        train_ind = train_ind+list(sub.index[:int(np.ceil(sub.shape[0]*TRAINRATIO))])
     train = reframed.loc[train_ind].drop(['site','date'], axis = 1)
     test = reframed.loc[~reframed.index.isin(train_ind)].drop(['site','date'], axis = 1)
     
@@ -621,23 +639,28 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
 #%% Histogram of forest cover in the study area
 
-# lc_dict = {14: 'crop',
-#            20: 'crop',
-#            30: 'crop',
-#            50: 'closed broadleaf deciduous',
-#            70: 'closed needleleaf evergreen',
-#            90: 'mixed forest',
-#            100:'mixed forest',
-#            110:'shrub',
-#            120:'shrub',
-#            130:'shrub',
-#            140:'grass',
-#            150:'sparse vegetation',
-#            160:'regularly flooded forest'}
+
 # hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
-# hist.apply(lambda item: item.index = lc)
 # hist.index = hist.index.to_series().map(lc_dict)
 
 # fig, ax = plt.subplots(figsize = (4,4))
 # hist.plot(kind = 'bar', ax = ax)
 # ax.set_ylabel('No. of sites')
+
+
+## site based heatmap
+
+rank = pred_frame.groupby('site').mean().drop(['percent_seasonal_mean','mod','percent(t)_hat'],axis = 1)
+for col in rank.columns:
+    if col[-3]=='-':
+        rank.drop(col, axis = 1, inplace = True)
+rank.columns = rank.columns.str[:-3]
+rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
+rank = rank.join(site_rmse)
+# rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
+rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
+# rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
+# rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
+rank = rank.rename(columns = {'percent':'fmc'})
+sns.set(font_scale=0.5, style = 'ticks')  
+axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (6,4))
