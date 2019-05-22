@@ -664,4 +664,39 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 # sns.set(font_scale=0.5, style = 'ticks')  
 # axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (6,4))
 
-#%% 
+#%% seasonality vs. IAV
+
+score = pred_frame.groupby('site').mean()
+score['seasonality_score'] = np.nan
+score['IAV_score'] = np.nan
+score = score[['seasonality_score','IAV_score']]
+##check seasonality
+def seasonality_score(df):
+    if df.shape[0]<=4:
+        return np.nan
+    else:
+        score = np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]
+    return score
+##check IAV
+def IAV_score(df):
+    # df =df.dropna()
+    mean = df.mean()
+    ### asumes all predictions span one year at max
+    score = (mean['percent(t)_hat'] - mean['percent(t)'])/mean['percent(t)']
+    return score
+
+for site in score.index:
+    sub = pred_frame.loc[pred_frame.site==site]
+    score.loc[site,'seasonality_score'] = seasonality_score(sub)
+    score.loc[site,'IAV_score'] = IAV_score(sub)
+score.dropna(inplace = True)
+sns.set(font_scale=1.4, style = 'ticks')
+fig, ax = plt.subplots(figsize = (4,4))
+ax.set_xlim(-1,1)
+ax.set_ylim(-1,1)
+sns.kdeplot(score.seasonality_score, score.IAV_score, ax = ax, cmap = 'Blues', shade = True, shade_lowest=False)
+ax.scatter(score.seasonality_score, score.IAV_score, marker = '+', color = 'k', linewidth = 0.5, s = 15)
+plt.show()
+print(score.shape)
+
+    
