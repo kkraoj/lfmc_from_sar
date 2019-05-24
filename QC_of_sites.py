@@ -61,21 +61,21 @@ if __name__ == "__main__":
     #fmc.loc[(fmc.duplicated(keep = False)==True)&(fmc.Latitude!=0)].to_excel('NFMD_duplicated_sites.xls')
     ### duplicates already dropped in NFMD_sites.xls
     ### ignroe sites for which location data not available
-    df = df.loc[df.site.isin(fmc.Latitude!=0)]
+    # df = df.loc[df.site.isin(fmc.Latitude!=0)]
     
     unique_sites = pd.DataFrame(df.site.unique(), columns = ["site"], dtype = 'str')
     unique_sites.sort_values(inplace = True, by = 'site')
     #unique_sites.to_excel("NFMD_sites.xls")
     
-#    for site in unique_sites['site'][500:600]:
-#        df_sub = df.loc[df.site==site]
-#        fig, ax = plt.subplots(figsize = (9, 6))
-#        for fuel in df_sub.fuel.unique():
-#            df_sub.loc[df_sub.fuel==fuel].plot(y = 'percent', ax=ax, marker = 'o', label = fuel)
-#        ax.set_title(site)
-#        ax.set_ylabel('FMC (%)')
-#        ax.set_xlabel('')
-#        ax.legend(bbox_to_anchor = [1,1])
-#        plt.show()
+    for site in unique_sites['site'][500:600]:
+        df_sub = df.loc[df.site==site]
+        fig, ax = plt.subplots(figsize = (9, 6))
+        for fuel in df_sub.fuel.unique():
+            df_sub.loc[df_sub.fuel==fuel].plot(y = 'percent', ax=ax, marker = 'o', label = fuel)
+        ax.set_title(site)
+        ax.set_ylabel('FMC (%)')
+        ax.set_xlabel('')
+        ax.legend(bbox_to_anchor = [1,1])
+        plt.show()
     
 
