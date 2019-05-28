@@ -13,7 +13,7 @@ from numpy import concatenate
 from scipy import optimize
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
-from pandas.tseries.offsets import MonthEnd
+from pandas.tseries.offsets import MonthEnd, SemiMonthEnd
 
 
 from sklearn.metrics import mean_squared_error, r2_score
@@ -47,26 +47,52 @@ lc_dict = {14: 'crop',
             150:'sparse vegetation',
             160:'regularly flooded forest'}
 
-def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2018-12-31', \
-                resolution = '15d',window = '30d', max_gap = '60d'):
+def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2019-05-31', \
+                resolution = '1M',window = '1M', max_gap = '4M'):
     df = df.copy()
     df.index = df.date
-    df.dropna(subset = [var], inplace = True)
-    x_ = df.groupby(df.index).mean().resample('1d').asfreq().index.values
-    y_ = df.groupby(df.index).mean().resample('1d').asfreq()[var].interpolate().rolling(window = window).mean()
-    z = pd.Series(y_,x_)
-    df.sort_index(inplace = True)
-    df['delta'] = df['date'].diff()
-    gap_end = df.loc[df.delta>=max_gap].index
-    gap_start = df.loc[(df.delta>=max_gap).shift(-1).fillna(False)].index
-    for start, end in zip(gap_start, gap_end):
-        z.loc[start:end] = np.nan
-    z =z.reindex(pd.date_range(start=ts_start, end=ts_end, freq=resolution))
-    z = pd.DataFrame(z)
-    z.dropna(inplace = True)
-    z['site'] = df.site[0]
-    z['date'] = z.index
-    return  z
+    df = df.resample(resolution).mean()
+
+        
+    # df.dropna(subset = [var], inplace = True)
+    # x_ = df.groupby(df.index).mean().resample('1d').asfreq().index.values
+    # y_ = df.groupby(df.index).mean().resample('1d').asfreq()[var].interpolate().rolling(window = window).mean()
+    # z = pd.Series(y_,x_)
+    # df.sort_index(inplace = True)
+    if resolution == '1M':
+        interp_limit = int(max_gap[:-1])
+    elif resolution =='SM':
+        interp_limit = 2*int(max_gap[:-1])
+    else:
+        raise  Exception('[INFO] RESOLUTION not supported')
+    df = df.interpolate(limit = interp_limit)    
+    df = df.dropna()
+    df = df[var]
+    df['date'] = df.index
+    # df['delta'] = df.index.to_series().diff()
+    # gap_end = df.loc[df.delta>=max_gap].index
+    # gap_start = df.loc[(df.delta>=max_gap).shift(-1).fillna(False)].index
+    # for start, end in zip(gap_start, gap_end):
+    #     z.loc[start:end] = np.nan
+    # z =z.reindex(pd.date_range(start=ts_start, end=ts_end, freq=resolution))
+    # z = pd.DataFrame(z)
+    # z.dropna(inplace = True)
+    # z['site'] = df.site[0]
+    # z['date'] = z.index
+    return  df
+
+def reindex(df, resolution = '1M'):
+    site = df.site.values[0]
+    if resolution == '1M':
+        df.date = pd.to_datetime(df['date'], format="%Y%m") + MonthEnd(1)
+    elif resolution =='SM':
+        df.date = df.date + SemiMonthEnd(1)
+    else:
+        raise  Exception('[INFO] RESOLUTION not supported')
+    df = df.groupby('date').mean()
+    df['date'] = df.index
+    df['site'] = site
+    return df
 
 os.chdir(dir_data)
 # convert series to supervised learning
@@ -82,59 +108,108 @@ static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
 
 all_inputs = static_inputs+dynamic_inputs
 inputs = all_inputs
-def make_df(quality = 'pure+all same'):
+def make_df(quality = 'pure+all same',resolution = '1M', max_gap = '4M', lag = '3M', inputs = inputs):
     ####FMC
-    df = pd.read_pickle('fmc_04-29-2019')
+    df = pd.read_pickle('fmc_24_may_2019')
     df = clean_fmc(df, quality = quality)
     master = pd.DataFrame()
     no_inputs_sites = []
     for site in df.site.unique():
         df_sub = df.loc[df.site==site]
-        df_sub = interpolate(df_sub, 'percent')
+        df_sub = reindex(df_sub,resolution = resolution)
+        # df_sub = interpolate(df_sub, 'percent', resolution = resolution, max_gap = max_gap)
         master = master.append(df_sub, ignore_index = True, sort = False)
-     
-    ### optical
-    df = pd.read_pickle('landsat8_500m_cloudless')
-    for var in optical_inputs:
-        feature = pd.DataFrame()
-        for site in master.site.unique():
-            if site in df.site.values:
-                df_sub = df.loc[df.site==site]  
-                feature_sub = interpolate(df_sub, var)
-                feature = feature.append(feature_sub, ignore_index = True, sort = False)
-            else:
-                if site not in no_inputs_sites:
-                    print('[INFO]\tsite skipped :\t%s'%site)
-                    no_inputs_sites.append(site)
-        master = pd.merge(master,feature, on=['date','site'], how = 'outer')         
-    ### sar
-    df = pd.read_pickle('sar_ascending_30_apr_2019')
-    for var in microwave_inputs:
-        feature = pd.DataFrame()
-        for site in master.site.unique():
-            if site in df.site.values:
-                df_sub = df.loc[df.site==site]  
-                feature_sub = interpolate(df_sub, var)
-                feature = feature.append(feature_sub, ignore_index = True, sort = False)
-            else:
-                if site not in no_inputs_sites:
-                    print('[INFO]\tsite skipped :\t%s'%site)
-                    no_inputs_sites.append(site)
-        master = pd.merge(master,feature, on=['date','site'], how = 'outer')          
-    
     ## static inputs    
     static_features_all = pd.read_csv('static_features.csv',dtype = {'site':str}, index_col = 0)
     if not(static_inputs is None):
         static_features_subset = static_features_all.loc[:,static_inputs]
-        master = master.join(static_features_subset, on = 'site')
+        master = master.join(static_features_subset, on = 'site') 
+    ### optical
     
+    df = pd.read_pickle('landsat8_500m_cloudless')
+    # for var in optical_inputs:
+    opt = pd.DataFrame()
+    for site in master.site.unique():
+        if site in df.site.values:
+            df_sub = df.loc[df.site==site]  
+            feature_sub = interpolate(df_sub, var = optical_inputs, resolution = resolution, max_gap = max_gap)
+            feature_sub['site'] = site
+            opt = opt.append(feature_sub, ignore_index = True, sort = False)
+        else:
+            if site not in no_inputs_sites:
+                print('[INFO]\tsite skipped :\t%s'%site)
+                no_inputs_sites.append(site)
+        # master = pd.merge(master,feature, on=['date','site'], how = 'outer')         
+    ### sar
+    df = pd.read_pickle('sar_ascending_30_apr_2019')
+    # for var in microwave_inputs:
+    micro = pd.DataFrame()
+    for site in master.site.unique():
+        if site in df.site.values:
+            df_sub = df.loc[df.site==site]  
+            feature_sub = interpolate(df_sub, var = microwave_inputs, resolution = resolution, max_gap = max_gap)
+            feature_sub['site'] = site
+            micro = micro.append(feature_sub, ignore_index = True, sort = False)
+        else:
+            if site not in no_inputs_sites:
+                print('[INFO]\tsite skipped :\t%s'%site)
+                no_inputs_sites.append(site)
+        # master = pd.merge(master,feature, on=['date','site'], how = 'outer')          
+        
+    dyn = pd.merge(opt,micro, on=['date','site'], how = 'outer')
     ## micro/opt inputs
     for num in microwave_inputs:
         for den in optical_inputs:
-            master['%s_%s'%(num, den)] = master[num]/master[den]
-    master['vh_vv'] = master['vh']-master['vv']
-    master.reset_index(drop = True, inplace = True)
-    return master    
+            dyn['%s_%s'%(num, den)] = dyn[num]/dyn[den]
+    dyn['vh_vv'] = dyn['vh']-dyn['vv']
+    
+    dyn = dyn[dynamic_inputs+['date','site']]
+    dyn = dyn.dropna()
+
+    ## start filling master
+    count=0
+    if resolution == '1M':
+        int_lag = int(lag[:-1])
+    elif resolution =='SM':
+        int_lag = 2*int(lag[:-1])
+    else:
+        raise  Exception('[INFO] RESOLUTION not supported')
+        
+        
+        
+    # for index, row in master.iterrows():
+    #     dyn_sub = dyn.loc[dyn.site==row.site]
+    #     dyn_sub['delta'] = row.date - dyn_sub.date
+    #     if resolution == '1M':
+    #         dyn_sub['steps'] = (dyn_sub['delta'] /np.timedelta64(1, 'M')).astype('int')
+    #     elif resolution =='SM':
+    #         dyn_sub['steps'] = (dyn_sub['delta']/np.timedelta64(15, 'D')).astype('int')
+    #     if all(elem in dyn_sub['steps'].values  for elem in range(int_lag, 0, -1)):
+    #         count+=1
+    #         print('[INFO] %d'%count)
+    
+    count=0
+    site_count = 0
+    ##vectorized:
+    for site in master.site.unique():
+        master_sub = master.loc[master.site==site]
+        if site in dyn.site.values:
+            dyn_sub = dyn.loc[dyn.site==site]
+            delta = master_sub.date.values.astype('datetime64[D]') - dyn_sub.date.values.astype('datetime64[D]').reshape((len(dyn_sub.date), 1))
+            if resolution == '1M':
+                delta = (delta/np.timedelta64(30, 'D')).astype('int')
+            elif resolution =='SM':
+                delta = (delta/np.timedelta64(15, 'D')).astype('int')
+            matches = np.repeat(0, delta.shape[1])
+            for item in range(int_lag, -1, -1):
+                matches+=(delta==item).any(axis = 0)
+            count+=(matches==(int_lag+1)).sum() 
+            if (matches==int_lag+1).sum() >=1:
+                site_count+=1
+    print('[INFO] Examples = %d'%count)    
+    print('[INFO] Sites = %d'%site_count)
+    # master.reset_index(drop = True, inplace = True)
+    # return master    
         
 
 
@@ -168,13 +243,16 @@ INPUTNAME = 'lstm_input_data_pure+all_same_22_may_2019_win_15d_gap_60d'
 SAVENAME = 'quality_pure+all_same_22_may_2019_win_15d'
 
 ##input options 
-RELOADINPUT = False
-OVERWRITEINPUT = True
+RELOADINPUT = True
+OVERWRITEINPUT = False
 LOAD_MODEL = True
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
+RESOLUTION = '1M'
+MAXGAP = '120d'
+
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = int(2e5)
@@ -193,7 +271,7 @@ if RELOADINPUT:
 else:
     if os.path.isfile(INPUTNAME) and not(OVERWRITEINPUT):
         raise  Exception('[INFO] Input File already exists. Try different INPUTNAME')
-    dataset_with_nans = make_df()    
+    dataset_with_nans = make_df(resolution = RESOLUTION, max_gap = MAXGAP, lag = LAG, inputs = inputs)    
     dataset_with_nans.to_pickle(INPUTNAME)
     
 def split_train_test(dataset_with_nans,inputs = None):
@@ -713,149 +791,149 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 #%% weights for mixed species
 
 
-def solve_for_weights(true_sub):
-    no_of_weights = len(true_sub.fuel.unique())
-       # data provided
-    x0 = np.repeat(0.,no_of_weights)
-    bounds=((0, 1),)*no_of_weights
-    X = true_sub.pivot(values = 'percent',columns = 'fuel')
-    X = X.fillna(X.mean()) ### important assumption. missing fmc replaced by mean
-#    X.dropna(inplace = True)
-    #sort columns alphabatically so that weight can be mapped to species later
-    X = X.reindex(sorted(X.columns), axis=1)
-    target = true_sub.groupby(true_sub.index)['percent(t)_hat'].mean()
-    target = target.loc[X.index]
+# def solve_for_weights(true_sub):
+#     no_of_weights = len(true_sub.fuel.unique())
+#        # data provided
+#     x0 = np.repeat(0.,no_of_weights)
+#     bounds=((0, 1),)*no_of_weights
+#     X = true_sub.pivot(values = 'percent',columns = 'fuel')
+#     X = X.fillna(X.mean()) ### important assumption. missing fmc replaced by mean
+# #    X.dropna(inplace = True)
+#     #sort columns alphabatically so that weight can be mapped to species later
+#     X = X.reindex(sorted(X.columns), axis=1)
+#     target = true_sub.groupby(true_sub.index)['percent(t)_hat'].mean()
+#     target = target.loc[X.index]
 
-    def loss(x):
-        return mean_squared_error(target,X.dot(x))**0.5
-    cons = {'type':'eq',
-            'fun':lambda x: 1 - np.sum(x)}
+#     def loss(x):
+#         return mean_squared_error(target,X.dot(x))**0.5
+#     cons = {'type':'eq',
+#             'fun':lambda x: 1 - np.sum(x)}
     
-    opt = {'disp':False}
+#     opt = {'disp':False}
     
-    res = optimize.minimize(loss, x0, constraints=cons,
-                                 method='SLSQP', options=opt, bounds = bounds)
-    ## return optimization result, target FMC (FMC predicted from model),
-    ## True measured FMC multiplied by weights, simply averaged FMC with weights = 1/n
+#     res = optimize.minimize(loss, x0, constraints=cons,
+#                                  method='SLSQP', options=opt, bounds = bounds)
+#     ## return optimization result, target FMC (FMC predicted from model),
+#     ## True measured FMC multiplied by weights, simply averaged FMC with weights = 1/n
     
-    return res, target, X.dot(res.x), X.mean(axis = 1)
+#     return res, target, X.dot(res.x), X.mean(axis = 1)
 
 
-df = make_df(quality = 'only mixed')
+# df = make_df(quality = 'only mixed')
 
-dataset, rescaled, reframed, \
-    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler, encoder = split_train_test(df, inputs = inputs)
-test_Xr = np.concatenate((train_Xr, test_Xr))
-test = train.append(test)
-test_X = test.drop(['percent(t)'], axis = 1).values
-inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
-
-
-true = pd.read_pickle('fmc_04-29-2019')
-true.site = true.site.astype('str')
-true.date = pd.to_datetime(true.date)
-true.date = true.date + MonthEnd(1)
-
-true = true.loc[true.date.dt.year>=2015]
-true = true.loc[~true.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour'])] 
-true = true[~true.fuel.str.contains("Duff")] ###dropping all dead DMC
-true = true[~true.fuel.str.contains("Dead")] ###dropping all dead DMC
-true = true[~true.fuel.str.contains("DMC")] ###dropping all dead DMC
-no_of_species_in_sites = true.groupby('site').fuel.unique().apply(lambda series: len(series))
-sites_with_leq_4_species = no_of_species_in_sites.loc[(no_of_species_in_sites<=4)].index
-true = true.loc[true.site.isin(sites_with_leq_4_species)]
-true.index = pd.to_datetime(true.date)
-ctr_found = 0
-ctr_notfound = 0
-ctr_more_than_1_fuels = 0
+# dataset, rescaled, reframed, \
+#     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+#     scaler, encoder = split_train_test(df, inputs = inputs)
+# test_Xr = np.concatenate((train_Xr, test_Xr))
+# test = train.append(test)
+# test_X = test.drop(['percent(t)'], axis = 1).values
+# inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 
 
-W = pd.DataFrame(index = true.site.unique(), columns = ['W1','W2','W3','W4','RMSE'])
-W = W.sort_index()
-col_list = ['site','date','S1','S2','S3','S4','W1','W2','W3','W4','FMC_weighted','FMC_mean','FMC_hat','RMSE']
-optimized_df = pd.DataFrame(columns = col_list)
+# true = pd.read_pickle('fmc_04-29-2019')
+# true.site = true.site.astype('str')
+# true.date = pd.to_datetime(true.date)
+# true.date = true.date + MonthEnd(1)
+
+# true = true.loc[true.date.dt.year>=2015]
+# true = true.loc[~true.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour'])] 
+# true = true[~true.fuel.str.contains("Duff")] ###dropping all dead DMC
+# true = true[~true.fuel.str.contains("Dead")] ###dropping all dead DMC
+# true = true[~true.fuel.str.contains("DMC")] ###dropping all dead DMC
+# no_of_species_in_sites = true.groupby('site').fuel.unique().apply(lambda series: len(series))
+# sites_with_leq_4_species = no_of_species_in_sites.loc[(no_of_species_in_sites<=4)].index
+# true = true.loc[true.site.isin(sites_with_leq_4_species)]
+# true.index = pd.to_datetime(true.date)
+# ctr_found = 0
+# ctr_notfound = 0
+# ctr_more_than_1_fuels = 0
 
 
-for site in true.site.unique():
-    if site in pred_frame.site.values:
-#            print('[INFO] Site found')
-        ctr_found+=1
-        true_sub = true.loc[true.site==site,['site','date','fuel','percent']]
-        true_sub = true_sub.groupby(['date','fuel']).mean().reset_index()
-        # true_sub = true_sub.set_index('date')
+# W = pd.DataFrame(index = true.site.unique(), columns = ['W1','W2','W3','W4','RMSE'])
+# W = W.sort_index()
+# col_list = ['site','date','S1','S2','S3','S4','W1','W2','W3','W4','FMC_weighted','FMC_mean','FMC_hat','RMSE']
+# optimized_df = pd.DataFrame(columns = col_list)
+
+
+# for site in true.site.unique():
+#     if site in pred_frame.site.values:
+# #            print('[INFO] Site found')
+#         ctr_found+=1
+#         true_sub = true.loc[true.site==site,['site','date','fuel','percent']]
+#         true_sub = true_sub.groupby(['date','fuel']).mean().reset_index()
+#         # true_sub = true_sub.set_index('date')
         
-        pred_sub = pred_frame.loc[pred_frame.site==site,['date','percent(t)_hat']].copy()
-        true_sub = true_sub.set_index('date').join(pred_sub.set_index('date'), how = 'inner', on = 'date')
-        if true_sub.shape[0]<20:
-            continue
-#            print('[INFO] No. of fuels = %d'%len(true_sub.fuel.unique()))
-        if len(true_sub.fuel.unique())>1:
-            ctr_more_than_1_fuels+=1
-            res, FMC_hat, FMC_weighted, FMC_mean = solve_for_weights(true_sub)
-            w = res.x
-            rmse = res.fun
-            if len(w)<4:
-                w = np.append(w, np.repeat(np.nan, 4-len(w)))
-            w = np.append(w, rmse)
-            W.loc[site] = w
-            ##### fill outputs of optimization in optimized df
-            FMC_hat.name = 'FMC_hat'
-            FMC_weighted.name = 'FMC_weighted'
-            FMC_mean.name = 'FMC_mean'
-#            break
-            _odf = pd.concat([FMC_hat, FMC_weighted, FMC_mean], axis=1)
-            _odf = _odf.reindex(columns = col_list)                
-            _odf['date'] = _odf.index
-            _odf['site'] = site
-            _odf.loc[:,['W1','W2','W3','W4','RMSE']] = w 
-            species = sorted(true_sub.fuel.unique())
-            if len(species)<4:
-                species = species+['nan']*(4-len(species))
-            _odf.loc[:,['S1','S2','S3','S4']] = species
-            optimized_df = optimized_df.append(_odf, ignore_index = True)
-            print('[INFO]\tWeights computed for site\t%s'%site)
-    else:
-        ctr_notfound+=1
-#            print('[INFO] Site NOT found')
+#         pred_sub = pred_frame.loc[pred_frame.site==site,['date','percent(t)_hat']].copy()
+#         true_sub = true_sub.set_index('date').join(pred_sub.set_index('date'), how = 'inner', on = 'date')
+#         if true_sub.shape[0]<20:
+#             continue
+# #            print('[INFO] No. of fuels = %d'%len(true_sub.fuel.unique()))
+#         if len(true_sub.fuel.unique())>1:
+#             ctr_more_than_1_fuels+=1
+#             res, FMC_hat, FMC_weighted, FMC_mean = solve_for_weights(true_sub)
+#             w = res.x
+#             rmse = res.fun
+#             if len(w)<4:
+#                 w = np.append(w, np.repeat(np.nan, 4-len(w)))
+#             w = np.append(w, rmse)
+#             W.loc[site] = w
+#             ##### fill outputs of optimization in optimized df
+#             FMC_hat.name = 'FMC_hat'
+#             FMC_weighted.name = 'FMC_weighted'
+#             FMC_mean.name = 'FMC_mean'
+# #            break
+#             _odf = pd.concat([FMC_hat, FMC_weighted, FMC_mean], axis=1)
+#             _odf = _odf.reindex(columns = col_list)                
+#             _odf['date'] = _odf.index
+#             _odf['site'] = site
+#             _odf.loc[:,['W1','W2','W3','W4','RMSE']] = w 
+#             species = sorted(true_sub.fuel.unique())
+#             if len(species)<4:
+#                 species = species+['nan']*(4-len(species))
+#             _odf.loc[:,['S1','S2','S3','S4']] = species
+#             optimized_df = optimized_df.append(_odf, ignore_index = True)
+#             print('[INFO]\tWeights computed for site\t%s'%site)
+#     else:
+#         ctr_notfound+=1
+# #            print('[INFO] Site NOT found')
 
-W = W.infer_objects()       
-W.dropna(how = 'all', inplace = True)
-#W.to_pickle("mixed_species/mixed_species_weights")
-#optimized_df.to_pickle('mixed_species/optimization_results')     
+# W = W.infer_objects()       
+# W.dropna(how = 'all', inplace = True)
+# #W.to_pickle("mixed_species/mixed_species_weights")
+# #optimized_df.to_pickle('mixed_species/optimization_results')     
     
    
-####### hist of RMSE
-#sns.set(font_scale=1.5, style = 'ticks')
-#fig, ax = plt.subplots(figsize = (3,3))
-#W.hist(column = 'RMSE', ax = ax, bins = 50, density = True)
-#ax.set_xlabel('RMSE')
-#ax.set_ylabel('Probability Density')
-#ax.set_xlim(0,10)
-############## pred FMC vs optimized FMC
-sns.set(font_scale=1.2, style = 'ticks')  
-ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
-                 r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
-                mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
-                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
-                     xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
+# ####### hist of RMSE
+# #sns.set(font_scale=1.5, style = 'ticks')
+# #fig, ax = plt.subplots(figsize = (3,3))
+# #W.hist(column = 'RMSE', ax = ax, bins = 50, density = True)
+# #ax.set_xlabel('RMSE')
+# #ax.set_ylabel('Probability Density')
+# #ax.set_xlim(0,10)
+# ############## pred FMC vs optimized FMC
+# sns.set(font_scale=1.2, style = 'ticks')  
+# ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
+#                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
+#                 mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
+#                      zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
+#                      xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
-############## pred FMC vs mean FMC (simple averaged)
-ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
-                 r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
-                 mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
-                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
-                     ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
+# ############## pred FMC vs mean FMC (simple averaged)
+# ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
+#                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
+#                  mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
+#                      zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
+#                      ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
 
-######## weights plot
+# ######## weights plot
 
-Wmax = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().max(1)
-Wmin = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().min(1)
-fig, ax = plt.subplots(figsize = (3,3))
-sns.kdeplot(Wmin, Wmax,cmap="Blues", shade=True, ax = ax, shade_lowest = False,n_levels=100)
-ax.scatter(Wmin, Wmax, edgecolor = 'k', s = 15, facecolor = 'b')
-ax.set_xlim(-0.1,1.1)
-ax.set_ylim(-0.1,1.1)
-ax.set_xlabel('min($w_i$)')
-ax.set_ylabel('max($w_i$)')
-#######
+# Wmax = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().max(1)
+# Wmin = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().min(1)
+# fig, ax = plt.subplots(figsize = (3,3))
+# sns.kdeplot(Wmin, Wmax,cmap="Blues", shade=True, ax = ax, shade_lowest = False,n_levels=100)
+# ax.scatter(Wmin, Wmax, edgecolor = 'k', s = 15, facecolor = 'b')
+# ax.set_xlim(-0.1,1.1)
+# ax.set_ylim(-0.1,1.1)
+# ax.set_xlabel('min($w_i$)')
+# ax.set_ylabel('max($w_i$)')
+# #######
