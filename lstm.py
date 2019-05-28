@@ -10,8 +10,12 @@ import pandas as pd
 import numpy as np
 from math import sqrt
 from numpy import concatenate
+from scipy import optimize
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
+from pandas.tseries.offsets import MonthEnd
+
+
 from sklearn.metrics import mean_squared_error, r2_score
 from keras.models import Sequential, load_model
 from keras.layers import Dense
@@ -78,10 +82,10 @@ static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
 
 all_inputs = static_inputs+dynamic_inputs
 inputs = all_inputs
-def make_df():
+def make_df(quality = 'pure+all same'):
     ####FMC
     df = pd.read_pickle('fmc_04-29-2019')
-    df = clean_fmc(df, quality = 'pure+all same')
+    df = clean_fmc(df, quality = quality)
     master = pd.DataFrame()
     no_inputs_sites = []
     for site in df.site.unique():
@@ -167,8 +171,8 @@ SAVENAME = 'quality_pure+all_same_22_may_2019_win_15d'
 RELOADINPUT = False
 OVERWRITEINPUT = True
 LOAD_MODEL = True
-OVERWRITE = True
-RETRAIN = True
+OVERWRITE = False
+RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
 ##modeling options
@@ -392,13 +396,52 @@ plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
 # print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
-#%% plot predicted timeseries
+#%%individual sites error
+
+## sites which have less training data
 
 train_frame = train.copy()
 train_frame.iloc[:,:len(inputs)+1] = scaler.inverse_transform(train.iloc[:,:len(inputs)+1])
 train_frame = train_frame.iloc[:,:len(inputs)+1]
 train_frame = train_frame.join(reframed.loc[:,['site','date']])
 frame = train_frame.append(pred_frame, sort = True)
+
+site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
+site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
+                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
+site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
+site_rmse = site_rmse.join(site_train_length)
+site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
+
+site_rmse = site_rmse.sort_values(by = 'site_rmse', ascending = False)
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific RMSE')
+
+# fig, ax = plt.subplots()
+# site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
+#                        edgecolor = 'grey', lw = 1)
+# ax.set_xlabel('No. of training examples available per site')
+# ax.set_ylabel('Site specific NRMSE')
+
+#%% ignoring very poor sites
+low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=40].index
+
+x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
+y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
+#         xlabel = "FMC", mec = 'grey', mew = 0)
+
+high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
+
+#%% plot predicted timeseries
+
+
 #
 #sns.set(font_scale=0.9, style = 'ticks')  
 #for site in pred_frame.site.unique():
@@ -555,40 +598,6 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #ax.set_ylabel('Site spceific $\sigma_{VV}$ availability')
 #plt.xticks(rotation=40)
 
-#%%individual sites error
-
-## sites which have less training data
-site_train_length = pd.DataFrame(train_frame.groupby('site').site.count().rename('train_length'))
-site_rmse = pd.DataFrame(pred_frame.groupby('site').apply(lambda df: sqrt(mean_squared_error(\
-                  df['percent(t)'], df['percent(t)_hat']))), columns = ['site_rmse'])
-site_rmse = site_rmse.join(frame.groupby('site')['percent(t)'].std().rename('norm_site_rmse'))
-site_rmse = site_rmse.join(site_train_length)
-site_rmse['norm_site_rmse'] = site_rmse['site_rmse']/site_rmse['norm_site_rmse']
-# fig, ax = plt.subplots()
-# site_rmse.plot.scatter(x = 'train_length',y='site_rmse', ax = ax, s = 40, \
-#                        edgecolor = 'grey', lw = 1)
-# ax.set_xlabel('No. of training examples available per site')
-# ax.set_ylabel('Site specific RMSE')
-
-# fig, ax = plt.subplots()
-# site_rmse.plot.scatter(x = 'train_length',y='norm_site_rmse', ax = ax, s = 40, \
-#                        edgecolor = 'grey', lw = 1)
-# ax.set_xlabel('No. of training examples available per site')
-# ax.set_ylabel('Site specific NRMSE')
-
-
-#%% ignoring very poor sites
-low_rmse_sites = site_rmse.loc[site_rmse.site_rmse<=40].index
-
-x = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)'].values
-y = pred_frame.loc[pred_frame.site.isin(low_rmse_sites),'percent(t)_hat'].values
-# plot_pred_actual(x, y,\
-#         r2_score(x, y), \
-#         sqrt(mean_squared_error(x, y)), \
-#         ms = 30,zoom = 1.,dpi = 200,axis_lim = [0,300], \
-#         xlabel = "FMC", mec = 'grey', mew = 0)
-
-high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 
 #%% seasonal cycle rmsd
 #os.chdir(dir_data)
@@ -668,37 +677,185 @@ print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
 #%% seasonality vs. IAV
 
-score = pred_frame.groupby('site').mean()
-score['seasonality_score'] = np.nan
-score['IAV_score'] = np.nan
-score = score[['seasonality_score','IAV_score']]
-##check seasonality
-def seasonality_score(df):
-    if df.shape[0]<=4:
-        return np.nan
-    else:
-        score = np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]
-    return score
-##check IAV
-def IAV_score(df):
-    # df =df.dropna()
-    mean = df.mean()
-    ### asumes all predictions span one year at max
-    score = (mean['percent(t)_hat'] - mean['percent(t)'])/mean['percent(t)']
-    return score
+# score = pred_frame.groupby('site').mean()
+# score['seasonality_score'] = np.nan
+# score['IAV_score'] = np.nan
+# score = score[['seasonality_score','IAV_score']]
+# ##check seasonality
+# def seasonality_score(df):
+#     if df.shape[0]<=4:
+#         return np.nan
+#     else:
+#         score = np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]
+#     return score
+# ##check IAV
+# def IAV_score(df):
+#     # df =df.dropna()
+#     mean = df.mean()
+#     ### asumes all predictions span one year at max
+#     score = (mean['percent(t)_hat'] - mean['percent(t)'])/mean['percent(t)']
+#     return score
 
-for site in score.index:
-    sub = pred_frame.loc[pred_frame.site==site]
-    score.loc[site,'seasonality_score'] = seasonality_score(sub)
-    score.loc[site,'IAV_score'] = IAV_score(sub)
-score.dropna(inplace = True)
-sns.set(font_scale=1.4, style = 'ticks')
-fig, ax = plt.subplots(figsize = (4,4))
-ax.set_xlim(-1,1)
-ax.set_ylim(-1,1)
-sns.kdeplot(score.seasonality_score, score.IAV_score, ax = ax, cmap = 'Blues', shade = True, shade_lowest=False)
-ax.scatter(score.seasonality_score, score.IAV_score, marker = '+', color = 'k', linewidth = 0.5, s = 15)
-plt.show()
-print(score.shape)
+# for site in score.index:
+#     sub = pred_frame.loc[pred_frame.site==site]
+#     score.loc[site,'seasonality_score'] = seasonality_score(sub)
+#     score.loc[site,'IAV_score'] = IAV_score(sub)
+# score.dropna(inplace = True)
+# sns.set(font_scale=1.4, style = 'ticks')
+# fig, ax = plt.subplots(figsize = (4,4))
+# ax.set_xlim(-1,1)
+# ax.set_ylim(-1,1)
+# sns.kdeplot(score.seasonality_score, score.IAV_score, ax = ax, cmap = 'Blues', shade = True, shade_lowest=False)
+# ax.scatter(score.seasonality_score, score.IAV_score, marker = '+', color = 'k', linewidth = 0.5, s = 15)
+# plt.show()
+# print(score.shape)
 
+#%% weights for mixed species
+
+
+def solve_for_weights(true_sub):
+    no_of_weights = len(true_sub.fuel.unique())
+       # data provided
+    x0 = np.repeat(0.,no_of_weights)
+    bounds=((0, 1),)*no_of_weights
+    X = true_sub.pivot(values = 'percent',columns = 'fuel')
+    X = X.fillna(X.mean()) ### important assumption. missing fmc replaced by mean
+#    X.dropna(inplace = True)
+    #sort columns alphabatically so that weight can be mapped to species later
+    X = X.reindex(sorted(X.columns), axis=1)
+    target = true_sub.groupby(true_sub.index)['percent(t)_hat'].mean()
+    target = target.loc[X.index]
+
+    def loss(x):
+        return mean_squared_error(target,X.dot(x))**0.5
+    cons = {'type':'eq',
+            'fun':lambda x: 1 - np.sum(x)}
     
+    opt = {'disp':False}
+    
+    res = optimize.minimize(loss, x0, constraints=cons,
+                                 method='SLSQP', options=opt, bounds = bounds)
+    ## return optimization result, target FMC (FMC predicted from model),
+    ## True measured FMC multiplied by weights, simply averaged FMC with weights = 1/n
+    
+    return res, target, X.dot(res.x), X.mean(axis = 1)
+
+
+df = make_df(quality = 'only mixed')
+
+dataset, rescaled, reframed, \
+    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+    scaler, encoder = split_train_test(df, inputs = inputs)
+test_Xr = np.concatenate((train_Xr, test_Xr))
+test = train.append(test)
+test_X = test.drop(['percent(t)'], axis = 1).values
+inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+
+
+true = pd.read_pickle('fmc_04-29-2019')
+true.site = true.site.astype('str')
+true.date = pd.to_datetime(true.date)
+true.date = true.date + MonthEnd(1)
+
+true = true.loc[true.date.dt.year>=2015]
+true = true.loc[~true.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour'])] 
+true = true[~true.fuel.str.contains("Duff")] ###dropping all dead DMC
+true = true[~true.fuel.str.contains("Dead")] ###dropping all dead DMC
+true = true[~true.fuel.str.contains("DMC")] ###dropping all dead DMC
+no_of_species_in_sites = true.groupby('site').fuel.unique().apply(lambda series: len(series))
+sites_with_leq_4_species = no_of_species_in_sites.loc[(no_of_species_in_sites<=4)].index
+true = true.loc[true.site.isin(sites_with_leq_4_species)]
+true.index = pd.to_datetime(true.date)
+ctr_found = 0
+ctr_notfound = 0
+ctr_more_than_1_fuels = 0
+
+
+W = pd.DataFrame(index = true.site.unique(), columns = ['W1','W2','W3','W4','RMSE'])
+W = W.sort_index()
+col_list = ['site','date','S1','S2','S3','S4','W1','W2','W3','W4','FMC_weighted','FMC_mean','FMC_hat','RMSE']
+optimized_df = pd.DataFrame(columns = col_list)
+
+
+for site in true.site.unique():
+    if site in pred_frame.site.values:
+#            print('[INFO] Site found')
+        ctr_found+=1
+        true_sub = true.loc[true.site==site,['site','date','fuel','percent']]
+        true_sub = true_sub.groupby(['date','fuel']).mean().reset_index()
+        # true_sub = true_sub.set_index('date')
+        
+        pred_sub = pred_frame.loc[pred_frame.site==site,['date','percent(t)_hat']].copy()
+        true_sub = true_sub.set_index('date').join(pred_sub.set_index('date'), how = 'inner', on = 'date')
+        if true_sub.shape[0]<20:
+            continue
+#            print('[INFO] No. of fuels = %d'%len(true_sub.fuel.unique()))
+        if len(true_sub.fuel.unique())>1:
+            ctr_more_than_1_fuels+=1
+            res, FMC_hat, FMC_weighted, FMC_mean = solve_for_weights(true_sub)
+            w = res.x
+            rmse = res.fun
+            if len(w)<4:
+                w = np.append(w, np.repeat(np.nan, 4-len(w)))
+            w = np.append(w, rmse)
+            W.loc[site] = w
+            ##### fill outputs of optimization in optimized df
+            FMC_hat.name = 'FMC_hat'
+            FMC_weighted.name = 'FMC_weighted'
+            FMC_mean.name = 'FMC_mean'
+#            break
+            _odf = pd.concat([FMC_hat, FMC_weighted, FMC_mean], axis=1)
+            _odf = _odf.reindex(columns = col_list)                
+            _odf['date'] = _odf.index
+            _odf['site'] = site
+            _odf.loc[:,['W1','W2','W3','W4','RMSE']] = w 
+            species = sorted(true_sub.fuel.unique())
+            if len(species)<4:
+                species = species+['nan']*(4-len(species))
+            _odf.loc[:,['S1','S2','S3','S4']] = species
+            optimized_df = optimized_df.append(_odf, ignore_index = True)
+            print('[INFO]\tWeights computed for site\t%s'%site)
+    else:
+        ctr_notfound+=1
+#            print('[INFO] Site NOT found')
+
+W = W.infer_objects()       
+W.dropna(how = 'all', inplace = True)
+#W.to_pickle("mixed_species/mixed_species_weights")
+#optimized_df.to_pickle('mixed_species/optimization_results')     
+    
+   
+####### hist of RMSE
+#sns.set(font_scale=1.5, style = 'ticks')
+#fig, ax = plt.subplots(figsize = (3,3))
+#W.hist(column = 'RMSE', ax = ax, bins = 50, density = True)
+#ax.set_xlabel('RMSE')
+#ax.set_ylabel('Probability Density')
+#ax.set_xlim(0,10)
+############## pred FMC vs optimized FMC
+sns.set(font_scale=1.2, style = 'ticks')  
+ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
+                 r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
+                mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
+                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
+                     xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
+
+############## pred FMC vs mean FMC (simple averaged)
+ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
+                 r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
+                 mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
+                     zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
+                     ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
+
+######## weights plot
+
+Wmax = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().max(1)
+Wmin = optimized_df.groupby('site')[['W1','W2','W3','W4']].max().min(1)
+fig, ax = plt.subplots(figsize = (3,3))
+sns.kdeplot(Wmin, Wmax,cmap="Blues", shade=True, ax = ax, shade_lowest = False,n_levels=100)
+ax.scatter(Wmin, Wmax, edgecolor = 'k', s = 15, facecolor = 'b')
+ax.set_xlim(-0.1,1.1)
+ax.set_ylim(-0.1,1.1)
+ax.set_xlabel('min($w_i$)')
+ax.set_ylabel('max($w_i$)')
+#######

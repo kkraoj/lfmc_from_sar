@@ -252,7 +252,7 @@ def color_based_on_lc(fc):
     return groups
     
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
-                     xlabel = "FMC anomaly", zoom = 1,\
+                     xlabel = "FMC anomaly", ylabel = "None", zoom = 1,\
                      figname = None, dpi = 600,ms = 8, mec ='', mew = 0):
     fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
@@ -272,8 +272,8 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     ax.plot(axis_lim,axis_lim, lw =.5, color = 'grey')
     ax.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-    ax.set_ylabel('Predicted '+xlabel)
-    ax.set_xlabel('Actual '+xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
     ax.set_yticks(ax.get_xticks())
 #    ax.set_xticks([-50,0,50,100])
 #    ax.set_yticks([-50,0,50,100])
