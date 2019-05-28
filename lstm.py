@@ -198,7 +198,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
         dyn_sub = dyn.loc[dyn.site==row.site]
         dyn_sub['delta'] = row.date - dyn_sub.date
         if resolution == '1M':
-            dyn_sub['steps'] = (dyn_sub['delta'] /np.timedelta64(1, 'M')).astype('int')
+            dyn_sub['steps'] = (dyn_sub['delta'] /np.timedelta64(30, 'D')).astype('int')
         elif resolution =='SM':
             dyn_sub['steps'] = (dyn_sub['delta']/np.timedelta64(15, 'D')).astype('int')
         if all(elem in dyn_sub['steps'].values for elem in range(int_lag, -1, -1)):
@@ -279,9 +279,9 @@ INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_1M_gap_3M'
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_1M_gap_3M'
 
 ##input options 
-RELOADINPUT = False
+RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = False
+LOAD_MODEL = True
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
@@ -595,7 +595,7 @@ high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 
 sns.set(font_scale=0.9, style = 'ticks')  
 alpha = 0.2
-for site in high_rmse_sites:
+for site in site_rmse.index:
     sub = frame.loc[frame.site==site]
 #    print(sub.shape)
     sub.index = sub.date
