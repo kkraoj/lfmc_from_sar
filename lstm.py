@@ -281,12 +281,12 @@ SAVENAME = 'quality_pure+all_same_28_may_2019_res_1M_gap_3M'
 ##input options 
 RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = True
-OVERWRITE = False
-RETRAIN = False
+LOAD_MODEL = False
+OVERWRITE = True
+RETRAIN = True
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = 'SM'
+RESOLUTION = '1M'
 MAXGAP = '3M'
 
 ##modeling options
@@ -296,7 +296,7 @@ DROPOUT = 0.1
 TRAINRATIO = 0.7
 LOSS = 'mse'
 LAG = '3M'
-int_lag = 6
+int_lag = 3
 RETRAINEPOCHS = int(20e3)
 
 ###############################################################################
@@ -595,7 +595,7 @@ high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 
 sns.set(font_scale=0.9, style = 'ticks')  
 alpha = 0.2
-for site in site_rmse.index:
+for site in high_rmse_sites:
     sub = frame.loc[frame.site==site]
 #    print(sub.shape)
     sub.index = sub.date
