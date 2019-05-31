@@ -84,13 +84,15 @@ def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2019-05-31',
 
 def reindex(df, resolution = '1M'):
     site = df.site.values[0]
-    if resolution == '1M':
-        df.date = pd.to_datetime(df['date'], format="%Y%m") + MonthEnd(1)
-    elif resolution =='SM':
-        df.date = df.date + SemiMonthEnd(1)
-    else:
-        raise  Exception('[INFO] RESOLUTION not supported')
-    df = df.groupby('date').mean()
+    # if resolution == '1M':
+    #     df.date = pd.to_datetime(df['date'], format="%Y%m") + MonthEnd(1)
+    # elif resolution =='SM':
+    #     df.date = df.date + SemiMonthEnd(1)
+    # else:
+    #     raise  Exception('[INFO] RESOLUTION not supported')
+    # df = df.groupby('date').mean()
+    df.index = df.date
+    df = df.resample(resolution).mean().dropna()
     df['date'] = df.index
     df['site'] = site
     return df
@@ -278,14 +280,14 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 
 
 ##input options 
-RELOADINPUT = True
-OVERWRITEINPUT = False
+RELOADINPUT = False
+OVERWRITEINPUT = True
 LOAD_MODEL = True
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = 'SM'
+RESOLUTION = '1M'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
@@ -728,25 +730,42 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 
 
 #%% seasonal cycle rmsd
-# os.chdir(dir_data)
-# df = pd.read_pickle('fmc_24_may_2019')
-# df.date = pd.to_datetime(df.date)
-# df.loc[df.percent>=1000,'percent'] = np.nan
+os.chdir(dir_data)
+df = pd.read_pickle('fmc_24_may_2019')
+df.date = pd.to_datetime(df.date)
+df.loc[df.percent>=1000,'percent'] = np.nan
+df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
+                        'Duff (DC)', '1-hour','10-hour','100-hour',\
+                        '1000-hour', 'Moss, Dead (DMC)' ])]
+## res = 1M
 # seasonal_mean = pd.DataFrame(index = range(1, 13))
 # for site in df.site.unique():
 #     df_sub = df.loc[df.site==site]
 #     # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
 #     seasonality_site = df_sub.groupby(df_sub.date.dt.month).percent.mean().rename(site)
 #     seasonal_mean = seasonal_mean.join(seasonality_site)
-# seasonal_mean.to_pickle('seasonal_mean_all_sites_monthly_31_may_2019')
-    
-seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_monthly_31_may_2019')
+# seasonal_mean.to_pickle('seasonal_mean_all_sites_1M_31_may_2019')
 
-pred_frame['mod'] = pred_frame.date.dt.month
+## res = 'SM' processing
+seasonal_mean = pd.DataFrame(index = range(1, 25))
+df['moy'] = df.date.dt.month # add fortnite or year index
+df['foy'] = 2*df['moy'] - 1*(df.date.dt.day<=15) # < because 15th and later are counted as month end in 'SM'
+for site in df.site.unique():
+    df_sub = df.loc[df.site==site]
+    # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
+    seasonality_site = df_sub.groupby('foy').percent.mean().rename(site)
+    seasonal_mean = seasonal_mean.join(seasonality_site)
+seasonal_mean.to_pickle('seasonal_mean_all_sites_SM_31_may_2019')
+
+
+seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION)
+pred_frame['1M'] = pred_frame.date.dt.month
+pred_frame['SM'] = (2*pred_frame['1M'] - 1*(pred_frame.date.dt.day<=15)).astype(int)
+# <= because <15 is replaced with 15 in pandas SM
 pred_frame['percent_seasonal_mean'] = np.nan
 for site in pred_frame.site.unique():
-    df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)']]
-    df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = 'mod')
+    df_sub = pred_frame.loc[pred_frame.site==site,['site','date',RESOLUTION,'percent(t)']]
+    df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
     pred_frame.update(df_sub)
     # pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
 # pred_frame.dropna(inplace = True)
@@ -756,6 +775,15 @@ print('[INFO] RMSE: %.3f' % rmse)
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
 print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
 
+
+pred_frame.percent_seasonal_mean.isnull().mean()
+pred_frame.loc[pred_frame.percent_seasonal_mean.isnull()]
+pred_frame.loc[859]
+
+site = 'Mad River'
+seasonal_mean.loc[:,site]
+df.loc[(df.site==site)&(df.date.dt.year==2018)]
+dataset.loc[(dataset.site==site)&(dataset.date.dt.year==2018)]
 
 #x = pred_frame['percent(t)']
 #y = pred_frame['percent_seasonal_mean']
