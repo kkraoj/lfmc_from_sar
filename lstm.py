@@ -275,19 +275,20 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 #%%  
 ###############################################################################
 
-INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_1M_gap_3M'
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_1M_gap_3M'
+
 
 ##input options 
 RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = False
-OVERWRITE = True
-RETRAIN = True
+LOAD_MODEL = True
+OVERWRITE = False
+RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = '1M'
+RESOLUTION = 'SM'
 MAXGAP = '3M'
+INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
@@ -296,9 +297,10 @@ DROPOUT = 0.1
 TRAINRATIO = 0.7
 LOSS = 'mse'
 LAG = '3M'
-int_lag = 3
 RETRAINEPOCHS = int(20e3)
 
+
+int_lag = int(LAG[0])
 ###############################################################################
 
 #%%modeling
@@ -593,37 +595,37 @@ high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 #        fig.savefig('plots/%s.jpg'%site, bbox_inches='tight')
 #    plt.show()
 
-sns.set(font_scale=0.9, style = 'ticks')  
-alpha = 0.2
-for site in high_rmse_sites:
-    sub = frame.loc[frame.site==site]
-#    print(sub.shape)
-    sub.index = sub.date
-#    if sub['percent(t)_hat'].count()<7:
-#        continue
-    fig, ax = plt.subplots(figsize = (4,1.5))
-    l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
-            zorder = 99, markeredgecolor = 'grey',\
-            marker = 'o', label = 'actual FMC', color = 'None', mew =2)
-    l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
-            zorder = 100, markeredgecolor = 'fuchsia', \
-            marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
-    ax.set_ylabel('FMC(%)')
-    ax.set_xlabel('')
+# sns.set(font_scale=0.9, style = 'ticks')  
+# alpha = 0.2
+# for site in high_rmse_sites:
+#     sub = frame.loc[frame.site==site]
+# #    print(sub.shape)
+#     sub.index = sub.date
+# #    if sub['percent(t)_hat'].count()<7:
+# #        continue
+#     fig, ax = plt.subplots(figsize = (4,1.5))
+#     l1 = ax.plot(sub.index, sub['percent(t)'], linestyle = '-',\
+#             zorder = 99, markeredgecolor = 'grey',\
+#             marker = 'o', label = 'actual FMC', color = 'None', mew =2)
+#     l2 = ax.plot(sub.index, sub['percent(t)_hat'], linestyle = '-', \
+#             zorder = 100, markeredgecolor = 'fuchsia', \
+#             marker = 'o', label = 'predicted FMC',color = 'None', mew= 2)
+#     ax.set_ylabel('FMC(%)')
+#     ax.set_xlabel('')
     
-    ax2 = ax.twinx()
-    l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
-                    marker = 'o', label = 'green', color = 'g')
-    ax3 = ax.twinx()
-    l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
-                    marker = 'o', label = 'vv',color = 'orange')    
-    ax.set_title(site)
-    ls = l1+l2+l3+l4
-    labs = [l.get_label() for l in ls]
-    ax.tick_params(axis='x', rotation=45)
-    ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
-              ncol=2)
-    plt.show()
+#     ax2 = ax.twinx()
+#     l3 = ax2.plot(sub.index, sub['green(t)'], ms = 5, mew = 0,alpha = alpha, \
+#                     marker = 'o', label = 'green', color = 'g')
+#     ax3 = ax.twinx()
+#     l4 = ax3.plot(sub.index, sub['vv(t)'], ms = 5, mew = 0,alpha = alpha,\
+#                     marker = 'o', label = 'vv',color = 'orange')    
+#     ax.set_title(site)
+#     ls = l1+l2+l3+l4
+#     labs = [l.get_label() for l in ls]
+#     ax.tick_params(axis='x', rotation=45)
+#     ax.legend(ls, labs, loc = 'lower center',bbox_to_anchor=[0.5, -1],\
+#               ncol=2)
+#     plt.show()
 
 #%% sensitivity
 os.chdir(dir_data)
@@ -727,18 +729,18 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 
 #%% seasonal cycle rmsd
 # os.chdir(dir_data)
-# df = pd.read_pickle('fmc_04-29-2019')
+# df = pd.read_pickle('fmc_24_may_2019')
 # df.date = pd.to_datetime(df.date)
 # df.loc[df.percent>=1000,'percent'] = np.nan
 # seasonal_mean = pd.DataFrame(index = range(1, 13))
 # for site in df.site.unique():
 #     df_sub = df.loc[df.site==site]
-#     seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
-#     seasonality_site = seasonality_site.groupby(seasonality_site.date.dt.month).percent.mean().rename(site)
+#     # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
+#     seasonality_site = df_sub.groupby(df_sub.date.dt.month).percent.mean().rename(site)
 #     seasonal_mean = seasonal_mean.join(seasonality_site)
-# seasonal_mean.to_pickle('seasonal_mean_all_sites')
+# seasonal_mean.to_pickle('seasonal_mean_all_sites_monthly_31_may_2019')
     
-seasonal_mean = pd.read_pickle('seasonal_mean_all_sites')
+seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_monthly_31_may_2019')
 
 pred_frame['mod'] = pred_frame.date.dt.month
 pred_frame['percent_seasonal_mean'] = np.nan
@@ -746,8 +748,8 @@ for site in pred_frame.site.unique():
     df_sub = pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)']]
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = 'mod')
     pred_frame.update(df_sub)
-    pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
-pred_frame.dropna(inplace = True)
+    # pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+# pred_frame.dropna(inplace = True)
 rmsd = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
 print('[INFO] RMSE: %.3f' % rmse) 
