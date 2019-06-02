@@ -281,14 +281,14 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 
 
 ##input options 
-RELOADINPUT = False
-OVERWRITEINPUT = True
+RELOADINPUT = True
+OVERWRITEINPUT = False
 LOAD_MODEL = True
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = 'SM'
+RESOLUTION = '1M'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
@@ -304,6 +304,9 @@ RETRAINEPOCHS = int(20e3)
 
 
 int_lag = int(LAG[0])
+if RESOLUTION =='SM':
+    int_lag*=2
+
 ###############################################################################
 
 #%%modeling
@@ -748,15 +751,15 @@ df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
 # seasonal_mean.to_pickle('seasonal_mean_all_sites_1M_31_may_2019')
 
 ## res = 'SM' processing
-seasonal_mean = pd.DataFrame(index = range(1, 25))
-df['moy'] = df.date.dt.month # add fortnite or year index
-df['foy'] = 2*df['moy'] - 1*(df.date.dt.day<=15) # < because 15th and later are counted as month end in 'SM'
-for site in df.site.unique():
-    df_sub = df.loc[df.site==site]
-    # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
-    seasonality_site = df_sub.groupby('foy').percent.mean().rename(site)
-    seasonal_mean = seasonal_mean.join(seasonality_site)
-seasonal_mean.to_pickle('seasonal_mean_all_sites_SM_31_may_2019')
+# seasonal_mean = pd.DataFrame(index = range(1, 25))
+# df['moy'] = df.date.dt.month # add fortnite or year index
+# df['foy'] = 2*df['moy'] - 1*(df.date.dt.day<15) # < because 15th and later are counted as month end in 'SM'
+# for site in df.site.unique():
+#     df_sub = df.loc[df.site==site]
+#     # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
+#     seasonality_site = df_sub.groupby('foy').percent.mean().rename(site)
+#     seasonal_mean = seasonal_mean.join(seasonality_site)
+# seasonal_mean.to_pickle('seasonal_mean_all_sites_SM_31_may_2019')
 
 
 seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION)
@@ -769,22 +772,13 @@ for site in frame.site.unique():
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
     frame.update(df_sub)
     # frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
-# frame.dropna(inplace = True)
+frame.dropna(inplace = True, subset = ['percent_seasonal_mean'])
 rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
 print('[INFO] RMSE: %.3f' % rmse) 
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
 print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
-
-frame.percent_seasonal_mean.isnull().mean()
-frame.loc[frame.percent_seasonal_mean.isnull(),'site','date',RESOLUTION,'percent(t)']
-frame.loc[577,['site','date',RESOLUTION,'percent(t)','percent_seasonal_mean']]
-
-site = 'Blackberry Hill'
-seasonal_mean.loc[:,site]
-df.loc[(df.site==site)&(df.date.dt.year==2018)]
-dataset.loc[(dataset.site==site)&(dataset.date.dt.year==2018)]
 
 #x = pred_frame['percent(t)']
 #y = pred_frame['percent_seasonal_mean']
