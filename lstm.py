@@ -868,7 +868,7 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 # def solve_for_weights(true_sub):
 #     no_of_weights = len(true_sub.fuel.unique())
-#        # data provided
+#         # data provided
 #     x0 = np.repeat(0.,no_of_weights)
 #     bounds=((0, 1),)*no_of_weights
 #     X = true_sub.pivot(values = 'percent',columns = 'fuel')
@@ -887,22 +887,22 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 #     opt = {'disp':False}
     
 #     res = optimize.minimize(loss, x0, constraints=cons,
-#                                  method='SLSQP', options=opt, bounds = bounds)
+#                                   method='SLSQP', options=opt, bounds = bounds)
 #     ## return optimization result, target FMC (FMC predicted from model),
 #     ## True measured FMC multiplied by weights, simply averaged FMC with weights = 1/n
     
 #     return res, target, X.dot(res.x), X.mean(axis = 1)
 
 
-# df = make_df(quality = 'only mixed')
+df = make_df(quality = 'only mixed')
 
-# dataset, rescaled, reframed, \
-#     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-#     scaler, encoder = split_train_test(df, inputs = inputs)
-# test_Xr = np.concatenate((train_Xr, test_Xr))
-# test = train.append(test)
-# test_X = test.drop(['percent(t)'], axis = 1).values
-# inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+dataset, rescaled, reframed, \
+    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+    scaler, encoder = split_train_test(df, inputs = inputs)
+test_Xr = np.concatenate((train_Xr, test_Xr))
+test = train.append(test)
+test_X = test.drop(['percent(t)'], axis = 1).values
+inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 
 
 # true = pd.read_pickle('fmc_04-29-2019')
@@ -985,20 +985,28 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 # #ax.set_xlabel('RMSE')
 # #ax.set_ylabel('Probability Density')
 # #ax.set_xlim(0,10)
+
 # ############## pred FMC vs optimized FMC
 # sns.set(font_scale=1.2, style = 'ticks')  
 # ax = plot_pred_actual(optimized_df['FMC_hat'], optimized_df['FMC_weighted'], \
-#                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
+#                   r2_score(optimized_df['FMC_hat'], optimized_df['FMC_weighted']),\
 #                 mean_squared_error(optimized_df['FMC_weighted'], optimized_df['FMC_hat'])**0.5,\
-#                      zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
-#                      xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
+#                       zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
+#                       xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
-# ############## pred FMC vs mean FMC (simple averaged)
+############## pred FMC vs mean FMC (simple averaged)
+
+x = inv_y
+y = inv_yhat
+plot_pred_actual(x.values, y.values, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
+                zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
+                    xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
+#
 # ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
-#                  r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
-#                  mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
-#                      zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
-#                      ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
+#                   r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
+#                   mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
+#                       zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20, \
+#                       ylabel = '$\overline{FMC}$', xlabel = '$\hat{FMC}$')
 
 # ######## weights plot
 
@@ -1011,4 +1019,4 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 # ax.set_ylim(-0.1,1.1)
 # ax.set_xlabel('min($w_i$)')
 # ax.set_ylabel('max($w_i$)')
-# #######
+#######
