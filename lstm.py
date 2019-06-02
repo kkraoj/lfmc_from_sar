@@ -91,8 +91,9 @@ def reindex(df, resolution = '1M'):
     # else:
     #     raise  Exception('[INFO] RESOLUTION not supported')
     # df = df.groupby('date').mean()
+
     df.index = df.date
-    df = df.resample(resolution).mean().dropna()
+    df = df.resample(rule = resolution, label = 'right' ).mean().dropna()
     df['date'] = df.index
     df['site'] = site
     return df
@@ -287,7 +288,7 @@ OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = '1M'
+RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
@@ -759,28 +760,28 @@ seasonal_mean.to_pickle('seasonal_mean_all_sites_SM_31_may_2019')
 
 
 seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION)
-pred_frame['1M'] = pred_frame.date.dt.month
-pred_frame['SM'] = (2*pred_frame['1M'] - 1*(pred_frame.date.dt.day<=15)).astype(int)
+frame['1M'] = frame.date.dt.month
+frame['SM'] = (2*frame['1M'] - 1*(frame.date.dt.day<=15)).astype(int)
 # <= because <15 is replaced with 15 in pandas SM
-pred_frame['percent_seasonal_mean'] = np.nan
-for site in pred_frame.site.unique():
-    df_sub = pred_frame.loc[pred_frame.site==site,['site','date',RESOLUTION,'percent(t)']]
+frame['percent_seasonal_mean'] = np.nan
+for site in frame.site.unique():
+    df_sub = frame.loc[frame.site==site,['site','date',RESOLUTION,'percent(t)']]
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
-    pred_frame.update(df_sub)
-    # pred_frame.loc[pred_frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
-# pred_frame.dropna(inplace = True)
-rmsd = sqrt(mean_squared_error(pred_frame['percent(t)'],pred_frame['percent_seasonal_mean'] ))
+    frame.update(df_sub)
+    # frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+# frame.dropna(inplace = True)
+rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
 print('[INFO] RMSE: %.3f' % rmse) 
 #print('[INFO] Persistence RMSE: %.3f' % persistence_rmse) 
-print('[INFO] FMC Standard deviation : %.3f' % pred_frame['percent(t)'].std())
+print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 
-pred_frame.percent_seasonal_mean.isnull().mean()
-pred_frame.loc[pred_frame.percent_seasonal_mean.isnull()]
-pred_frame.loc[859]
+frame.percent_seasonal_mean.isnull().mean()
+frame.loc[frame.percent_seasonal_mean.isnull(),'site','date',RESOLUTION,'percent(t)']
+frame.loc[577,['site','date',RESOLUTION,'percent(t)','percent_seasonal_mean']]
 
-site = 'Mad River'
+site = 'Blackberry Hill'
 seasonal_mean.loc[:,site]
 df.loc[(df.site==site)&(df.date.dt.year==2018)]
 dataset.loc[(dataset.site==site)&(dataset.date.dt.year==2018)]
