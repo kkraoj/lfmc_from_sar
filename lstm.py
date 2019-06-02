@@ -894,11 +894,14 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 #     return res, target, X.dot(res.x), X.mean(axis = 1)
 
 
-df = make_df(quality = 'only mixed')
+# df, int_lag = make_df(quality = 'only mixed')
+# df.to_pickle('mixed_species_inputs')
 
+df = pd.read_pickle('mixed_species_inputs')
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler, encoder = split_train_test(df, inputs = inputs)
+    scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
+    
 test_Xr = np.concatenate((train_Xr, test_Xr))
 test = train.append(test)
 test_X = test.drop(['percent(t)'], axis = 1).values
@@ -998,7 +1001,7 @@ inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, r
 
 x = inv_y
 y = inv_yhat
-plot_pred_actual(x.values, y.values, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
+plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
                 zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
                     xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
 #
