@@ -12,8 +12,11 @@ from dirs import dir_data, dir_codes
 import matplotlib.pyplot as plt
 os.chdir(dir_data)
 
+
 microwave_inputs = ['vv','vh']
 optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
+mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
+dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
 
 resolution = 'SM'
 max_gap = '3M'
@@ -67,10 +70,13 @@ dyn['vh_vv'] = dyn['vh']-dyn['vv']
 # dyn = dyn[dynamic_inputs+['date','site']]
 dyn = dyn.dropna()
 
-for site in dyn.site.unique():
+for site in dyn.site.unique()[:50]:
     dyn_sub = dyn.loc[dyn.site==site]
     dyn_sub = dyn_sub.sort_values(by = 'date')
     fig, ax = plt.subplots(figsize = (6,2))
-    ax.plot(dyn_sub.date, dyn_sub['red'],'r')
-    ax.plot(dyn_sub.date, dyn_sub['vh_red'],'m')
+    ax.plot(dyn_sub.date, dyn_sub['red'],'-ro')
+    ax2 = ax.twinx()
+    ax2.plot(dyn_sub.date, dyn_sub['vh_red'],'-mo')
     plt.show()
+
+(dyn[mixed_inputs]<-1e3).sum()
