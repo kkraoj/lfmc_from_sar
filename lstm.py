@@ -291,13 +291,13 @@ DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_big'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = int(2e5)
 DROPOUT = 0.1
-TRAINRATIO = 0.7
+TRAINRATIO = 0.80
 LOSS = 'mse'
 LAG = '3M'
 RETRAINEPOCHS = int(20e3)
@@ -405,7 +405,8 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
 #                   recurrent_regularizer = Rreg))
-    # model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))#, \
 #                   activity_regularizer = Areg, \
 #                   bias_regularizer= Breg,\
@@ -487,7 +488,8 @@ inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, r
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
 plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
-                          zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "FMC", mec = 'grey', mew = 0)
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual FMC", \
+            ylabel = "Predicted FMC",mec = 'grey', mew = 0)
 
 #
 #%% split predict plot into pure and mixed species sites
@@ -812,21 +814,21 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 # ax.set_ylabel('No. of sites')
 
 #%%
-## site based heatmap
-# rank = pred_frame.groupby('site').mean().drop(['percent_seasonal_mean','mod','percent(t)_hat'],axis = 1)
-# for col in rank.columns:
-#     if col[-3]=='-':
-#         rank.drop(col, axis = 1, inplace = True)
-# rank.columns = rank.columns.str[:-3]
-# rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
-# rank = rank.join(site_rmse)
-# # rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
-# rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
-# # rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
-# # rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
-# rank = rank.rename(columns = {'percent':'fmc'})
-# sns.set(font_scale=0.5, style = 'ticks')  
-# axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (6,4))
+# site based heatmap
+rank = pred_frame.groupby('site').mean().drop(['percent(t)_hat'],axis = 1)
+for col in rank.columns:
+    if col[-3]=='-':
+        rank.drop(col, axis = 1, inplace = True)
+rank.columns = rank.columns.str[:-3]
+rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
+rank = rank.join(site_rmse)
+# rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
+rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
+# rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
+# rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
+rank = rank.rename(columns = {'percent':'fmc'})
+sns.set(font_scale=0.5, style = 'ticks')  
+axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (8,6))
 
 #%% seasonality vs. IAV
 
