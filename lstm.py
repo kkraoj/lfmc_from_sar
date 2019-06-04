@@ -897,17 +897,18 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 # df, int_lag = make_df(quality = 'only mixed')
 # df.to_pickle('mixed_species_inputs')
 
-df = pd.read_pickle('mixed_species_inputs')
-dataset, rescaled, reframed, \
-    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
+#%% uncomment for mixed species plotting
+# df = pd.read_pickle('mixed_species_inputs')
+# dataset, rescaled, reframed, \
+#     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+#     scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
     
-test_Xr = np.concatenate((train_Xr, test_Xr))
-test = train.append(test)
-test_X = test.drop(['percent(t)'], axis = 1).values
-inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+# test_Xr = np.concatenate((train_Xr, test_Xr))
+# test = train.append(test)
+# test_X = test.drop(['percent(t)'], axis = 1).values
+# inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 
-
+#%%
 # true = pd.read_pickle('fmc_04-29-2019')
 # true.site = true.site.astype('str')
 # true.date = pd.to_datetime(true.date)
@@ -997,14 +998,13 @@ inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, r
 #                       zoom = 1,dpi = 150, axis_lim = [75,150], ms = 20,\
 #                       xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
-############## pred FMC vs mean FMC (simple averaged)
-
-x = inv_y
-y = inv_yhat
-plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
-                zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
-                    xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
-#
+#%%############## pred FMC vs mean FMC (simple averaged)
+# x = inv_y
+# y = inv_yhat
+# plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
+#                 zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
+#                     xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
+#%%
 # ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
 #                   r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
 #                   mean_squared_error(optimized_df['FMC_mean'], optimized_df['FMC_hat'])**0.5,\
