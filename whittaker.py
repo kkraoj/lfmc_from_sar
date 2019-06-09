@@ -113,6 +113,7 @@ ax.scatter(t, p, c = 'grey', alpha = 0.02, edgecolor = "none")
 ax.set_xlabel('Temperature ($^o$C)')
 ax.set_ylabel('Precipitation (mm.yr$^{-1}$)')
 ax.scatter(latlon.temp, latlon.ppt, marker = 'x', color = 'r', linewidth = 0.5)
+ax.set_ylim(-150,3000)
 
 fig, ax = plt.subplots(figsize = (3,3))
 ax.scatter(t, e, c = 'grey', alpha = 0.02, edgecolor = "none")

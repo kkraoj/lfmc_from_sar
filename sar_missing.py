@@ -23,8 +23,8 @@ df.dropna(inplace = True)
 n_site = df.groupby(['site', df.date.dt.year]).vh.count().reset_index().\
     pivot(index = 'site',columns = 'date', values = 'vh')
 
-# fig, ax = plt.subplots(figsize = (3, 6))
-# sns.heatmap(n_site, ax =ax)
+fig, ax = plt.subplots(figsize = (3, 6))
+sns.heatmap(n_site, ax =ax)
 
 #%% Plot SAR availability per site versus number of measurements in each site
 meas = pd.read_pickle('fmc_24_may_2019')
@@ -45,5 +45,3 @@ ax.scatter(n_sar_fmc.data_record, n_sar_fmc.sar)
 ax.set_xlabel('fmc_data_record (years)')
 ax.set_ylabel('n_sar')
 
-
-n_sar_fmc['fmc_length']

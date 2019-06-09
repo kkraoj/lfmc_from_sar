@@ -285,18 +285,18 @@ RELOADINPUT = True
 OVERWRITEINPUT = False
 LOAD_MODEL = True
 OVERWRITE = False
-RETRAIN = False
+RETRAIN = True
 SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_big'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_big_v2'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = int(2e5)
-DROPOUT = 0.1
+DROPOUT = 0.05
 TRAINRATIO = 0.80
 LOSS = 'mse'
 LAG = '3M'
@@ -405,6 +405,10 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
 #                   recurrent_regularizer = Rreg))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))#, \
@@ -815,20 +819,20 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 #%%
 # site based heatmap
-rank = pred_frame.groupby('site').mean().drop(['percent(t)_hat'],axis = 1)
-for col in rank.columns:
-    if col[-3]=='-':
-        rank.drop(col, axis = 1, inplace = True)
-rank.columns = rank.columns.str[:-3]
-rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
-rank = rank.join(site_rmse)
-# rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
-rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
-# rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
-# rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
-rank = rank.rename(columns = {'percent':'fmc'})
-sns.set(font_scale=0.5, style = 'ticks')  
-axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (8,6))
+# rank = pred_frame.groupby('site').mean().drop(['percent(t)_hat'],axis = 1)
+# for col in rank.columns:
+#     if col[-3]=='-':
+#         rank.drop(col, axis = 1, inplace = True)
+# rank.columns = rank.columns.str[:-3]
+# rank = rank.loc[site_rmse.sort_values('site_rmse', ascending = False).index]
+# rank = rank.join(site_rmse)
+# # rank = rank.join(reframed.groupby('site').count()['percent(t)'].rename('examples'))
+# rank = rank.join(reframed.groupby('site').std()['percent(t)'].rename('fmc_sd'))
+# # rank = rank.join(reframed.groupby('site').max()['percent(t)'].rename('fmc_max'))
+# # rank = rank.join((reframed.groupby('site').max()-reframed.groupby('site').min())['percent(t)'].rename('fmc_range'))
+# rank = rank.rename(columns = {'percent':'fmc'})
+# sns.set(font_scale=0.5, style = 'ticks')  
+# axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, col_cluster = True,  figsize = (8,6))
 
 #%% seasonality vs. IAV
 
@@ -900,15 +904,15 @@ axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, co
 # df.to_pickle('mixed_species_inputs')
 
 #%% uncomment for mixed species plotting
-# df = pd.read_pickle('mixed_species_inputs')
-# dataset, rescaled, reframed, \
-#     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-#     scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
+df = pd.read_pickle('mixed_species_inputs')
+dataset, rescaled, reframed, \
+    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+    scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
     
-# test_Xr = np.concatenate((train_Xr, test_Xr))
-# test = train.append(test)
-# test_X = test.drop(['percent(t)'], axis = 1).values
-# inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+test_Xr = np.concatenate((train_Xr, test_Xr))
+test = train.append(test)
+test_X = test.drop(['percent(t)'], axis = 1).values
+inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 
 #%%
 # true = pd.read_pickle('fmc_04-29-2019')
@@ -1001,11 +1005,11 @@ axs= sns.clustermap(rank.astype(float), standard_scale =1, row_cluster=False, co
 #                       xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
 #%%############## pred FMC vs mean FMC (simple averaged)
-# x = inv_y
-# y = inv_yhat
-# plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
-#                 zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
-#                     xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
+x = inv_y
+y = inv_yhat
+plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
+                zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
+                    xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
 #%%
 # ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
 #                   r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
