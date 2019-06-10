@@ -281,23 +281,24 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 
 
 ##input options 
+np.random.seed(7)
 RELOADINPUT = True
 OVERWRITEINPUT = False
 LOAD_MODEL = True
-OVERWRITE = False
+OVERWRITE = True
 RETRAIN = True
 SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_big_v2'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = int(2e5)
 DROPOUT = 0.05
-TRAINRATIO = 0.80
+TRAINRATIO = 0.70
 LOSS = 'mse'
 LAG = '3M'
 RETRAINEPOCHS = int(20e3)
@@ -360,13 +361,19 @@ def split_train_test(dataset, inputs = None, int_lag = None):
     # test = reframed.loc[reframed.date.dt.year>=2018].drop(['site','date'], axis = 1)
     #### split train test as 70% of time series of each site rather than blanket 2018 cutoff
     train_ind=[]
-    for site in reframed.site.unique():
-        sub = reframed.loc[reframed.site==site]
-        sub = sub.sort_values(by = 'date')
-        train_ind = train_ind+list(sub.index[:int(np.ceil(sub.shape[0]*TRAINRATIO))])
+    # for site in reframed.site.unique():
+    #     sub = reframed.loc[reframed.site==site]
+    #     sub = sub.sort_values(by = 'date')
+    #     train_ind = train_ind+list(sub.index[:int(np.ceil(sub.shape[0]*TRAINRATIO))])
+    for cover in reframed['forest_cover(t)'].unique():
+        sub = reframed.loc[reframed['forest_cover(t)']==cover]
+        sites = sub.site.unique()
+        train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
+        train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
     train = reframed.loc[train_ind].drop(['site','date'], axis = 1)
     test = reframed.loc[~reframed.index.isin(train_ind)].drop(['site','date'], axis = 1)
-    
+    train.sort_index(inplace = True)
+    test.sort_index(inplace = True)
     #print(train.shape)
     #print(test.shape)
     # split into input and outputs
@@ -392,26 +399,21 @@ dataset, rescaled, reframed, \
 filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 Areg = regularizers.l2(1e-4)
-Breg = regularizers.l2(1e-4)
+Breg = regularizers.l2(1e-3)
 Kreg = regularizers.l2(1e-5)
 Rreg = regularizers.l2(1e-5)
 
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, bias_regularizer= Breg,\
                     return_sequences=True))#, \
 #                   activity_regularizer = Areg, \
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
 #                   recurrent_regularizer = Rreg))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))#, \
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True, bias_regularizer= Breg))
+    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, bias_regularizer= Breg))#, \
 #                   activity_regularizer = Areg, \
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
@@ -455,7 +457,7 @@ if RETRAIN or not(LOAD_MODEL):
     history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
                         validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
                         callbacks=callbacks_list)
-    # model = load_model(filepath) # once trained, load best model
+    model = load_model(filepath) # once trained, load best model
 
     #%% plot history
     fig, ax = plt.subplots(figsize = (4,4))
@@ -904,15 +906,15 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 # df.to_pickle('mixed_species_inputs')
 
 #%% uncomment for mixed species plotting
-df = pd.read_pickle('mixed_species_inputs')
-dataset, rescaled, reframed, \
-    train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-    scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
+# df = pd.read_pickle('mixed_species_inputs')
+# dataset, rescaled, reframed, \
+#     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+#     scaler, encoder = split_train_test(df, inputs = inputs, int_lag = int_lag)
     
-test_Xr = np.concatenate((train_Xr, test_Xr))
-test = train.append(test)
-test_X = test.drop(['percent(t)'], axis = 1).values
-inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+# test_Xr = np.concatenate((train_Xr, test_Xr))
+# test = train.append(test)
+# test_X = test.drop(['percent(t)'], axis = 1).values
+# inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 
 #%%
 # true = pd.read_pickle('fmc_04-29-2019')
@@ -1005,11 +1007,11 @@ inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, r
 #                       xlabel = '$\hat{FMC}$', ylabel = '$\sum w_i\ x\ FMC_i$')    
 
 #%%############## pred FMC vs mean FMC (simple averaged)
-x = inv_y
-y = inv_yhat
-plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
-                zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
-                    xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
+# x = inv_y
+# y = inv_yhat
+# plot_pred_actual(x.values, y, r2_score(x, y), mean_squared_error(x,y)**0.5, ms = 30,\
+#                 zoom = 1.,dpi = 200,axis_lim = [0,300],mec = 'grey', mew = 0,\
+#                     xlabel = '$\overline{FMC}$', ylabel = '$\hat{FMC}$')
 #%%
 # ax = plot_pred_actual(optimized_df['FMC_hat'],optimized_df['FMC_mean'], \
 #                   r2_score(optimized_df['FMC_hat'], optimized_df['FMC_mean'] ),\
