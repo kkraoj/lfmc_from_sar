@@ -284,12 +284,12 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 np.random.seed(7)
 RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = True
+LOAD_MODEL = False
 OVERWRITE = True
-RETRAIN = True
+RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = 'SM'
+RESOLUTION = '1M'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
@@ -365,11 +365,15 @@ def split_train_test(dataset, inputs = None, int_lag = None):
     #     sub = reframed.loc[reframed.site==site]
     #     sub = sub.sort_values(by = 'date')
     #     train_ind = train_ind+list(sub.index[:int(np.ceil(sub.shape[0]*TRAINRATIO))])
-    for cover in reframed['forest_cover(t)'].unique():
-        sub = reframed.loc[reframed['forest_cover(t)']==cover]
-        sites = sub.site.unique()
-        train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
-        train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
+    # for cover in reframed['forest_cover(t)'].unique():
+    #     sub = reframed.loc[reframed['forest_cover(t)']==cover]
+    #     sites = sub.site.unique()
+    #     train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
+    #     train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
+    sites = reframed.site.unique()
+    train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
+    train_ind = reframed.loc[reframed.site.isin(train_sites)].index
+    
     train = reframed.loc[train_ind].drop(['site','date'], axis = 1)
     test = reframed.loc[~reframed.index.isin(train_ind)].drop(['site','date'], axis = 1)
     train.sort_index(inplace = True)
@@ -426,7 +430,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
 #    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT))
     #model.add(LSTM(50, input_shape=(train_Xr.shape[1], train_Xr.shape[2]), dropout = 0.3))
     #model.add(LSTM(10, input_shape=(train_Xr.shape[1], train_Xr.shape[2]), dropout = 0.3))
-#    model.add(Dense(6))
+    # model.add(Dense(6))
     model.add(Dense(1))
 #    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
 #    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
