@@ -501,6 +501,19 @@ plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual FMC", \
             ylabel = "Predicted FMC",mec = 'grey', mew = 0)
 
+#%% true versus pred site means
+t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
+x = t['percent(t)'].values
+y = t['percent(t)_hat'].values
+
+plot_pred_actual(x, y,\
+        r2_score(x, y), \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
+        ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2)
+
+
 #
 #%% split predict plot into pure and mixed species sites
 
