@@ -15,8 +15,9 @@ import re
 
 os.chdir(dir_data)
 
-for pass_type in ['ascending','descending']:
-    folder = "sar/500m_%s"%pass_type
+passes = ['ascending']
+for pass_type in passes:
+    folder = "sar/500m_%s_VV"%pass_type
     files = os.listdir(folder)
     Df = pd.DataFrame()
     for file in files:
@@ -34,13 +35,23 @@ for pass_type in ['ascending','descending']:
     
     #clean up band names
     Df.columns = Df.columns.str.lower()
-    Df.to_pickle('sar_%s_30_apr_2019'%pass_type)
+    Df.to_pickle('sar_%s_VV_21_jun_2019'%pass_type)
 
 ###%% ######### check Dfs
-for pass_type in ['ascending','descending']:
-    Df = pd.read_pickle('sar_%s_30_apr_2019'%pass_type)
+for pass_type in passes:
+    Df = pd.read_pickle('sar_%s_VV_21_jun_2019'%pass_type)
     Df.index = Df.date
     fig, ax = plt.subplots(figsize = (9,3))
-    Df.loc[Df.site==Df.site.unique()[5],'vh'].plot(marker = 'o',ax = ax,  title = pass_type+'/%s'%Df.site.unique()[5])
+    Df.loc[Df.site==Df.site.unique()[5],'vv'].plot(marker = 'o',ax = ax,  title = pass_type+'/%s'%Df.site.unique()[5])
     ax.set_xlabel('')
     ax.set_ylabel('vh')
+
+#%%
+#### append SAR vv only to previous VH + VV's VV
+Df2 = pd.read_pickle('sar_ascending_30_apr_2019')
+Df2.drop(['angle','vh'],axis = 1, inplace = True)
+Df = pd.read_pickle('sar_ascending_VV_21_jun_2019')  
+Df = Df.append(Df2).drop_duplicates()
+Df = Df.sort_values(by = ['site','date']) 
+Df.to_pickle('sar_ascending_VV_21_jun_2019')
+    

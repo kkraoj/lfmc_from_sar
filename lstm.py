@@ -513,8 +513,33 @@ plot_pred_actual(x, y,\
         zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
         ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2)
 
+#%% true versus pred seasonality
 
+t = pred_frame.groupby(['site',pred_frame.date.dt.month])['percent(t)','percent(t)_hat'].mean()
+x = t['percent(t)'].values
+y = t['percent(t)_hat'].values
+
+plot_pred_actual(x, y,\
+        r2_score(x, y), \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual MoY-averaged FMC", \
+        ylabel = "Predicted MoY-averaged FMC",mec = 'grey', mew = 1)
 #
+#%% true versus pred IAV
+
+t = pred_frame.groupby(['site',pred_frame.date.dt.year])['percent(t)','percent(t)_hat'].mean()
+x = t['percent(t)'].values
+y = t['percent(t)_hat'].values
+
+plot_pred_actual(x, y,\
+        r2_score(x, y), \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual annual FMC", \
+        ylabel = "Predicted annual FMC",mec = 'grey', mew = 1)
+#
+
 #%% split predict plot into pure and mixed species sites
 
 #### plot only pure species point
@@ -805,6 +830,8 @@ print('[INFO] RMSE: %.3f' % rmse)
 print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 
+
+
 #x = pred_frame['percent(t)']
 #y = pred_frame['percent_seasonal_mean']
 #plot_pred_actual(x.values, y.values, r2_score(x, y), rmsd, ms = 30,\
@@ -825,6 +852,10 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 #to_plot.index = to_plot.date
 #to_plot.percent.plot()
 #to_plot.index.min()
+
+
+
+
 
 #%% Histogram of forest cover in the study area
 
