@@ -102,9 +102,9 @@ os.chdir(dir_data)
 # convert series to supervised learning
 
 
-microwave_inputs = ['vv','vh']
+microwave_inputs = ['vv']
 optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
-mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
+mixed_inputs =  ['vv_%s'%den for den in optical_inputs] 
 dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
 
 static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
@@ -145,7 +145,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')         
     ### sar
-    df = pd.read_pickle('sar_ascending_30_apr_2019')
+    df = pd.read_pickle('sar_ascending_VV_21_jun_2019')
     # for var in microwave_inputs:
     micro = pd.DataFrame()
     for site in master.site.unique():
@@ -165,7 +165,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
     for num in microwave_inputs:
         for den in optical_inputs:
             dyn['%s_%s'%(num, den)] = dyn[num]/dyn[den]
-    dyn['vh_vv'] = dyn['vh']-dyn['vv']
+    # dyn['vh_vv'] = dyn['vh']-dyn['vv']
     
     dyn = dyn[dynamic_inputs+['date','site']]
     dyn = dyn.dropna()
@@ -291,8 +291,8 @@ SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
-INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_vv_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_vv_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
