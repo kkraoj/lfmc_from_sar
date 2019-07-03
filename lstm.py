@@ -9,6 +9,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import pickle 
 from math import sqrt
 from numpy import concatenate
 from scipy import optimize
@@ -289,7 +290,7 @@ OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
-RESOLUTION = '1M'
+RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
@@ -319,7 +320,13 @@ else:
         raise  Exception('[INFO] Input File already exists. Try different INPUTNAME')
     dataset, int_lag = make_df(resolution = RESOLUTION, max_gap = MAXGAP, lag = LAG, inputs = inputs)    
     dataset.to_pickle(INPUTNAME)
-   
+
+# ## dropping sar/ratio columns
+# for num in ['vh','vv']:
+#     for den in ['ndvi','ndwi','nirv']:
+#         for col in dataset.columns:    
+#             if '%s_%s'%(num, den) in col:
+#                 dataset.drop(col, axis = 1, inplace = True)
     
 def split_train_test(dataset, inputs = None, int_lag = None):
    
@@ -395,8 +402,15 @@ def split_train_test(dataset, inputs = None, int_lag = None):
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
     scaler, encoder = split_train_test(dataset, int_lag = int_lag)
+    
+# output = open(r'D:\Krishna\projects\vwc_from_radar\data\encoder.pkl', 'wb')
+# pickle.dump(encoder, output)
+# output.close()
 
-#print(train_Xr.shape, train_y.shape, test_Xr.shape, test_y.shape)
+# output = open(r'D:\Krishna\projects\vwc_from_radar\data\scaler.pkl', 'wb')
+# pickle.dump(scaler, output)
+# output.close()
+
  
 #%% design network
 
@@ -859,13 +873,13 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 #%% Histogram of forest cover in the study area
 
-
-# hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover']))
-# hist.index = hist.index.to_series().map(lc_dict)
-
-# fig, ax = plt.subplots(figsize = (4,4))
-# hist.plot(kind = 'bar', ax = ax)
-# ax.set_ylabel('No. of sites')
+sns.set(font_scale=1, style = 'ticks') 
+hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover(t)']), normalize = True)
+hist.index = hist.index.to_series().map(lc_dict)
+hist = hist.sort_index()
+fig, ax = plt.subplots(figsize = (4,4))
+hist.plot(kind = 'bar', ax = ax)
+ax.set_ylabel('No. of sites')
 
 #%%
 # site based heatmap

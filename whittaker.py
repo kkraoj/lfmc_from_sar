@@ -22,6 +22,9 @@ from matplotlib.patches import Polygon
 import seaborn as sns
 from osgeo import gdal
 from skimage.transform import resize
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+import pickle
 
 
 
@@ -39,8 +42,8 @@ p[p<0] = np.nan
 e[e<0] = np.nan
 
 e = resize(e, p.shape)
- 
-#%% load sites
+# 
+##%% load sites
 driver = gdal.GetDriverByName('GTiff')
 
 training_sites = ['Blackstone', 'Hammett', 'Kuna', 'Simco', 'Double Springs',
@@ -103,20 +106,72 @@ for filename in [ "temp.tif",  "ppt.tif",  "elevation.tif"]:
     pixelHeight = -transform[5]
     data = band.ReadAsArray(0, 0, cols, rows)
     latlon= getValue(data, latlon, filename[:-4])
+#
+#latlon = latlon.drop(latlon[latlon.ppt<0].index)
+##%% plot t vs. p
+#sns.set(style = 'ticks',font_scale = 1.1)
+#
+#fig, ax = plt.subplots(figsize = (3,3))
+#ax.scatter(t, p, c = 'grey', alpha = 0.02, edgecolor = "none")
+#ax.set_xlabel('Temperature ($^o$C)')
+#ax.set_ylabel('Precipitation (mm.yr$^{-1}$)')
+#ax.scatter(latlon.temp, latlon.ppt, marker = 'x', color = 'r', linewidth = 0.5)
+#ax.set_ylim(-150,3000)
+#
+#fig, ax = plt.subplots(figsize = (3,3))
+#ax.scatter(t, e, c = 'grey', alpha = 0.02, edgecolor = "none")
+#ax.set_xlabel('Temperature ($^o$C)')
+#ax.set_ylabel('Elevation (m)')
+#ax.scatter(latlon.temp, latlon.elevation, marker = 'x', color = 'cyan', linewidth = 0.5)
 
-latlon = latlon.drop(latlon[latlon.ppt<0].index)
-#%% plot t vs. p
-sns.set(style = 'ticks',font_scale = 1.1)
 
-fig, ax = plt.subplots(figsize = (3,3))
-ax.scatter(t, p, c = 'grey', alpha = 0.02, edgecolor = "none")
+#%% RMSE per site
+
+df = pd.read_csv(r'D:\Krishna\projects\vwc_from_radar\data\pred_frame.csv', index_col = 0)
+def rmse(df):
+    rmse = sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))
+    return rmse
+latlon['rmse'] = df.groupby('site').apply(rmse)
+sns.set(style = 'ticks',font_scale = 1.5)
+
+fig, ax = plt.subplots(figsize = (4,4))
+sns.regplot(latlon.ppt, latlon.rmse, ax = ax)
+ax.set_xlabel('Precipitation (mm.yr$^{-1}$)')
+ax.set_ylabel('Site RMSE')
+
+fig, ax = plt.subplots(figsize = (4,4))
+sns.regplot(latlon.temp, latlon.rmse, ax = ax)
 ax.set_xlabel('Temperature ($^o$C)')
-ax.set_ylabel('Precipitation (mm.yr$^{-1}$)')
-ax.scatter(latlon.temp, latlon.ppt, marker = 'x', color = 'r', linewidth = 0.5)
-ax.set_ylim(-150,3000)
+ax.set_ylabel('Site RMSE')
 
-fig, ax = plt.subplots(figsize = (3,3))
-ax.scatter(t, e, c = 'grey', alpha = 0.02, edgecolor = "none")
+fig, ax = plt.subplots(figsize = (4,4))
+sns.regplot(latlon.elevation, latlon.rmse, ax = ax)
+#ax.scatter(latlon.elevation, latlon.rmse)
+ax.set_xlabel('Elevation (m)')
+ax.set_ylabel('Site RMSE')
+
+latlon['land_cover'] = df.groupby('site')['forest_cover(t)'].min()
+
+fig, ax = plt.subplots(figsize = (4,4))
+ax.scatter(latlon.land_cover, latlon.rmse)
+ax.set_xlabel('Land cover')
+ax.set_ylabel('Site RMSE')
+
+#%% Temp histogram
+
+t_hist = t.flatten()
+t_hist = t_hist[~np.isnan(t_hist)]
+
+
+latlon['examples'] = df.groupby('site').date.count()
+latlon.examples/=latlon.examples.sum()
+
+fig, ax = plt.subplots(figsize = (4,4))
+
+ax.hist(t_hist, normed = True, bins = 50)
+ax.bar(latlon.temp, 2*latlon.examples, width =0.6, color = 'r', alpha = 0.5)
 ax.set_xlabel('Temperature ($^o$C)')
-ax.set_ylabel('Elevation (m)')
-ax.scatter(latlon.temp, latlon.elevation, marker = 'x', color = 'cyan', linewidth = 0.5)
+ax.set_ylabel('Frequency')
+
+
+
