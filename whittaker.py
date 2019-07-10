@@ -84,6 +84,8 @@ training_sites = ['Blackstone', 'Hammett', 'Kuna', 'Simco', 'Double Springs',
 
 latlon = pd.read_csv(r'D:\Krishna\projects\vwc_from_radar\data\fuel_moisture\nfmd_queried_latlon.csv', index_col = 0)
 latlon = latlon.loc[training_sites]
+#drop a one row of site Fortynine C2A because of duplicate
+latlon = latlon[~latlon.index.duplicated()]
 
 def getValue(data, latlon, colname):
     latlon[colname] = np.nan
@@ -163,15 +165,58 @@ t_hist = t.flatten()
 t_hist = t_hist[~np.isnan(t_hist)]
 
 
+
+
 latlon['examples'] = df.groupby('site').date.count()
-latlon.examples/=latlon.examples.sum()
+#latlon.examples/=latlon.examples.sum()
+#
+#fig, ax = plt.subplots(figsize = (4,4))
+#
+#ax.hist(t_hist, normed = True, bins = 50)
+#ax.bar(latlon.temp, 2*latlon.examples, width =0.6, color = 'r', alpha = 0.5)
+#ax.set_xlabel('Temperature ($^o$C)')
+#ax.set_ylabel('Frequency')
+#
+#(latlon.rmse**2*latlon.examples).sum()**0.5
 
-fig, ax = plt.subplots(figsize = (4,4))
 
-ax.hist(t_hist, normed = True, bins = 50)
-ax.bar(latlon.temp, 2*latlon.examples, width =0.6, color = 'r', alpha = 0.5)
-ax.set_xlabel('Temperature ($^o$C)')
-ax.set_ylabel('Frequency')
+#%% weighted rmse calc
 
+latlon.drop_duplicates(inplace = True)
+latlon.dropna(inplace = True)
+latlon['se'] = latlon.rmse**2*latlon.examples
 
+def get_site_pdf(df,col_name = 'temp'):
+    col = np.repeat(df[col_name].values,df['examples'].astype(int).values)
+    y,x = np.histogram(col,bins=100)
+    x = x[:-1]
+    df[col_name+'_hist'] = np.nan
+    for index, row in df.iterrows():
+        df.loc[index,col_name+'_hist'] = y[x[x<=df[col_name].loc[index]].argmax()]
+    df[col_name+'_hist']/=df[col_name+'_hist'].sum() #normalize prability mass function
+    return df
 
+latlon = get_site_pdf(latlon, col_name = 'temp')
+latlon = get_site_pdf(latlon, col_name = 'land_cover')
+latlon = get_site_pdf(latlon, col_name = 'elevation')
+latlon = get_site_pdf(latlon, col_name = 'ppt')
+
+def get_roi_pdf(df):
+    vars = ['temp','ppt','elevation']
+    ctr = 0
+    for var in [t, p,e]:
+        hist = var.flatten()[~np.isnan(var.flatten())]
+        y,x = np.histogram(hist,bins=100)
+        x = x[:-1]
+        df[vars[ctr]+'_roi_hist'] = np.nan
+        for index, row in df.iterrows():
+            df.loc[index,vars[ctr]+'_roi_hist'] = y[x[x<=df[vars[ctr]].loc[index]].argmax()] 
+        df[vars[ctr]+'_roi_hist']/=df[vars[ctr]+'_roi_hist'].sum() #normalize prability mass function
+        ctr+=1
+    return df
+
+latlon = get_roi_pdf(latlon)
+
+(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
+(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
+(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
