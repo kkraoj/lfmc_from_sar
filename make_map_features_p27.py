@@ -83,7 +83,7 @@ raw_sar_bands = ['vh','vv']
 for lag in range(3, -1, -1):
     band_names = dict(zip(range(1,6),raw_opt_bands))
     for band in band_names.keys():
-        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2018-%02d-01_l8.tif'%(7-lag),\
+        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2018-%02d-01_cloudsnowfree_l8.tif'%(7-lag),\
         latlon.longitude.values, latlon.latitude.values, band = band)
     latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
     
@@ -108,7 +108,7 @@ for lag in range(3, -1, -1):
     else:
         latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t)')
 
-latlon.to_csv('data/map/dynamic_features.csv')
+latlon.to_csv('data/map/dynamic_features_15-jul-2019.csv')
     
 
 
