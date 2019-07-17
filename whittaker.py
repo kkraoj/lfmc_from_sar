@@ -170,12 +170,12 @@ t_hist = t_hist[~np.isnan(t_hist)]
 latlon['examples'] = df.groupby('site').date.count()
 #latlon.examples/=latlon.examples.sum()
 #
-#fig, ax = plt.subplots(figsize = (4,4))
+fig, ax = plt.subplots(figsize = (4,4))
 #
-#ax.hist(t_hist, normed = True, bins = 50)
+ax.hist(t_hist, normed = True, bins = 100)
 #ax.bar(latlon.temp, 2*latlon.examples, width =0.6, color = 'r', alpha = 0.5)
-#ax.set_xlabel('Temperature ($^o$C)')
-#ax.set_ylabel('Frequency')
+ax.set_xlabel('Temperature ($^o$C)')
+ax.set_ylabel('Frequency')
 #
 #(latlon.rmse**2*latlon.examples).sum()**0.5
 
@@ -188,12 +188,12 @@ latlon['se'] = latlon.rmse**2*latlon.examples
 
 def get_site_pdf(df,col_name = 'temp'):
     col = np.repeat(df[col_name].values,df['examples'].astype(int).values)
-    y,x = np.histogram(col,bins=100)
+    y,x = np.histogram(col,bins=100, density = True)
     x = x[:-1]
     df[col_name+'_hist'] = np.nan
     for index, row in df.iterrows():
         df.loc[index,col_name+'_hist'] = y[x[x<=df[col_name].loc[index]].argmax()]
-    df[col_name+'_hist']/=df[col_name+'_hist'].sum() #normalize prability mass function
+#    df[col_name+'_hist']/=df[col_name+'_hist'].sum() #normalize prability mass function
     return df
 
 latlon = get_site_pdf(latlon, col_name = 'temp')
@@ -206,17 +206,34 @@ def get_roi_pdf(df):
     ctr = 0
     for var in [t, p,e]:
         hist = var.flatten()[~np.isnan(var.flatten())]
-        y,x = np.histogram(hist,bins=100)
+        y,x = np.histogram(hist,bins=100, density = True)
         x = x[:-1]
         df[vars[ctr]+'_roi_hist'] = np.nan
         for index, row in df.iterrows():
             df.loc[index,vars[ctr]+'_roi_hist'] = y[x[x<=df[vars[ctr]].loc[index]].argmax()] 
-        df[vars[ctr]+'_roi_hist']/=df[vars[ctr]+'_roi_hist'].sum() #normalize prability mass function
+#        df[vars[ctr]+'_roi_hist']/=df[vars[ctr]+'_roi_hist'].sum() #normalize prability mass function
         ctr+=1
     return df
 
 latlon = get_roi_pdf(latlon)
 
-(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
-(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
-(latlon.se*latlon.temp_roi_hist/latlon.temp_hist).mean()**0.5
+#%% sample overlaying hist
+
+alpha = 0.5
+fig, ax = plt.subplots(figsize = (5,5))
+ax.bar(latlon.temp.values, latlon.temp_hist.values, alpha = alpha, color = 'b', label = 'sites')
+ax.bar(latlon.temp.values, latlon.temp_roi_hist.values, alpha = alpha, color = 'm', label = 'ROI')
+ax.set_xlabel('Temp')
+ax.set_ylabel('pdf')
+plt.legend()
+
+
+#%% RMSE_w
+RMSE =    ((latlon.se).sum()/(latlon.examples.sum()))**0.5
+RMSE_w_T =  ((latlon.se*latlon.temp_roi_hist/latlon.temp_hist).sum()/(latlon.examples.sum()))**0.5
+RMSE_w_E =  ((latlon.se*latlon.elevation_roi_hist/latlon.elevation_hist).sum()/(latlon.examples.sum()))**0.5
+RMSE_w_P =  ((latlon.se*latlon.ppt_roi_hist/latlon.ppt_hist).sum()/(latlon.examples.sum()))**0.5
+
+print('RMSE weighted by precipitation = %0.2f %%'%RMSE_w_P)
+print('RMSE weighted by elevation = %0.2f %%'%RMSE_w_E)
+print('RMSE weighted by temperature = %0.2f %%'%RMSE_w_T)

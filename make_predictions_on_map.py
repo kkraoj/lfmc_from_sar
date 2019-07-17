@@ -13,6 +13,8 @@ from dirs import dir_data, dir_codes
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from matplotlib import ticker
 
 from keras.models import load_model
 
@@ -27,7 +29,7 @@ pkl_file.close()
 pkl_file = open('scaler.pkl', 'rb')
 scaler = pickle.load(pkl_file) 
 pkl_file.close()
-date = "15-jul-2019"
+date = "08-01-2018"
 #%% prediction
 # static = pd.read_csv('map/static_features.csv', index_col = 0)
 # static.to_pickle('map/static_features')
@@ -77,34 +79,55 @@ scaled = None
 
 inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
 np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+yhat = None
 
 dataset = pd.read_pickle('map/inputs_%s'%date)
 #predictions only on previously trained landcovers
 dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
 
 dataset['pred_fmc'] = inv_yhat
-dataset[['latitude','longitude','pred_fmc']].to_pickle('map/fmc_map_2018_07_01_v2')
+fname = 'map/fmc_map_%s'%date
+dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
 dataset = None
+inv_yhat = None
 
 #%% fmc map
 
-latlon = pd.read_pickle('map/fmc_map_2018_07_01_v2')
+latlon = pd.read_pickle(fname)
 enlarge = 1
 
 fig, ax = plt.subplots(figsize=(8*enlarge,7*enlarge))
 
 m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
         projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
-m.drawmapboundary(fill_color='white')
 # load the shapefile, use the name 'states'
 m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
                 name='states', drawbounds=True) 
+
+patches   = []
+
+for info, shape in zip(m.states_info, m.states):
+    patches.append(Polygon(np.array(shape), True) )
+ax.add_collection(PatchCollection(patches, facecolor= 'grey', edgecolor='k', linewidths=1.5))
+
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
               s=0.01,c=latlon.pred_fmc.values,cmap ='magma' ,edgecolor = 'w',linewidth = 0,\
                     marker='s',latlon = True, zorder = 2,\
-                    vmin = 40, vmax = 200)
-cax = fig.add_axes([0.3, 0.2, 0.03, 0.15])
-fig.colorbar(plot,ax=ax,cax=cax)
+                    vmin = 50, vmax = 200)
+m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
+                name='states', drawbounds=True, linewidth = 1.5) 
+cax = fig.add_axes([0.7, 0.5, 0.03, 0.3])
+   
+cax.annotate('LFMC (%) \n', xy = (0.,1.0), ha = 'left', va = 'bottom')
+cb0 = fig.colorbar(plot,ax=ax,cax=cax)
+cb0.locator = ticker.MaxNLocator(nbins=5)
+cb0.update_ticks()
+cb0.set_ticks(np.linspace(50,200,4))
+cb0.set_ticklabels(['<50','100','150','>200']) 
+# tick_labels = [str(int(x)) for x in np.linspace(20,220,6)]
+# tick_labels[0] = '<50'
+# tick_labels[-1] = '>200'
+# cax.set_yticklabels(tick_labels)
 
 #%% . hist of lc 
 # lc_dict = {14: 'crop',
