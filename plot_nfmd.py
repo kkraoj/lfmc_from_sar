@@ -20,10 +20,10 @@ from matplotlib.patches import Polygon
 from pylab import cm
 from dirs import dir_figures
 
-def transform(x,y, center_x, center_y, scale, trans_x, trans_y):
-    x = scale*(x-center_x)+ trans_x+center_x
-    y = scale*(y-center_y)+ trans_y+center_y
-    return x,y
+# def transform(x,y, center_x, center_y, scale, trans_x, trans_y):
+#     x = scale*(x-center_x)+ trans_x+center_x
+#     y = scale*(y-center_y)+ trans_y+center_y
+#     return x,y
 ################################################################################
 dir_data = "D:/Krishna/projects/vwc_from_radar/data/fuel_moisture"
 os.chdir(dir_data)
@@ -160,7 +160,7 @@ df = df.loc[df.residual<=2, :]
 #df = df.loc[df.data_points>=10, :]
 latlon = pd.read_csv('data/fuel_moisture/nfmd_spatial.csv', index_col = 0)
 ### import 50 sites
-selected_sites = pd.read_pickle('data/cleaned_anomalies_11-29-2018/fm_smoothed').columns
+selected_sites = pd.read_pickle('data/lstm_input_data_pure+all_same_28_may_2019_res_SM_gap_3M').site.unique()
 latlon['color'] = 'lightgrey'
 latlon.loc[selected_sites,'color'] = 'maroon'
 latlon.sort_values('color', inplace = True)
@@ -184,10 +184,10 @@ for shapedict in m.states_info:
     statename = shapedict['NAME']
     statenames.append(statename)
 for nshape,seg in enumerate(m.states):
-    if statenames[nshape] == 'Alaska':
-    # Alaska is too big. Scale it down to 35% first, then transate it. 
-        new_seg = [(0.35*args[0] + 1100000, 0.35*args[1]-1500000) for args in seg]
-        seg = new_seg    
+    # if statenames[nshape] == 'Alaska':
+    # # Alaska is too big. Scale it down to 35% first, then transate it. 
+    #     new_seg = [(0.35*args[0] + 1100000, 0.35*args[1]-1500000) for args in seg]
+    #     seg = new_seg    
     poly = Polygon(seg,facecolor='papayawhip',edgecolor='k', zorder  = 1)
     ax.add_patch(poly)
   

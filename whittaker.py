@@ -193,7 +193,7 @@ def get_site_pdf(df,col_name = 'temp'):
     df[col_name+'_hist'] = np.nan
     for index, row in df.iterrows():
         df.loc[index,col_name+'_hist'] = y[x[x<=df[col_name].loc[index]].argmax()]
-#    df[col_name+'_hist']/=df[col_name+'_hist'].sum() #normalize prability mass function
+    df[col_name+'_hist']/=df[col_name+'_hist'].sum() #normalize prability mass function
     return df
 
 latlon = get_site_pdf(latlon, col_name = 'temp')
@@ -211,7 +211,7 @@ def get_roi_pdf(df):
         df[vars[ctr]+'_roi_hist'] = np.nan
         for index, row in df.iterrows():
             df.loc[index,vars[ctr]+'_roi_hist'] = y[x[x<=df[vars[ctr]].loc[index]].argmax()] 
-#        df[vars[ctr]+'_roi_hist']/=df[vars[ctr]+'_roi_hist'].sum() #normalize prability mass function
+        df[vars[ctr]+'_roi_hist']/=df[vars[ctr]+'_roi_hist'].sum() #normalize prability mass function
         ctr+=1
     return df
 
@@ -223,7 +223,23 @@ alpha = 0.5
 fig, ax = plt.subplots(figsize = (5,5))
 ax.bar(latlon.temp.values, latlon.temp_hist.values, alpha = alpha, color = 'b', label = 'sites')
 ax.bar(latlon.temp.values, latlon.temp_roi_hist.values, alpha = alpha, color = 'm', label = 'ROI')
-ax.set_xlabel('Temp')
+ax.set_xlabel('MAT ($^o$C)')
+ax.set_ylabel('pdf')
+plt.legend()
+
+alpha = 0.5
+fig, ax = plt.subplots(figsize = (5,5))
+ax.bar(latlon.elevation.values, latlon.elevation_hist.values, alpha = alpha, color = 'b', label = 'sites', width = 100)
+ax.bar(latlon.elevation.values, latlon.elevation_roi_hist.values, alpha = alpha, color = 'm', label = 'ROI', width = 100)
+ax.set_xlabel('Altitude (m)')
+ax.set_ylabel('pdf')
+plt.legend()
+
+alpha = 0.5
+fig, ax = plt.subplots(figsize = (5,5))
+ax.bar(latlon.ppt.values, latlon.ppt_hist.values, alpha = alpha, color = 'b', label = 'sites', width = 100)
+ax.bar(latlon.ppt.values, latlon.ppt_roi_hist.values, alpha = alpha, color = 'm', label = 'ROI', width = 100)
+ax.set_xlabel('MAP (mm.yr$^{-1}$)')
 ax.set_ylabel('pdf')
 plt.legend()
 

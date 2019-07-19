@@ -814,7 +814,7 @@ df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
 #     seasonal_mean = seasonal_mean.join(seasonality_site)
 # seasonal_mean.to_pickle('seasonal_mean_all_sites_1M_31_may_2019')
 
-## res = 'SM' processing
+# res = 'SM' processing
 # seasonal_mean = pd.DataFrame(index = range(1, 25))
 # df['moy'] = df.date.dt.month # add fortnite or year index
 # df['foy'] = 2*df['moy'] - 1*(df.date.dt.day<15) # < because 15th and later are counted as month end in 'SM'
@@ -822,6 +822,10 @@ df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
 #     df_sub = df.loc[df.site==site]
 #     # seasonality_site = interpolate(df_sub, ts_start = df_sub.date.min())
 #     seasonality_site = df_sub.groupby('foy').percent.mean().rename(site)
+#     counts = pd.value_counts(df_sub['foy'])
+#     seasonality_site = seasonality_site[counts>5]
+#     if seasonality_site.shape[0]==0:
+#         continue
 #     seasonal_mean = seasonal_mean.join(seasonality_site)
 # seasonal_mean.to_pickle('seasonal_mean_all_sites_SM_31_may_2019')
 
@@ -833,10 +837,19 @@ frame['SM'] = (2*frame['1M'] - 1*(frame.date.dt.day<=15)).astype(int)
 frame['percent_seasonal_mean'] = np.nan
 for site in frame.site.unique():
     df_sub = frame.loc[frame.site==site,['site','date',RESOLUTION,'percent(t)']]
+    # if site not in seasonal_mean.columns:
+    #     continue
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
     frame.update(df_sub)
     # frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
 frame.dropna(inplace = True, subset = ['percent_seasonal_mean'])
+
+### manually calculating because if there is a site with only 1 observation per MoY, its rmsd will be zero
+#there are 97 such sites
+gg = frame['percent(t)_hat']-frame['percent_seasonal_mean']
+gg = gg[gg.abs()>0]
+sqrt((gg**2).mean())
+
 rmsd = sqrt(mean_squared_error(frame['percent(t)'],frame['percent_seasonal_mean'] ))
 print('[INFO] RMSD between actual and seasonal cycle: %.3f' % rmsd) 
 print('[INFO] RMSE: %.3f' % rmse) 
