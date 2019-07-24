@@ -516,43 +516,43 @@ plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
             ylabel = "Predicted FMC",mec = 'grey', mew = 0)
 
 #%% true versus pred site means
-t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
-x = t['percent(t)'].values
-y = t['percent(t)_hat'].values
+# t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
+# x = t['percent(t)'].values
+# y = t['percent(t)_hat'].values
 
-plot_pred_actual(x, y,\
-        r2_score(x, y), \
-        sqrt(mean_squared_error(x, y)), \
-        ms = 40,\
-        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
-        ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2)
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 40,\
+#         zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
+#         ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2)
 
-#%% true versus pred seasonality
+# #%% true versus pred seasonality
 
-t = pred_frame.groupby(['site',pred_frame.date.dt.month])['percent(t)','percent(t)_hat'].mean()
-x = t['percent(t)'].values
-y = t['percent(t)_hat'].values
+# t = pred_frame.groupby(['site',pred_frame.date.dt.month])['percent(t)','percent(t)_hat'].mean()
+# x = t['percent(t)'].values
+# y = t['percent(t)_hat'].values
 
-plot_pred_actual(x, y,\
-        r2_score(x, y), \
-        sqrt(mean_squared_error(x, y)), \
-        ms = 40,\
-        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual MoY-averaged FMC", \
-        ylabel = "Predicted MoY-averaged FMC",mec = 'grey', mew = 1)
-#
-#%% true versus pred IAV
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 40,\
+#         zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual MoY-averaged FMC", \
+#         ylabel = "Predicted MoY-averaged FMC",mec = 'grey', mew = 1)
 
-t = pred_frame.groupby(['site',pred_frame.date.dt.year])['percent(t)','percent(t)_hat'].mean()
-x = t['percent(t)'].values
-y = t['percent(t)_hat'].values
 
-plot_pred_actual(x, y,\
-        r2_score(x, y), \
-        sqrt(mean_squared_error(x, y)), \
-        ms = 40,\
-        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual annual FMC", \
-        ylabel = "Predicted annual FMC",mec = 'grey', mew = 1)
-#
+# #%% true versus pred IAV
+
+# t = pred_frame.groupby(['site',pred_frame.date.dt.year])['percent(t)','percent(t)_hat'].mean()
+# x = t['percent(t)'].values
+# y = t['percent(t)_hat'].values
+
+# plot_pred_actual(x, y,\
+#         r2_score(x, y), \
+#         sqrt(mean_squared_error(x, y)), \
+#         ms = 40,\
+#         zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual annual FMC", \
+#         ylabel = "Predicted annual FMC",mec = 'grey', mew = 1)
 
 #%% split predict plot into pure and mixed species sites
 
@@ -805,6 +805,7 @@ df.loc[df.percent>=1000,'percent'] = np.nan
 df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
                         'Duff (DC)', '1-hour','10-hour','100-hour',\
                         '1000-hour', 'Moss, Dead (DMC)' ])]
+df = df[df.date.dt.year>=2014]
 ## res = 1M
 # seasonal_mean = pd.DataFrame(index = range(1, 13))
 # for site in df.site.unique():
@@ -814,7 +815,7 @@ df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
 #     seasonal_mean = seasonal_mean.join(seasonality_site)
 # seasonal_mean.to_pickle('seasonal_mean_all_sites_1M_31_may_2019')
 
-# res = 'SM' processing
+# res = 'SM' 
 # seasonal_mean = pd.DataFrame(index = range(1, 25))
 # df['moy'] = df.date.dt.month # add fortnite or year index
 # df['foy'] = 2*df['moy'] - 1*(df.date.dt.day<15) # < because 15th and later are counted as month end in 'SM'
@@ -837,8 +838,8 @@ frame['SM'] = (2*frame['1M'] - 1*(frame.date.dt.day<=15)).astype(int)
 frame['percent_seasonal_mean'] = np.nan
 for site in frame.site.unique():
     df_sub = frame.loc[frame.site==site,['site','date',RESOLUTION,'percent(t)']]
-    # if site not in seasonal_mean.columns:
-    #     continue
+    if site not in seasonal_mean.columns:
+        continue
     df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
     frame.update(df_sub)
     # frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
@@ -857,6 +858,24 @@ print('[INFO] RMSE: %.3f' % rmse)
 print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 
+#%% true versus pred seasonal anomaly
+ndf = frame[['site','date','percent(t)','percent(t)_hat','percent_seasonal_mean']]
+ndf.dropna(inplace = True)
+
+x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
+y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)'].mean())).values
+
+# x = ndf['percent(t)'].values
+# y = ndf['percent(t)_hat'].values
+
+plot_pred_actual(x, y,\
+        np.corrcoef(x, y)[0,1]**2, \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual FMC anomaly", \
+        ylabel = "Predicted FMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "viridis")
+
+#%%
 
 
 #x = pred_frame['percent(t)']
@@ -886,13 +905,13 @@ print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 #%% Histogram of forest cover in the study area
 
-sns.set(font_scale=1, style = 'ticks') 
-hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover(t)']), normalize = True)
-hist.index = hist.index.to_series().map(lc_dict)
-hist = hist.sort_index()
-fig, ax = plt.subplots(figsize = (4,4))
-hist.plot(kind = 'bar', ax = ax)
-ax.set_ylabel('No. of sites')
+# sns.set(font_scale=1, style = 'ticks') 
+# hist = pd.value_counts(encoder.inverse_transform(dataset.drop_duplicates('site')['forest_cover(t)']), normalize = True)
+# hist.index = hist.index.to_series().map(lc_dict)
+# hist = hist.sort_index()
+# fig, ax = plt.subplots(figsize = (4,4))
+# hist.plot(kind = 'bar', ax = ax)
+# ax.set_ylabel('No. of sites')
 
 #%%
 # site based heatmap
