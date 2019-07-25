@@ -253,7 +253,7 @@ def color_based_on_lc(fc):
     
 def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim = [-25,50],\
                      xlabel = "FMC anomaly", ylabel = "None", zoom = 1,\
-                     figname = None, dpi = 600,ms = 8, mec ='', mew = 0, test_r2 = True):
+                     figname = None, dpi = 600,ms = 8, mec ='', mew = 0, test_r2 = True, bias = False):
     fig, ax = plt.subplots(figsize = (zoom*3.5,zoom*3.5), dpi = dpi)
     plt.axis('scaled')
     x = test_y
@@ -266,8 +266,9 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     x, y, z = x[idx], y[idx], z[idx]
 #    groups = color_based_on_lc(df.loc[test_x.index,'forest_cover'])
     plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap, linewidth = mew)
-    
-
+    ax.set_xlim(axis_lim)
+    ax.set_ylim(axis_lim)
+    ax.plot(axis_lim,axis_lim, lw =.5, color = 'grey')
     
     ax.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -276,13 +277,18 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     ax.set_yticks(ax.get_xticks())
 #    ax.set_xticks([-50,0,50,100])
 #    ax.set_yticks([-50,0,50,100])
+    model_bias = np.mean(pred_y - test_y)
     if test_r2:
         ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$'%(np.floor(R2*100)/100, model_rmse), \
-                    xy=(0.05, 0.97), xycoords='axes fraction',\
+                    xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
     else:
         ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$'%(np.floor(R2*100)/100, model_rmse), \
-                    xy=(0.05, 0.97), xycoords='axes fraction',\
+                    xy=(0.03, 0.97), xycoords='axes fraction',\
+                    ha='left',va='top')
+    if bias:
+        ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$Bias=%0.1f$'%(np.floor(R2*100)/100, model_rmse, model_bias), \
+                    xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
 #    divider = make_axes_locatable(ax)
 #    cax = divider.append_axes("right", size="5%", pad=0.08)
@@ -293,9 +299,8 @@ def plot_pred_actual(test_y, pred_y, R2, model_rmse,  cmap = 'plasma', axis_lim 
     if not(figname is None):
         plt.savefig(os.path.join(dir_figures,figname), dpi = dpi,\
                     bbox_inches="tight")
-    ax.plot(axis_lim,axis_lim, lw =.5, color = 'grey')
-    ax.set_xlim(axis_lim)
-    ax.set_ylim(axis_lim)
+    
+
     plt.show()
     
     return ax

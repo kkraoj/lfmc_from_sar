@@ -190,7 +190,7 @@ for nshape,seg in enumerate(m.states):
     #     seg = new_seg    
     poly = Polygon(seg,facecolor='papayawhip',edgecolor='k', zorder  = 1)
     ax.add_patch(poly)
-  
+latlon = latlon.loc[selected_sites] # plotting only red sites for IGARSS
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
                s=200,c=latlon.color.values,cmap =cmap ,edgecolor = 'w',linewidth = 2,\
                     marker='o',alpha = alpha,latlon = True, zorder = 2,\

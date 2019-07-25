@@ -511,21 +511,21 @@ def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
 inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
-plot_pred_actual(inv_y.values, inv_yhat, r2, rmse, ms = 30,\
+plot_pred_actual(inv_y.values, inv_yhat,  np.corrcoef(inv_y.values, inv_yhat)[0,1]**2, rmse, ms = 30,\
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual FMC", \
-            ylabel = "Predicted FMC",mec = 'grey', mew = 0)
+            ylabel = "Predicted FMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
 #%% true versus pred site means
-# t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
-# x = t['percent(t)'].values
-# y = t['percent(t)_hat'].values
+t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
+x = t['percent(t)'].values
+y = t['percent(t)_hat'].values
 
-# plot_pred_actual(x, y,\
-#         r2_score(x, y), \
-#         sqrt(mean_squared_error(x, y)), \
-#         ms = 40,\
-#         zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
-#         ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2)
+plot_pred_actual(x, y,\
+        np.corrcoef(x, y)[0,1]**2, \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
+        ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2,test_r2 = False)
 
 # #%% true versus pred seasonality
 
@@ -873,7 +873,7 @@ plot_pred_actual(x, y,\
         sqrt(mean_squared_error(x, y)), \
         ms = 40,\
         zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual FMC anomaly", \
-        ylabel = "Predicted FMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "viridis")
+        ylabel = "Predicted FMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "plasma")
 
 #%%
 
