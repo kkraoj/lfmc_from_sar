@@ -512,8 +512,8 @@ inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, r
 #%% true vsersus pred scatter
 sns.set(font_scale=1.5, style = 'ticks')
 plot_pred_actual(inv_y.values, inv_yhat,  np.corrcoef(inv_y.values, inv_yhat)[0,1]**2, rmse, ms = 30,\
-            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual FMC", \
-            ylabel = "Predicted FMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
 #%% true versus pred site means
 t = pred_frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
@@ -524,8 +524,8 @@ plot_pred_actual(x, y,\
         np.corrcoef(x, y)[0,1]**2, \
         sqrt(mean_squared_error(x, y)), \
         ms = 40,\
-        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged FMC", \
-        ylabel = "Predicted site-averaged FMC",mec = 'grey', mew = 2,test_r2 = False)
+        zoom = 1.,dpi = 200,axis_lim = [50,200], xlabel = "Actual site-averaged LFMC", \
+        ylabel = "Predicted site-averaged LFMC",mec = 'grey', mew = 2,test_r2 = False)
 
 # #%% true versus pred seasonality
 
@@ -872,8 +872,8 @@ plot_pred_actual(x, y,\
         np.corrcoef(x, y)[0,1]**2, \
         sqrt(mean_squared_error(x, y)), \
         ms = 40,\
-        zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual FMC anomaly", \
-        ylabel = "Predicted FMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "plasma")
+        zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual LFMC anomaly", \
+        ylabel = "Predicted LFMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "plasma")
 
 #%%
 
