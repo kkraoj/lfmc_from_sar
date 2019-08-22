@@ -19,6 +19,7 @@ from pandas.tseries.offsets import MonthEnd, SemiMonthEnd
 
 
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import KFold
 from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
@@ -304,9 +305,10 @@ TRAINRATIO = 0.70
 LOSS = 'mse'
 LAG = '3M'
 RETRAINEPOCHS = int(20e3)
+FOLDS = 3
 CV = False
-kf = KFold(n_splits=3, random_state = SEED)
 
+kf = KFold(n_splits=FOLDS, random_state = SEED)
 int_lag = int(LAG[0])
 if RESOLUTION =='SM':
     int_lag*=2
@@ -415,8 +417,8 @@ def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = 
     test_Xr = test_X.reshape((test_X.shape[0], int_lag+1, len(inputs)), order = 'A')
     return dataset, rescaled, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-            scaler, encoder
-            
+            scaler, encoder         
+
 dataset, rescaled, reframed, \
     train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
     scaler, encoder = split_train_test(dataset, int_lag = int_lag)
@@ -892,6 +894,38 @@ plot_pred_actual(x, y,\
         ms = 40,\
         zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual LFMC anomaly", \
         ylabel = "Predicted LFMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "plasma")
+
+
+#%% CV 
+CV = True # hard coded
+if CV:
+    frame = pd.DataFrame()
+    
+    for fold in range(FOLDS):
+        print('[INFO] Fold: %1d'%fold)
+        dataset, rescaled, reframed, \
+            train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+            scaler, encoder = split_train_test(dataset, int_lag = int_lag, CV = CV, fold = fold)
+            
+        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_fold_%d.hdf5'%(SAVENAME, fold))
+        
+        checkpoint = ModelCheckpoint(filepath, save_best_only=True)
+    
+        callbacks_list = [checkpoint, earlystopping]
+    
+        history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
+                            validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
+                            callbacks=callbacks_list)
+        model = load_model(filepath) # once trained, load best model
+        inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+        frame = frame.append(pred_frame)
+    x = frame['percent(t)'].values
+    y =  frame['percent(t)_hat'].values
+    rmse = np.sqrt(mean_squared_error(x,y))
+    plot_pred_actual(x, y,  np.corrcoef(x, y)[0,1]**2, rmse, ms = 30,\
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
+
 
 #%%
 
