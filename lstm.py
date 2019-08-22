@@ -282,7 +282,8 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 
 
 ##input options 
-np.random.seed(0)
+SEED = 0
+np.random.seed(SEED)
 RELOADINPUT = True
 OVERWRITEINPUT = False
 LOAD_MODEL = True
@@ -303,7 +304,8 @@ TRAINRATIO = 0.70
 LOSS = 'mse'
 LAG = '3M'
 RETRAINEPOCHS = int(20e3)
-
+CV = False
+kf = KFold(n_splits=3, random_state = SEED)
 
 int_lag = int(LAG[0])
 if RESOLUTION =='SM':
@@ -328,7 +330,7 @@ else:
 #             if '%s_%s'%(num, den) in col:
 #                 dataset.drop(col, axis = 1, inplace = True)
     
-def split_train_test(dataset, inputs = None, int_lag = None):
+def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None):
    
     if DROPCROPS:
         crop_classes = [item[0] for item in lc_dict.items() if item[1] == 'crop']
@@ -372,11 +374,27 @@ def split_train_test(dataset, inputs = None, int_lag = None):
     #     sub = reframed.loc[reframed.site==site]
     #     sub = sub.sort_values(by = 'date')
     #     train_ind = train_ind+list(sub.index[:int(np.ceil(sub.shape[0]*TRAINRATIO))])
-    for cover in reframed['forest_cover(t)'].unique():
-        sub = reframed.loc[reframed['forest_cover(t)']==cover]
-        sites = sub.site.unique()
-        train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
-        train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
+    if CV:
+        for cover in np.sort(reframed['forest_cover(t)'].unique()):
+            sub = reframed.loc[reframed['forest_cover(t)']==cover]
+            sites = np.sort(sub.site.unique())
+            
+            if len(sites)<3:
+                train_sites = sites
+            else:
+                train_sites_ind, _ = list(kf.split(sites))[fold]
+                train_sites = sites[train_sites_ind]
+                # break
+            train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
+        # print(len(train_ind)/reframed.shape[0])
+    else:
+        for cover in reframed['forest_cover(t)'].unique():
+            sub = reframed.loc[reframed['forest_cover(t)']==cover]
+            sites = sub.site.unique()
+            train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
+            train_ind+=list(sub.loc[sub.site.isin(train_sites)].index)
+
+        
     # sites = reframed.site.unique()
     # train_sites = np.random.choice(sites, size = int(np.ceil(TRAINRATIO*len(sites))), replace = False)
     # train_ind = reframed.loc[reframed.site.isin(train_sites)].index
@@ -427,7 +445,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, bias_regularizer= Breg,\
                     return_sequences=True))#, \
 #                   activity_regularizer = Areg, \
-#                   bias_regularizer= Breg,\
+#                   bias_regularizer= Breg,\    
 #                   kernel_regularizer = Kreg, \
 #                   recurrent_regularizer = Rreg))
     model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True, bias_regularizer= Breg))
