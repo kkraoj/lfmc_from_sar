@@ -926,7 +926,7 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
-
+frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
 #%%
 
 
