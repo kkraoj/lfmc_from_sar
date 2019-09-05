@@ -43,9 +43,9 @@ lc_dict = {14: 'crop',
             70: 'closed needleleaf evergreen',
             90: 'mixed forest',
             100:'mixed forest',
-            110:'shrub',
-            120:'shrub',
-            130:'shrub',
+            110:'shrub/grassland',
+            120:'grassland/shrubland',
+            130:'closed to open shrub',
             140:'grass',
             150:'sparse vegetation',
             160:'regularly flooded forest'}
@@ -332,7 +332,7 @@ else:
 #             if '%s_%s'%(num, den) in col:
 #                 dataset.drop(col, axis = 1, inplace = True)
     
-def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None):
+def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None, FOLDS = FOLDS):
    
     if DROPCROPS:
         crop_classes = [item[0] for item in lc_dict.items() if item[1] == 'crop']
@@ -381,7 +381,7 @@ def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = 
             sub = reframed.loc[reframed['forest_cover(t)']==cover]
             sites = np.sort(sub.site.unique())
             
-            if len(sites)<3:
+            if len(sites)<FOLDS:
                 train_sites = sites
             else:
                 train_sites_ind, _ = list(kf.split(sites))[fold]
@@ -436,22 +436,42 @@ dataset, rescaled, reframed, \
 
 filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
-Areg = regularizers.l2(1e-4)
+Areg = regularizers.l2(1e-5)
 Breg = regularizers.l2(1e-3)
-Kreg = regularizers.l2(1e-5)
-Rreg = regularizers.l2(1e-5)
+Kreg = regularizers.l2(1e-15)
+Rreg = regularizers.l2(1e-15)
 
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     
     model = Sequential()
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT, bias_regularizer= Breg,\
-                    return_sequences=True))#, \
-#                   activity_regularizer = Areg, \
-#                   bias_regularizer= Breg,\    
-#                   kernel_regularizer = Kreg, \
-#                   recurrent_regularizer = Rreg))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True, bias_regularizer= Breg))
-    model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, bias_regularizer= Breg))#, \
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                  return_sequences=True, \
+                  bias_regularizer= Breg))
+                  # activity_regularizer = Areg, \
+                  
+                  # kernel_regularizer = Kreg, \
+                  # recurrent_regularizer = Rreg))
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                    return_sequences=True, \
+                    bias_regularizer= Breg))
+                  # activity_regularizer = Areg, \
+                  
+                  # kernel_regularizer = Kreg, \
+                  # recurrent_regularizer = Rreg))
+    # model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+    #                 return_sequences=True, \
+    #               activity_regularizer = Areg, \
+    #               bias_regularizer= Breg,\
+    #               kernel_regularizer = Kreg, \
+    #               recurrent_regularizer = Rreg))
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                   bias_regularizer= Breg))
+                   # activity_regularizer = Areg, \
+                 
+                  # kernel_regularizer = Kreg, \
+                  # recurrent_regularizer = Rreg))
+    # model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT,return_sequences=True, bias_regularizer= Breg))
+    # model.add(LSTM(10, dropout = DROPOUT, recurrent_dropout=DROPOUT, bias_regularizer= Breg))#, \
 #                   activity_regularizer = Areg, \
 #                   bias_regularizer= Breg,\
 #                   kernel_regularizer = Kreg, \
@@ -897,10 +917,10 @@ plot_pred_actual(x, y,\
 
 
 #%% CV 
-CV = True # hard coded
+CV = False # hard coded
 if CV:
     frame = pd.DataFrame()
-    
+    # model = build_model()
     for fold in range(FOLDS):
         print('[INFO] Fold: %1d'%fold)
         dataset, rescaled, reframed, \
@@ -914,7 +934,7 @@ if CV:
         callbacks_list = [checkpoint, earlystopping]
     
         history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
-                            validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
+                            validation_data=(test_Xr, test_y), verbose=0, shuffle=False,\
                             callbacks=callbacks_list)
         model = load_model(filepath) # once trained, load best model
         inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
@@ -926,7 +946,53 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
-frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+
+#%% RMSE vs sites. bar chart
+
+frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+rmse = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
+rmse.index = range(len(rmse))
+
+fig, ax = plt.subplots(figsize = (6,6))
+ax.bar(rmse.index, rmse.values, width = 1)
+ax.set_ylabel('RMSE')
+ax.set_xlabel('Sites')
+# ax.set_xticklabels(range(len(rmse)))
+
+#%% timeseries for three sites
+new_frame = frame.copy()
+new_frame.index = pd.to_datetime(new_frame.date)
+rmse = new_frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
+
+fig, ax = plt.subplots(figsize = (4,1.5))
+sub = new_frame.loc[new_frame.site == rmse.index[0]]
+sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'grey', ax = ax,\
+        marker = 'o', label = 'actual', color = 'grey', mew =0.1,ms = 3,linewidth = 1 ,legend = False)
+sub.plot(y = 'percent(t)_hat', linestyle = '-', markeredgecolor = 'fuchsia', ax = ax,\
+        marker = 'o', label = 'predicted',color = 'None', mew= 0.1, ms = 3, lw = 1, legend = False)
+ax.set_ylabel('FMC(%)')
+ax.set_xlabel('')
+# ax.set_title(site)
+
+
+#%% performance by landcover table
+
+table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))})
+table['R2'] = frame.groupby('forest_cover(t)').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]**2)
+table['N'] = frame.groupby('forest_cover(t)').apply(lambda df: df.shape[0])
+table['Bias'] = frame.groupby('forest_cover(t)').apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean())
+### works only with original encoder!!
+pkl_file = open('encoder.pkl', 'rb')
+encoder = pickle.load(pkl_file) 
+pkl_file.close()
+table.index = encoder.inverse_transform(table.index.astype(int))
+table.index = table.index.map(lc_dict)
+table.index.name = 'landcover'
+print(table)
+table.to_excel('model_performance_by_lc.xls')
+
+
 #%%
 
 
