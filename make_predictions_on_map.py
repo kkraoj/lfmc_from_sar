@@ -129,21 +129,24 @@ m.scatter(mask.longitude.values, mask.latitude.values,
 
 m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
                 name='states', drawbounds=True, linewidth = 1.5) 
-# cax = fig.add_axes([0.7, 0.5, 0.03, 0.3])
+
+
+cax = fig.add_axes([0.7, 0.5, 0.03, 0.3])
    
-# cax.annotate('LFMC (%) \n', xy = (0.,1.0), ha = 'left', va = 'bottom')
-# cb0 = fig.colorbar(plot,ax=ax,cax=cax)
-# cb0.locator = ticker.MaxNLocator(nbins=5)
-# cb0.update_ticks()
-# cb0.set_ticks(np.linspace(50,200,4))
-# cb0.set_ticklabels(['<50','100','150','>200']) 
+cax.annotate('LFMC (%) \n', xy = (0.,1.0), ha = 'left', va = 'bottom')
+cb0 = fig.colorbar(plot,ax=ax,cax=cax)
+cb0.locator = ticker.MaxNLocator(nbins=5)
+cb0.update_ticks()
+cb0.set_ticks(np.linspace(50,200,4))
+cb0.set_ticklabels(['<50','100','150','>200']) 
 
 
-# tick_labels = [str(int(x)) for x in np.linspace(20,220,6)]
-# tick_labels[0] = '<50'
-# tick_labels[-1] = '>200'
-# cax.set_yticklabels(tick_labels)
+tick_labels = [str(int(x)) for x in np.linspace(20,220,6)]
+tick_labels[0] = '<50'
+tick_labels[-1] = '>200'
+cax.set_yticklabels(tick_labels)
 
+# fig.save(r'D:\Krishna\projects\vwc_from_radar\figures\map_high_res.jpg')
 #%% . hist of lc 
 # lc_dict = {14: 'crop',
 #             20: 'crop',

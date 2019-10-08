@@ -950,48 +950,55 @@ if CV:
 
 #%% RMSE vs sites. bar chart
 
-frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
-rmse = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
-rmse.index = range(len(rmse))
+# frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+# rmse = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
+# rmse.index = range(len(rmse))
 
-fig, ax = plt.subplots(figsize = (6,6))
-ax.bar(rmse.index, rmse.values, width = 1)
-ax.set_ylabel('RMSE')
-ax.set_xlabel('Sites')
-# ax.set_xticklabels(range(len(rmse)))
+# fig, ax = plt.subplots(figsize = (6,6))
+# ax.bar(rmse.index, rmse.values, width = 1)
+# ax.set_ylabel('RMSE')
+# ax.set_xlabel('Sites')
+# # ax.set_xticklabels(range(len(rmse)))
 
 #%% timeseries for three sites
-new_frame = frame.copy()
-new_frame.index = pd.to_datetime(new_frame.date)
-rmse = new_frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
+# new_frame = frame.copy()
+# new_frame.index = pd.to_datetime(new_frame.date)
+# rmse = new_frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
 
-fig, ax = plt.subplots(figsize = (4,1.5))
-sub = new_frame.loc[new_frame.site == rmse.index[0]]
-sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'grey', ax = ax,\
-        marker = 'o', label = 'actual', color = 'grey', mew =0.1,ms = 3,linewidth = 1 ,legend = False)
-sub.plot(y = 'percent(t)_hat', linestyle = '-', markeredgecolor = 'fuchsia', ax = ax,\
-        marker = 'o', label = 'predicted',color = 'None', mew= 0.1, ms = 3, lw = 1, legend = False)
-ax.set_ylabel('FMC(%)')
-ax.set_xlabel('')
-# ax.set_title(site)
+# fig, ax = plt.subplots(figsize = (4,1.5))
+# sub = new_frame.loc[new_frame.site == rmse.index[0]]
+# sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'grey', ax = ax,\
+#         marker = 'o', label = 'actual', color = 'grey', mew =0.1,ms = 3,linewidth = 1 ,legend = False)
+# sub.plot(y = 'percent(t)_hat', linestyle = '-', markeredgecolor = 'fuchsia', ax = ax,\
+#         marker = 'o', label = 'predicted',color = 'fuchsia', mew= 0.1, ms = 3, lw = 1, legend = False)
+# ax.set_ylabel('LFMC(%)') 
+# ax.set_xlabel('')
+# # ax.set_title(site)
+
+plot_pred_actual(inv_y.values, inv_yhat,  np.corrcoef(inv_y.values, inv_yhat)[0,1]**2, rmse, ms = 30,\
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
 
 #%% performance by landcover table
 
-table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))})
-table['R2'] = frame.groupby('forest_cover(t)').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]**2)
-table['N'] = frame.groupby('forest_cover(t)').apply(lambda df: df.shape[0])
-table['Bias'] = frame.groupby('forest_cover(t)').apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean())
-### works only with original encoder!!
-pkl_file = open('encoder.pkl', 'rb')
-encoder = pickle.load(pkl_file) 
-pkl_file.close()
-table.index = encoder.inverse_transform(table.index.astype(int))
-table.index = table.index.map(lc_dict)
-table.index.name = 'landcover'
-print(table)
-table.to_excel('model_performance_by_lc.xls')
+# table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
+# table['R2'] = frame.groupby('forest_cover(t)').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]**2).round(2)
+# table['N_obs'] = frame.groupby('forest_cover(t)').apply(lambda df: df.shape[0])
+# table['N_sites'] = frame.groupby('forest_cover(t)').apply(lambda df: len(df.site.unique()))
+# table['Bias'] = frame.groupby('forest_cover(t)').apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
+# ### works only with original encoder!!
+# pkl_file = open('encoder.pkl', 'rb')
+# encoder = pickle.load(pkl_file) 
+# pkl_file.close()
+# table.index = encoder.inverse_transform(table.index.astype(int))
+# table.index = table.index.map(lc_dict)
+# table.index.name = 'landcover'
+# table = table[['N_sites','N_obs','RMSE','R2','Bias']]
 
+# print(table)
+# table.to_excel('model_performance_by_lc.xls')
+# table.to_latex('model_performance_by_lc.tex')
 
 #%%
 
