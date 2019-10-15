@@ -12,8 +12,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.dates as mdates
 import matplotlib.ticker as mtick
+from mpl_toolkits.basemap import Basemap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.patches import Polygon, Patch
+
+
+
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import gaussian_kde
+
+from osgeo import gdal
+
 from dirs import dir_data, dir_codes, dir_figures
 from fnn_smoothed_anomaly_all_sites import plot_importance, plot_usa
 import pickle
@@ -74,7 +83,10 @@ def bar_chart():
     rmse['Sites'] = range(len(rmse))
     ### mean rmse values store
     lc_rmse = rmse.groupby('Landcover').RMSE.mean().sort_values()
-    lc_rmse.index = [6.5,55,72,95,106.5,122.5]
+    lc_rmse.name = 'lc_rmse'
+    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
     
     fig, _ = plt.subplots(2,3, figsize = (DC,4))
     grid = plt.GridSpec(3, 2, wspace=0.4, hspace=0.15, figure = fig)
@@ -103,10 +115,10 @@ def bar_chart():
 
     colors = ['darkslategrey','forestgreen','olive','darkgoldenrod','darkorange','lawngreen']
     sns.barplot(x="Sites", y="RMSE", data=rmse, ax = ax1, hue = 'Landcover', \
-                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.1,
+                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax1.plot(lc_rmse,'s',color='lightgrey',ms = 3.5, mec = 'slategrey',mew = 0.4,\
+    ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
              label = 'mean landcover rmse')
     # ax1.bar(rmse.index, rmse.values, width = 1)
     handles, labels = ax1.get_legend_handles_labels()
@@ -116,9 +128,11 @@ def bar_chart():
     ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
     
     # ax1.set_xticklabels(range(len(rmse)))
-    ax1.set_xticks([0,25,50,75,100,124])
-    ax1.set_xticklabels([0,25,50,75,100,124])
+    ax1.set_xticks([])
+    ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax1, 1)
+    ax1.set_ylim(0,90)
 
     #%% timeseries for three sites
     new_frame = frame.copy()
@@ -132,13 +146,13 @@ def bar_chart():
                                                    astype(int).unique()[0])]
         if ax == ax4:       
             sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
-                marker = 'o', label = 'actual', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
+                marker = 'o', label = 'observed', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
         else:
             sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
                 marker = 'o', label = '_nolegend_', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
         
         sub.plot(y = 'percent(t)_hat', linestyle = '--', markeredgecolor = 'k', ax = ax,\
-                marker = 'o', label = 'predicted',color = color_dict[lc], mew= 0.3, ms = 3, lw = 1, rot = 0)
+                marker = 'o', label = 'estimated',color = color_dict[lc], mew= 0.3, ms = 3, lw = 1, rot = 0)
         if ax==ax3:
             ax.set_ylabel('LFMC(%)') 
         ax.set_xlabel('')
@@ -199,44 +213,50 @@ def landcover_table():
     # table.to_latex('model_performance_by_lc.tex')
 
 #%% prediction scatter plots after CV
+def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette().as_hex()), axis_lim = [-25,50],\
+                 xlabel = "None", ylabel = "None", ticks = None,\
+                 ms = 8, mec ='', mew = 0, ax = None):
+    # plt.axis('scaled')
+    ax.set_aspect('equal', 'box')
 
+    x = test_y
+    y = pred_y
+    
+    non_nan_ind=np.where(~np.isnan(x))[0]
+    x=x.take(non_nan_ind);y=y.take(non_nan_ind)
+    non_nan_ind=np.where(~np.isnan(y))[0]
+    x=x.take(non_nan_ind);y=y.take(non_nan_ind)
+
+    xy = np.vstack([x,y])
+    z = gaussian_kde(xy)(xy)
+    idx = z.argsort()
+    x, y, z = x[idx], y[idx], z[idx]
+    plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap, linewidth = mew)
+    
+    ax.plot(axis_lim,axis_lim, lw =.2, color = 'grey')
+    
+    # ax.yaxis.set_major_formatter(mtick.PercentFormatter())
+    # ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    ax.set_yticks(ax.get_xticks())
+#    ax.set_xticks([-50,0,50,100])
+#    ax.set_yticks([-50,0,50,100])
+    R2 = r2_score(x,y)
+    model_rmse = np.sqrt(mean_squared_error(x,y))
+    model_bias = np.mean(pred_y - test_y)
+    ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$Bias=%0.1f$'%(np.floor(R2*100)/100, model_rmse, model_bias), \
+                    xy=(0.03, 0.97), xycoords='axes fraction',\
+                    ha='left',va='top')
+    ax.set_xlim(axis_lim)
+    ax.set_ylim(axis_lim)
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+    # plt.tight_layout()
+        
 def scatter_plot():
     
-    def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette().as_hex()), axis_lim = [-25,50],\
-                     xlabel = "None", ylabel = "None", ticks = None,\
-                     ms = 8, mec ='', mew = 0, ax = None):
-        # plt.axis('scaled')
-        ax.set_aspect('equal', 'box')
 
-        x = test_y
-        y = pred_y
-
-        xy = np.vstack([x,y])
-        z = gaussian_kde(xy)(xy)
-        idx = z.argsort()
-        x, y, z = x[idx], y[idx], z[idx]
-        plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap, linewidth = mew)
-        
-        ax.plot(axis_lim,axis_lim, lw =.2, color = 'grey')
-        
-        # ax.yaxis.set_major_formatter(mtick.PercentFormatter())
-        # ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel(xlabel)
-        ax.set_yticks(ax.get_xticks())
-    #    ax.set_xticks([-50,0,50,100])
-    #    ax.set_yticks([-50,0,50,100])
-        R2 = r2_score(x,y)
-        model_rmse = np.sqrt(mean_squared_error(x,y))
-        model_bias = np.mean(pred_y - test_y)
-        ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$Bias=%0.1f$'%(np.floor(R2*100)/100, model_rmse, model_bias), \
-                        xy=(0.03, 0.97), xycoords='axes fraction',\
-                        ha='left',va='top')
-        ax.set_xlim(axis_lim)
-        ax.set_ylim(axis_lim)
-        ax.set_xticks(ticks)
-        ax.set_yticks(ticks)
-        # plt.tight_layout()
 
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
     grid = plt.GridSpec(1, 3, wspace=0.6, figure = fig)
@@ -250,8 +270,8 @@ def scatter_plot():
     y = frame['percent(t)_hat'].values
     
     plot_pred_actual(x, y,ax = ax1,ticks = [0,100,200,300],\
-        ms = 40, axis_lim = [0,300], xlabel = "LFMC (%)", \
-        ylabel = "$\hat{LFMC}$ (%)",mec = 'grey', mew = 0)
+        ms = 40, axis_lim = [0,300], xlabel = "$LFMC_{obs}$ (%)", \
+        ylabel = "$LFMC_{est}$ (%)",mec = 'grey', mew = 0)
     
 
     t = frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
@@ -259,8 +279,8 @@ def scatter_plot():
     y = t['percent(t)_hat'].values
     
     plot_pred_actual(x, y,ax = ax2,\
-                 ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_s}$ (%)", \
-            ylabel = "$\hat{\overline{LFMC_s}}$ (%)",mec = 'grey', mew = 0.3, ticks = [50,100,150,200])
+                 ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_{obs}}$ (%)", \
+            ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0.3, ticks = [50,100,150,200])
     
     
     
@@ -271,8 +291,8 @@ def scatter_plot():
     y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)'].mean())).values
     
     plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
-                 ms = 40, axis_lim = [-100,100], xlabel = "LFMC - $\overline{LFMC_s}$ (%)", \
-            ylabel = "$\hat{LFMC} - \hat{\overline{LFMC_s}}$ (%)",mec = 'grey', mew = 0)
+                 ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
+            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
     ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')  
     ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
@@ -370,6 +390,178 @@ def microwave_importance():
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
     
+def nfmd_sites():
+    ################################################################################
+    
+    
+    fig = plt.figure(constrained_layout=True,figsize=(0.67*DC, 3))
+    widths = [2, 1]
+    heights = [1,1]
+    spec = mpl.gridspec.GridSpec(ncols=2, nrows=2, width_ratios=widths,\
+                                 height_ratios = heights,\
+                                 wspace = 0.4,hspace = 0.15)
+    
+    ax1 = plt.subplot(spec[0:,0])
+    ax2 = plt.subplot(spec[0,1])
+    ax3 = plt.subplot(spec[1,1])
+    
+    
+    # fig, _ = plt.subplots(2,3,figsize=(0.67*DC, SC), constrained_layout = True)
+    # cols = 5
+    # grid = plt.GridSpec(2,cols, wspace=-0,hspace= 0.2  , figure = fig)
+    
+    # ax1 = plt.subplot(grid[0:,0:cols-1])
+    # ax2 = plt.subplot(grid[0, cols-1])
+    # ax3 = plt.subplot(grid[1, cols-1]) 
+    
+    dir_data = "D:/Krishna/projects/vwc_from_radar/data/fuel_moisture"
+    os.chdir(dir_data)
+    files = os.listdir(dir_data+'/raw/')
+    Df = pd.DataFrame()
+    for file in files:
+        Df = pd.concat([Df, pd.read_table('raw/'+file)])
+    Df.drop("Unnamed: 7", axis = 1, inplace = True)
+    Df["Date"] = pd.to_datetime(Df["Date"])
+    
+    Df['address'] = Df["Site"] + ', '+ Df["State"]
+    pd.DataFrame(Df['address'].unique(), columns = ['address']).to_csv('address.csv')
+    
+    ## actual latlon queried from nfmd
+    latlon = pd.read_csv("nfmd_queried_latlon.csv", index_col = 0)
+    latlon['observations'] = Df.groupby('Site').GACC.count()
+    latlon.rename(columns = {"Latitude":"latitude", "Longitude":"longitude"}, inplace = True)
+    temp = Df.drop_duplicates(subset = 'Site')
+    temp.index = temp.Site
+    latlon['State'] = np.NaN
+    latlon.update(temp)
+     
+    ##############################################################################
+    ### plot of data record
+    os.chdir('D:/Krishna/projects/vwc_from_radar')
+    df = pd.read_pickle('data/df_sar_vwc_all')
+    df.residual = df.residual.abs()
+    # df = df.loc[df.residual<=2, :]
+    #df = df.loc[df.data_points>=10, :]
+    latlon = pd.read_csv('data/fuel_moisture/nfmd_spatial.csv', index_col = 0)
+    ### import 50 sites
+    # selected_sites = pd.read_pickle('data/lstm_input_data_pure+all_same_28_may_2019_res_SM_gap_3M').site.unique()
+    selected_sites = list(frame.site.unique())
+    selected_sites.remove('Baker Park') # This is in south dakota
+    latlon['color'] = 'lightgrey'
+    latlon.loc[selected_sites,'color'] = 'maroon'
+    latlon = latlon.loc[selected_sites] # plotting only red sites for IGARSS
+    latlon.sort_values('color', inplace = True)
+    # latlon['data_points'] = df.groupby('Site').obs_date.count()
+    latlon['data_points'] = frame.groupby('site').date.count()
+    latlon.sort_values('data_points',inplace = True, ascending = False)
+    #latlon = latlon.loc[latlon.data_points>=10,:]
+    cmap = 'magma'
+    sns.set_style('ticks')
+    alpha = 1
+    
+    m = Basemap(llcrnrlon=-119,llcrnrlat=22.8,urcrnrlon=-92,urcrnrlat=52,
+            projection='lcc',lat_1=33,lat_2=45,lon_0=-95, ax = ax1)
+    m.drawmapboundary(fill_color='lightcyan',zorder = 0.9)
+    #-----------------------------------------------------------------------
+    # load the shapefile, use the name 'states'
+    m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True)
+    statenames=[]
+    for shapedict in m.states_info:
+        statename = shapedict['NAME']
+        statenames.append(statename)
+    for nshape,seg in enumerate(m.states): 
+        poly = Polygon(seg,facecolor='papayawhip',edgecolor='k', zorder  = 2,alpha = 0.6)
+        ax1.add_patch(poly)
+    ### adding ndvi
+    plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
+                   s=2*latlon.data_points,c=latlon.color.values,edgecolor = 'lightgrey',linewidth = 0.5,\
+                        marker='o',alpha = 0.9,latlon = True, zorder = 4,\
+                        )
+    #################
+    ds = gdal.Open(r"D:\Krishna\projects\vwc_from_radar\data\usa_shapefile\west_usa_ndvi.tif")
+    data = ds.ReadAsArray()
+    data = np.ma.masked_where(data<=0,data)
+    x = np.linspace(-134.4, -134.4+0.1*data.shape[1]-0.1,data.shape[1]) #from raster.GetGeoTransform()
+    y  = np.linspace(52.0,52.0-0.1*data.shape[0]+0.1,data.shape[0]) 
+    xx, yy = np.meshgrid(x, y)  
+    m.pcolormesh(xx, yy, data, cmap = 'YlGn',vmin =0,vmax = 250,\
+                 zorder = 1,latlon=True) 
+    m1 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=2*10)
+    m2 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=2*50)
+    m3 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=2*100)
+    legend_markers = [m1, m2,m3]
+
+    labels =['10','50','100']
+
+    legend = ax1.legend(handles=legend_markers, labels=labels, loc='upper center',
+        scatterpoints=1,title = 'No. of Measurements',ncol = 3,\
+        handletextpad=0,bbox_to_anchor = (0.5,0.01),fontsize = 'small',borderpad = 0.5)
+    plt.setp(legend.get_title(),fontsize='small')
+    ###############
+    m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True)
+    #ax.set_title('Length of data record (number of points $\geq$ 10)')
+    plt.setp(ax1.spines.values(), color='w')
+    #plt.legend()
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", size="5%", pad=0.08)
+    #cb=fig.colorbar(plot,ax=ax,cax=cax, ticks = np.linspace(0,20,5))
+    #cax.annotate('$\Delta$ days',xy=(0,1.0), xycoords='axes fraction',\
+    #            ha='left')
+    # plt.savefig(os.path.join(dir_figures,'nfmd_sites'), dpi =600,\
+                        # bbox_inches="tight")
+    e = np.load(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\elevation.npy")
+    p = np.load(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\precipitation.npy")
+    t = np.load(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\temperature.npy")
+
+    latlon = pd.read_csv(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\nfmd_sites_climatology.csv",\
+                         index_col = 0)
+    ax2.hexbin(t.flatten(),e.flatten(),cmap ='Greys',gridsize = (20,14),\
+               linewidths=0.1,norm=mpl.colors.LogNorm(vmin=0.8, vmax=10000))
+    ax2.set_xlim(-1,25)
+    ax2.set_ylim(-200,4200)
+    ax2.set_ylabel('MAP (mm.yr$^{-1}$)')
+    ax2.set_xticks([0,10,20])
+    ax2.set_xticklabels([])
+    ax2.set_ylim(top = 4200)
+
+    ax2.scatter(latlon.temp, latlon.ppt, marker = 'o', color = 'maroon',\
+                s = 8,linewidth = 0.5,edgecolor = 'w',label = 'Sites')
+    # ax2.set_ylim(-150,3000)
+
+    ax3.hexbin(t.flatten(),e.flatten(),cmap ='Greys',gridsize = (20,14),\
+               linewidths=0.1,norm=mpl.colors.LogNorm(vmin=1, vmax=10000),label = '_nolegend_')
+    ax3.set_xlim(-1,25)
+    ax3.set_ylim(-200,4200)
+    ax3.set_xlabel('MAT ($^o$C)')
+    ax3.set_ylabel('Elevation (m)')
+    ax3.scatter(latlon.temp, latlon.elevation, marker = 'o', color = 'maroon',\
+                s = 8,linewidth = 0.5,edgecolor = 'w')
+    ax3.set_xticks([0,10,20])
+    
+    
+    ax1.annotate('a.', xy=(-0.0, 1.02), xycoords='axes fraction',\
+                ha='left',va='bottom', weight = 'bold')  
+    ax2.annotate('b.', xy=(-0.6, 1.04), xycoords='axes fraction',\
+                ha='left',va='bottom', weight = 'bold')      
+    ax3.annotate('c.', xy=(-0.6, 1.04), xycoords='axes fraction',\
+                ha='left',va='bottom', weight = 'bold')
+    
+    
+    ax2.scatter([],[],label = 'West USA',marker = 'h',s=10,color = 'grey')    
+    ax2.legend(prop={'size': FS-3},frameon = False,handletextpad =-0.3,\
+               borderpad=0.2,bbox_to_anchor = (1.02,1.02))
+    
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'sites.jpg'), \
+                                 dpi =DPI, bbox_inches="tight")
+    
+    plt.show()
+    
     
 save_fig = True
 
@@ -378,6 +570,7 @@ def main():
     # scatter_plot()
     # landcover_table()
     # microwave_importance()
+    # nfmd_sites()
     
 if __name__ == '__main__':
     main()

@@ -15,6 +15,12 @@ from mpl_toolkits.basemap import Basemap
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib import ticker
+from matplotlib.colors import ListedColormap
+
+import seaborn as sns
+
+sns.set_style('ticks')
+
 
 from keras.models import load_model
 
@@ -107,8 +113,10 @@ fig, ax = plt.subplots(figsize=(8*enlarge,7*enlarge))
 m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
         projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
 # load the shapefile, use the name 'states'
-m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
-                name='states', drawbounds=True) 
+m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True)
+# m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
+                # name='states', drawbounds=True) 
 
 patches   = []
 
@@ -116,19 +124,25 @@ for info, shape in zip(m.states_info, m.states):
     patches.append(Polygon(np.array(shape), True) )
 ax.add_collection(PatchCollection(patches, facecolor= 'grey', edgecolor='k', linewidths=1.5))
 
+colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
+          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
+          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
+          
+cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
+
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-              s=0.01,c=latlon.pred_fmc.values,cmap ='magma' ,edgecolor = 'w',linewidth = 0,\
+              s=0.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
                     marker='s',latlon = True, zorder = 2,\
                     vmin = 50, vmax = 200)
 
 #### add mask
-
 m.scatter(mask.longitude.values, mask.latitude.values, 
               s=.1,c='grey',linewidth = 0,edgecolor = 'w',\
                     marker='s',latlon = True, zorder = np.inf)
-
-m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
-                name='states', drawbounds=True, linewidth = 1.5) 
+m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True, linewidth = 1.5)
+# m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
+                # name='states', drawbounds=True, linewidth = 1.5) 
 
 
 cax = fig.add_axes([0.7, 0.5, 0.03, 0.3])
