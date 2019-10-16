@@ -245,7 +245,7 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     R2 = r2_score(x,y)
     model_rmse = np.sqrt(mean_squared_error(x,y))
     model_bias = np.mean(pred_y - test_y)
-    ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$Bias=%0.1f$'%(np.floor(R2*100)/100, model_rmse, model_bias), \
+    ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100), model_rmse, np.abs(model_bias), \
                     xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
     ax.set_xlim(axis_lim)
@@ -285,10 +285,10 @@ def scatter_plot():
     
     
     ndf = frame[['site','date','percent(t)','percent(t)_hat']]
-    ndf.dropna(inplace = True)
+    ndf = ndf.dropna()
     
     x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
-    y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)'].mean())).values
+    y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
     
     plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
@@ -566,8 +566,8 @@ def nfmd_sites():
 save_fig = True
 
 def main():
-    bar_chart()
-    # scatter_plot()
+    # bar_chart()
+    scatter_plot()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()

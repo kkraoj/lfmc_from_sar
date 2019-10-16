@@ -69,7 +69,7 @@ fname = 'map/fmc_map_2018_07_01_v2'
 #     if 'forest_cover' in col:
 #         dataset[col] = dataset['forest_cover(t)']
 # ##scale
-# dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
+#  .replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
 # dataset.fillna(method = 'ffill',inplace = True)
 # dataset.fillna(method = 'bfill',inplace = True)
 

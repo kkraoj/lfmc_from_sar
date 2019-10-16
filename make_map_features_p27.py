@@ -77,7 +77,7 @@ def get_value(filename, mx, my, band = 1):
 
 latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
 MoY = 8
-date = '08-01-2018'
+date = '%02d-01-2019'%(MoY)
 ####sar
 raw_opt_bands = ['blue','green','red','nir','swir']
 raw_sar_bands = ['vh','vv']
