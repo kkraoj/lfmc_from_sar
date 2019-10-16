@@ -76,7 +76,7 @@ def get_value(filename, mx, my, band = 1):
 #%%add dynamic features
 
 latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
-MoY = 8
+MoY = 10
 date = '%02d-01-2019'%(MoY)
 ####sar
 raw_opt_bands = ['blue','green','red','nir','swir']
@@ -84,7 +84,7 @@ raw_sar_bands = ['vh','vv']
 for lag in range(3, -1, -1):
     band_names = dict(zip(range(1,6),raw_opt_bands))
     for band in band_names.keys():
-        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2018-%02d-01_cloudsnowfree_l8.tif'%(MoY-lag),\
+        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2019-%02d-01_cloudsnowfree_l8.tif'%(MoY-lag),\
         latlon.longitude.values, latlon.latitude.values, band = band)
     latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
     
@@ -94,7 +94,7 @@ for lag in range(3, -1, -1):
     
     band_names = dict(zip(range(1,3),raw_sar_bands))
     for band in band_names.keys():
-        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2018-%02d-01_sar.tif'%(MoY-lag),\
+        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2019-%02d-01_sar.tif'%(MoY-lag),\
         latlon.longitude.values, latlon.latitude.values, band = band)
     latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
     latlon['vh_vv'] = latlon.vh - latlon.vv
