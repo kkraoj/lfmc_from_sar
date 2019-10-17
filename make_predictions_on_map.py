@@ -35,74 +35,74 @@ pkl_file.close()
 pkl_file = open('scaler.pkl', 'rb')
 scaler = pickle.load(pkl_file) 
 pkl_file.close()
-date = "08-01-2019"
+date = "06-01-2019"
 fname = 'map/fmc_map_%s'%date
 # fname = 'map/fmc_map_2018_07_01_v2'
 #%% prediction
-# static = pd.read_csv('map/static_features.csv', index_col = 0)
-# static.to_pickle('map/static_features')
+# # static = pd.read_csv('map/static_features.csv', index_col = 0)
+# # static.to_pickle('map/static_features')
 
 
-static = pd.read_pickle('map/static_features')
-dyn = pd.read_csv('map/dynamic_features_%s.csv'%date, index_col = 0)
-# dyn.to_pickle('map/dynamic_features_%s'%date)
-dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
-# inputs.to_pickle('map/inputs_%s'%date)
-static = None
-dyn = None
-# inputs = None
+# static = pd.read_pickle('map/static_features')
+# dyn = pd.read_csv('map/dynamic_features_%s.csv'%date, index_col = 0)
+# # dyn.to_pickle('map/dynamic_features_%s'%date)
+# dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
+# # inputs.to_pickle('map/inputs_%s'%date)
+# static = None
+# dyn = None
+# # inputs = None
 
-# dataset = pd.read_pickle('map/inputs_%s'%date)
-# dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
-dataset = dataset.reindex(sorted(dataset.columns), axis=1)
+# # dataset = pd.read_pickle('map/inputs_%s'%date)
+# # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
+# dataset = dataset.reindex(sorted(dataset.columns), axis=1)
 
-### add percent col to start
-dataset['percent(t)'] = 100 #dummy
-cols = list(dataset.columns.values)
-cols.remove('percent(t)')
-cols.remove('latitude')
-cols.remove('longitude')
-cols = ['latitude', 'longitude','percent(t)']+cols
-dataset = dataset[cols]
+# ### add percent col to start
+# dataset['percent(t)'] = 100 #dummy
+# cols = list(dataset.columns.values)
+# cols.remove('percent(t)')
+# cols.remove('latitude')
+# cols.remove('longitude')
+# cols = ['latitude', 'longitude','percent(t)']+cols
+# dataset = dataset[cols]
 
-#predictions only on previously trained landcovers
-dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
-dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
-
-for col in dataset.columns:
-    if 'forest_cover' in col:
-        dataset[col] = dataset['forest_cover(t)']
-
-##scale
-dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
-dataset.dropna(inplace = True)
-# dataset.fillna(method = 'ffill',inplace = True)
-# dataset.fillna(method = 'bfill',inplace = True)
-scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
-dataset.loc[:,2:] = scaled #skip latlon
-dataset.drop('percent(t)',axis = 1, inplace = True)
-scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
-# np.save('map/scaled_%s.npy'%date, scaled)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratios'%('1M','3M')
-filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
-
-model = load_model(filepath)
-yhat = model.predict(scaled)
-
-scaled = None
-
-inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-# np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-yhat = None
-
-# dataset = pd.read_pickle('map/inputs_%s'%date)
-#predictions only on previously trained landcovers
+# #predictions only on previously trained landcovers
 # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+# dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
 
-dataset['pred_fmc'] = inv_yhat
-dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
-dataset = None
-inv_yhat = None
+# for col in dataset.columns:
+#     if 'forest_cover' in col:
+#         dataset[col] = dataset['forest_cover(t)']
+
+# ##scale
+# dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
+# dataset.dropna(inplace = True)
+# # dataset.fillna(method = 'ffill',inplace = True)
+# # dataset.fillna(method = 'bfill',inplace = True)
+# scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
+# dataset.loc[:,2:] = scaled #skip latlon
+# dataset.drop('percent(t)',axis = 1, inplace = True)
+# scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
+# # np.save('map/scaled_%s.npy'%date, scaled)
+# SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratios'%('1M','3M')
+# filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
+
+# model = load_model(filepath)
+# yhat = model.predict(scaled)
+
+# scaled = None
+
+# inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+# # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+# yhat = None
+
+# # dataset = pd.read_pickle('map/inputs_%s'%date)
+# #predictions only on previously trained landcovers
+# # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+
+# dataset['pred_fmc'] = inv_yhat
+# dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
+# dataset = None
+# inv_yhat = None
 
 #%% fmc map
 
@@ -135,20 +135,20 @@ colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b7
 cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
 
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-              s=0.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
+               s=0.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
                     marker='s',latlon = True, zorder = 2,\
                     vmin = 50, vmax = 200)
 
 #### add mask
 
 m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
-                    name='states', drawbounds=True, linewidth = 1.5)
+                    name='states', drawbounds=True, linewidth = 0.5)
 
 
 
-# cax = fig.add_axes([0.7, 0.5, 0.03, 0.3])
-   
-# cax.annotate('LFMC (%) \n', xy = (0.,1.0), ha = 'left', va = 'bottom')
+# cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
+    
+# cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom')
 # cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4))
 # cax.set_yticklabels(['<50','100','150','>200']) 
 
