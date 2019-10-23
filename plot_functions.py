@@ -16,6 +16,8 @@ from mpl_toolkits.basemap import Basemap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Polygon, Patch
 
+import cartopy.crs as ccrs
+ 
 
 
 from sklearn.metrics import mean_squared_error, r2_score
@@ -47,16 +49,23 @@ DC = 7.48031
 lc_dict = {14: 'crop',
             20: 'crop',
             30: 'crop',
-            50: 'closed broadleaf deciduous',
-            70: 'closed needleleaf evergreen',
-            90: 'mixed forest',
-            100:'mixed forest',
-            110:'shrub/grassland',
+                50: 'Closed broadleaf deciduous',
+            70: 'Closed needleleaf evergreen',
+            90: 'Mixed forest',
+            100:'Mixed forest',
+            110:'Shrub/grassland',
             120:'grassland/shrubland',
-            130:'closed to open shrub',
-            140:'grass',
+            130:'Shrubland',
+            140:'Grassland',
             150:'sparse vegetation',
             160:'regularly flooded forest'}
+color_dict = {'Closed broadleaf deciduous':'darkorange',
+              'Closed needleleaf evergreen': 'forestgreen',
+              'Mixed forest':'darkslategrey',
+              'Shrub/grassland' :'olive' ,
+              'Shrubland':'darkgoldenrod',
+              'Grassland':'lawngreen',
+              }  
 
 pkl_file = open(os.path.join(dir_data,'encoder.pkl'), 'rb')
 encoder = pickle.load(pkl_file) 
@@ -66,7 +75,16 @@ pkl_file.close()
 
 frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
 
+def change_width(ax, new_value) :
+    for patch in ax.patches :
+        current_width = patch.get_width()
+        diff = current_width - new_value
 
+        # we change the bar width
+        patch.set_width(new_value)
+
+        # we recenter the bar
+        patch.set_x(patch.get_x() + diff * .5)
 
 def bar_chart():
     rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
@@ -95,16 +113,7 @@ def bar_chart():
     ax3 = plt.subplot(grid[1, 1])
     ax4 = plt.subplot(grid[2, 1])
     
-    def change_width(ax, new_value) :
-        for patch in ax.patches :
-            current_width = patch.get_width()
-            diff = current_width - new_value
-    
-            # we change the bar width
-            patch.set_width(new_value)
-    
-            # we recenter the bar
-            patch.set_x(patch.get_x() + diff * .5)
+
     color_dict = {'closed broadleaf deciduous':'darkorange',
                   'closed needleleaf evergreen': 'forestgreen',
                   'mixed forest':'darkslategrey',
@@ -194,6 +203,53 @@ def bar_chart():
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
 
+def bar_chart_sd():
+    rmse = pd.DataFrame({'SD':frame.groupby('site').apply(lambda df: df['percent(t)'].std()).sort_values()})
+    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
+    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    rmse['lc_order'] = rmse['Landcover'].map(lc_order)
+    rmse.sort_values(by=['lc_order','SD'], inplace = True)
+    rmse['Sites'] = range(len(rmse))
+    ### mean rmse values store
+    lc_rmse = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_rmse.name = 'lc_rmse'
+    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (SC,4))
+    colors = lc_rmse.index.map(color_dict)
+    # colors = ['darkslategrey','forestgreen','olive','darkgoldenrod','darkorange','lawngreen']
+    sns.barplot(x="Sites", y="SD", data=rmse, ax = ax1, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
+                )
+    ## plot mean rmse points
+    ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
+             label = 'Mean landcover sd')
+    # ax1.bar(rmse.index, rmse.values, width = 1)
+    handles, labels = ax1.get_legend_handles_labels()
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    
+    ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
+    
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    change_width(ax1, 1)
+    ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+
 #%% performance by landcover table
 def landcover_table():
     table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
@@ -201,12 +257,14 @@ def landcover_table():
     table['N_obs'] = frame.groupby('forest_cover(t)').apply(lambda df: df.shape[0])
     table['N_sites'] = frame.groupby('forest_cover(t)').apply(lambda df: len(df.site.unique()))
     table['Bias'] = frame.groupby('forest_cover(t)').apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
+    table['SD'] = frame.groupby('forest_cover(t)').apply(lambda df: df['percent(t)'].std().round(2))
+
     ### works only with original encoder!!
     
     table.index = encoder.inverse_transform(table.index.astype(int))
     table.index = table.index.map(lc_dict)
     table.index.name = 'landcover'
-    table = table[['N_sites','N_obs','RMSE','R2','Bias']]
+    table = table[['N_sites','N_obs','SD','RMSE','R2','Bias']]
     
     print(table)
     # table.to_excel('model_performance_by_lc.xls')
@@ -520,7 +578,7 @@ def nfmd_sites():
 
     latlon = pd.read_csv(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\nfmd_sites_climatology.csv",\
                          index_col = 0)
-    ax2.hexbin(t.flatten(),e.flatten(),cmap ='Greys',gridsize = (20,14),\
+    ax2.hexbin(t.flatten(),p.flatten(),cmap ='Greys',gridsize = (20,14),\
                linewidths=0.1,norm=mpl.colors.LogNorm(vmin=0.8, vmax=10000))
     ax2.set_xlim(-1,25)
     ax2.set_ylim(-200,4200)
@@ -530,7 +588,7 @@ def nfmd_sites():
     ax2.set_ylim(top = 4200)
 
     ax2.scatter(latlon.temp, latlon.ppt, marker = 'o', color = 'maroon',\
-                s = 8,linewidth = 0.5,edgecolor = 'w',label = 'Sites')
+                s = 8,linewidth = 0.5,edgecolor = 'w',label = '_nolegend_')
     # ax2.set_ylim(-150,3000)
 
     ax3.hexbin(t.flatten(),e.flatten(),cmap ='Greys',gridsize = (20,14),\
@@ -540,7 +598,7 @@ def nfmd_sites():
     ax3.set_xlabel('MAT ($^o$C)')
     ax3.set_ylabel('Elevation (m)')
     ax3.scatter(latlon.temp, latlon.elevation, marker = 'o', color = 'maroon',\
-                s = 8,linewidth = 0.5,edgecolor = 'w')
+                s = 8,linewidth = 0.5,edgecolor = 'w', label = 'Sites')
     ax3.set_xticks([0,10,20])
     
     
@@ -552,8 +610,8 @@ def nfmd_sites():
                 ha='left',va='bottom', weight = 'bold')
     
     
-    ax2.scatter([],[],label = 'West USA',marker = 'h',s=10,color = 'grey')    
-    ax2.legend(prop={'size': FS-3},frameon = False,handletextpad =-0.3,\
+    ax3.scatter([],[],label = 'West USA',marker = 'h',s=10,color = 'grey')    
+    ax3.legend(prop={'size': FS-3},frameon = False,handletextpad =-0.3,\
                borderpad=0.2,bbox_to_anchor = (1.02,1.02))
     
     if save_fig:
@@ -567,7 +625,8 @@ save_fig = True
 
 def main():
     # bar_chart()
-    scatter_plot()
+    bar_chart_sd()
+    # scatter_plot()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
