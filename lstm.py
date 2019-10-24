@@ -898,7 +898,7 @@ print('[INFO] RMSE: %.3f' % rmse)
 print('[INFO] FMC Standard deviation : %.3f' % frame['percent(t)'].std())
 
 
-#%% true versus pred seasonal anomaly
+#%% true versus pred time anomaly
 ndf = frame[['site','date','percent(t)','percent(t)_hat','percent_seasonal_mean']]
 ndf.dropna(inplace = True)
 
@@ -978,6 +978,46 @@ if CV:
 plot_pred_actual(inv_y.values, inv_yhat,  np.corrcoef(inv_y.values, inv_yhat)[0,1]**2, rmse, ms = 30,\
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
+
+
+#%% true versus pred seasonal anomaly
+
+frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+frame.date = pd.to_datetime(frame.date)
+
+seasonal_mean = pd.read_pickle('seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION)
+frame['1M'] = frame.date.dt.month
+frame['SM'] = (2*frame['1M'] - 1*(frame.date.dt.day<=15)).astype(int)
+# <= because <15 is replaced with 15 in pandas SM
+frame['percent_seasonal_mean'] = np.nan
+for site in frame.site.unique():
+    df_sub = frame.loc[frame.site==site,['site','date',RESOLUTION,'percent(t)']]
+    if site not in seasonal_mean.columns:
+        continue
+    df_sub = df_sub.join(seasonal_mean.loc[:,site].rename('percent_seasonal_mean'), on = RESOLUTION)
+    frame.update(df_sub)
+    # frame.loc[frame.site==site,['site','date','mod','percent(t)','percent_seasonal_mean']]
+frame.dropna(inplace = True, subset = ['percent_seasonal_mean'])
+
+### manually calculating because if there is a site with only 1 observation per MoY, its rmsd will be zero
+#there are 97 such sites
+gg = frame['percent(t)_hat']-frame['percent_seasonal_mean']
+gg = gg[gg.abs()>0]
+sqrt((gg**2).mean())
+
+x = frame['percent(t)'] - frame['percent_seasonal_mean'].values
+y = frame['percent(t)_hat'] - frame['percent_seasonal_mean'].values
+
+# x = ndf['percent(t)'].values
+# y = ndf['percent(t)_hat'].values
+
+plot_pred_actual(x, y,\
+        np.corrcoef(x, y)[0,1]**2, \
+        sqrt(mean_squared_error(x, y)), \
+        ms = 40,\
+        zoom = 1.,dpi = 200,axis_lim = [-100,100],xlabel = "Actual LFMC anomaly", \
+        ylabel = "Predicted LFMC anomaly",mec = 'None', mew = 1, test_r2 = False, cmap = "plasma")
+
 
 
 #%% performance by landcover table
