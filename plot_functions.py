@@ -116,13 +116,7 @@ def bar_chart():
     ## plot mean rmse points
     ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
              label = 'Mean landcover RMSE')
-    # ax1.bar(rmse.index, rmse.values, width = 1)
-    handles, labels = ax1.get_legend_handles_labels()
-    handles.append(handles.pop(0))
-    labels.append(labels.pop(0))
-    
-    ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
-    
+   
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
     ax1.set_yticks([0,20,40,60,80])
@@ -138,7 +132,7 @@ def bar_chart():
                 ha='right',va='bottom', weight = 'bold')      
 
     ####R2
-    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: df['percent(t)'].std()).sort_values()})
     rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
     rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
     rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
@@ -161,15 +155,27 @@ def bar_chart():
                 dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax2.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
-             label = 'Mean landcover RMSE')
-    
-    ax2.set_ylim(0,1)
+    ax2.plot(rmse.index, rmse.lc_rmse, '--',color='sienna',alpha = 0.8,\
+             label = 'Mean landcover SD')
+    ax2.set_ylim(0,90)
     ax2.set_xticks([])
-    # ax2.set_yticks([0,20,40,60,80])
+    ax2.set_yticks([0,20,40,60,80])
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax2, 1)
-    ax2.set_ylim(-0.05,1.05)
+    # ax2.set_ylim(-0.05,1.05)
+    ax2.set_ylabel('SD')
+    h2,l2 = ax2.get_legend_handles_labels()
+     # ax1.bar(rmse.index, rmse.values, width = 1)
+    handles, labels = ax1.get_legend_handles_labels()
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    handles.append(h2[0])
+    labels.append(l2[0])
+    
+    ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
+    ax2.get_legend().remove()
+    
+
 
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
@@ -231,6 +237,8 @@ def time_series():
     new_frame.index = pd.to_datetime(new_frame.date)
     rmse = new_frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
     
+    fig, (ax2, ax3, ax4) = plt.subplots(3,1,figsize = (SC,4))
+    
     for site, ax in zip([0,63,-1], [ax2, ax3, ax4]):
         sub = new_frame.loc[new_frame.site == rmse.index[site]]
         
@@ -271,8 +279,17 @@ def time_series():
         if ax == ax2 or ax == ax3:
             plt.setp(ax.get_xmajorticklabels(), visible=False)
             plt.setp(ax.get_xminorticklabels(), visible=False)   
-
-
+    
+    ax2.annotate('a.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')  
+    ax3.annotate('b.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold') 
+    ax4.annotate('c.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold') 
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'time_series.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
 def landcover_table():
     table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
     table['R2'] = frame.groupby('forest_cover(t)').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]**2).round(2)
@@ -297,7 +314,7 @@ def landcover_table():
     table = table.append(overall)
     print(table)
     # table.to_excel('model_performance_by_lc.xls')
-    table.to_latex(os.path.join(dir_figures,'model_performance_by_lc.tex'))
+    # table.to_latex(os.path.join(dir_figures,'model_performance_by_lc.tex'))
 
 #%% prediction scatter plots after CV
 def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette().as_hex()), axis_lim = [-25,50],\
@@ -674,11 +691,11 @@ save_fig = False
 
 def main():
     # seasonal_anomaly()
-    bar_chart()
+    # bar_chart()
     # time_series()
     # bar_chart_sd()
     # scatter_plot()
-    # landcover_table()
+    landcover_table()
     # microwave_importance()
     # nfmd_sites()
     
