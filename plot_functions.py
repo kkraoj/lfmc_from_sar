@@ -99,6 +99,9 @@ def bar_chart():
     rmse['lc_order'] = rmse['Landcover'].map(lc_order)
     rmse.sort_values(by=['lc_order','RMSE'], inplace = True)
     rmse['Sites'] = range(len(rmse))
+    ## SD
+    rmse['SD'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+
     ### mean rmse values store
     lc_rmse = rmse.groupby('Landcover').RMSE.mean().sort_values()
     lc_rmse.name = 'lc_rmse'
@@ -115,7 +118,7 @@ def bar_chart():
                 )
     ## plot mean rmse points
     ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
-             label = 'Mean landcover RMSE')
+             label = 'Overall landcover RMSE')
    
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
@@ -131,39 +134,33 @@ def bar_chart():
     ax2.annotate('b.', xy=(-0.12, 1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')      
 
-    ####R2
-    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: df['percent(t)'].std()).sort_values()})
-    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
-    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
-    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
-        
-    ### sort by landcover then ascending
-    lc_order = rmse.groupby('Landcover').RMSE.mean().sort_values()
-    lc_order.loc[:] = range(len(lc_order))
-    rmse['lc_order'] = rmse['Landcover'].map(lc_order)
-    rmse.sort_values(by=['lc_order','RMSE'], inplace = True)
-    rmse['Sites'] = range(len(rmse))
+    ####SD
+
     ### mean rmse values store
-    lc_rmse = rmse.groupby('Landcover').RMSE.mean().sort_values()
-    lc_rmse.name = 'lc_rmse'
+    lc_sd = frame.groupby('forest_cover(t)').apply(lambda df: df['percent(t)'].std())
+    lc_sd.name = 'lc_sd'
+    lc_sd.index = encoder.inverse_transform(lc_sd.index.astype(int))
+    lc_sd.index = lc_sd.index.map(lc_dict)
+    lc_sd.index.name = 'Landcover'
+
     # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
-    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')    
+    rmse = pd.merge(rmse, lc_sd, on = 'Landcover')    
     
     ##### plotting 
     colors = lc_rmse.index.map(color_dict)
-    sns.barplot(x="Sites", y="RMSE", data=rmse, ax = ax2, hue = 'Landcover', \
+    sns.barplot(x="Sites", y="SD", data=rmse, ax = ax2, hue = 'Landcover', \
                 dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax2.plot(rmse.index, rmse.lc_rmse, '--',color='sienna',alpha = 0.8,\
-             label = 'Mean landcover SD')
+    ax2.plot(rmse.index, rmse.lc_sd, '--',color='sienna',alpha = 0.8,\
+             label = 'Overall landcover SD')
     ax2.set_ylim(0,90)
     ax2.set_xticks([])
     ax2.set_yticks([0,20,40,60,80])
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax2, 1)
     # ax2.set_ylim(-0.05,1.05)
-    ax2.set_ylabel('SD')
+    # ax2.set_ylabel('SD')
     h2,l2 = ax2.get_legend_handles_labels()
      # ax1.bar(rmse.index, rmse.values, width = 1)
     handles, labels = ax1.get_legend_handles_labels()
@@ -184,7 +181,7 @@ def bar_chart():
 
 
 def bar_chart_sd():
-    rmse = pd.DataFrame({'SD':frame.groupby('site').apply(lambda df: df['percent(t)'].std()).sort_values()})
+    rmse = pd.DataFrame({'SD':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
     rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
     rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
@@ -210,21 +207,124 @@ def bar_chart_sd():
                 dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
-             label = 'Mean landcover SD')
+    # ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
+             # label = 'Mean landcover SD')
     # ax1.bar(rmse.index, rmse.values, width = 1)
     handles, labels = ax1.get_legend_handles_labels()
     handles.append(handles.pop(0))
     labels.append(labels.pop(0))
     
-    ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
-    
+    ax1.legend(handles, labels,prop={'size': 7})
+    ax1.set_ylabel('$R^2_{test}$')
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
-    ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_yticks([0,20,40,60,80])
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax1, 1)
-    ax1.set_ylim(0,90)
+    # ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+def bar_chart_site_anomalies_R2():
+    
+    ndf = frame[['site','date','percent(t)','percent(t)_hat']]
+    
+    x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean()))
+    y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean()))
+    
+    sa = pd.DataFrame({'true':x,'pred':y})
+    sa.reset_index(inplace = True) 
+    
+    rmse = pd.DataFrame({'SD':sa.groupby('site').apply(lambda df: r2_score(df['true'],df['pred'])).sort_values()})
+    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
+    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    rmse['lc_order'] = rmse['Landcover'].map(lc_order)
+    rmse.sort_values(by=['lc_order','SD'], inplace = True)
+    rmse['Sites'] = range(len(rmse))
+    ### mean rmse values store
+    lc_rmse = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_rmse.name = 'lc_rmse'
+    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (SC,4))
+    colors = lc_rmse.index.map(color_dict)
+    # colors = ['darkslategrey','forestgreen','olive','darkgoldenrod','darkorange','lawngreen']
+    sns.barplot(x="Sites", y="SD", data=rmse, ax = ax1, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
+                )
+    ## plot mean rmse points
+    # ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
+             # label = 'Mean landcover SD')
+    # ax1.bar(rmse.index, rmse.values, width = 1)
+    handles, labels = ax1.get_legend_handles_labels()
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    
+    ax1.legend(handles, labels,prop={'size': 7})
+    ax1.set_ylabel('$R^2_{test}$')
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_ylabel('$R^2_{test}$(site-anomalies)')
+    # ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    change_width(ax1, 1)
+    # ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+def bar_chart_time():
+    rmse = pd.DataFrame({'SD':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
+    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    rmse['lc_order'] = rmse['Landcover'].map(lc_order)
+    rmse.sort_values(by=['lc_order','SD'], inplace = True)
+    rmse['Sites'] = range(len(rmse))
+    ### mean rmse values store
+    rmse['$N_{obs}$'] = frame.groupby('site').apply(lambda df: df.shape[0])
+    lc_rmse = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_rmse.name = 'lc_rmse'
+    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (SC,4))
+    colors = lc_rmse.index.map(color_dict)
+    # colors = ['darkslategrey','forestgreen','olive','darkgoldenrod','darkorange','lawngreen']
+    sns.barplot(x="Sites", y="$N_{obs}$", data=rmse, ax = ax1, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
+                )
+    ## plot mean rmse points
+    # ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
+             # label = 'Mean landcover SD')
+    # ax1.bar(rmse.index, rmse.values, width = 1)
+    handles, labels = ax1.get_legend_handles_labels()
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    
+    ax1.legend(handles, labels,prop={'size': 7})
+    # ax1.set_ylabel('$R^2_{test}$')
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    # ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    change_width(ax1, 1)
+    # ax1.set_ylim(0,90)
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
                                  dpi =DPI, bbox_inches="tight")
@@ -256,7 +356,7 @@ def time_series():
         if ax==ax3:
             ax.set_ylabel('LFMC(%)') 
         ax.set_xlabel('')
-        ax.legend(prop ={'size':7})
+        ax.legend(prop ={'size':7}, loc = 'lower right')
         #set ticks every week
         # ax.xaxis.set_major_locator(mdates.YearLocator())
         #set major ticks format
@@ -291,19 +391,25 @@ def time_series():
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
 def landcover_table():
-    table = pd.DataFrame({'RMSE':frame.groupby('forest_cover(t)').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
-    table['R2'] = frame.groupby('forest_cover(t)').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]**2).round(2)
-    table['N_obs'] = frame.groupby('forest_cover(t)').apply(lambda df: df.shape[0])
-    table['N_sites'] = frame.groupby('forest_cover(t)').apply(lambda df: len(df.site.unique()))
-    table['MBE'] = frame.groupby('forest_cover(t)').apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
-    table['SD'] = frame.groupby('forest_cover(t)').apply(lambda df: df['percent(t)'].std().round(1))
+    groupby = 'forest_cover(t)'
+    frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+
+    frame = frame.loc[frame[groupby]==0]
+    groupby = 'site'
+    table = pd.DataFrame({'RMSE':frame.groupby(groupby).apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
+    table['R2'] = frame.groupby(groupby).apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).round(2)
+    table['N_obs'] = frame.groupby(groupby).apply(lambda df: df.shape[0])
+    table['N_sites'] = frame.groupby(groupby).apply(lambda df: len(df.site.unique()))
+    table['MBE'] = frame.groupby(groupby).apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
+    table['SD'] = frame.groupby(groupby).apply(lambda df: df['percent(t)'].std().round(1))
+    table['Mean'] = frame.groupby(groupby).apply(lambda df: df['percent(t)'].mean().round(1))
 
     ### works only with original encoder!!
     
-    table.index = encoder.inverse_transform(table.index.astype(int))
-    table.index = table.index.map(lc_dict)
-    table.index.name = 'landcover'
-    table = table[['N_sites','N_obs','SD','RMSE','R2','MBE']]
+    # table.index = encoder.inverse_transform(table.index.astype(int))
+    # table.index = table.index.map(lc_dict)
+    # table.index.name = 'landcover'
+    table = table[['N_sites','N_obs','SD','RMSE','R2','MBE','Mean']]
     table.sort_values('R2',inplace = True)
     overall = table.sum()
     overall.name = 'Overall'
@@ -359,9 +465,6 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     # plt.tight_layout()
         
 def scatter_plot():
-    
-
-
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
     grid = plt.GridSpec(1, 3, wspace=0.6, figure = fig)
     
@@ -389,7 +492,6 @@ def scatter_plot():
     
     
     ndf = frame[['site','date','percent(t)','percent(t)_hat']]
-    ndf = ndf.dropna()
     
     x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
     y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
@@ -694,8 +796,10 @@ def main():
     # bar_chart()
     # time_series()
     # bar_chart_sd()
+    # bar_chart_time()
+    bar_chart_site_anomalies_R2()
     # scatter_plot()
-    landcover_table()
+    # landcover_table()
     # microwave_importance()
     # nfmd_sites()
     
