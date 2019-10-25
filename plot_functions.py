@@ -367,13 +367,13 @@ def site_mean_anomalies():
                  c = 'None',ecolor='grey',linewidth = 0.5,capsize=1,\
                  capthick = 0.5,zorder = -1,label = '_nolegend_')
     ax1.scatter(df.Sites,df.pred_mean, color = "None",\
-                edgecolor = "grey",linewidth = 1,s = 6,label = '_nolegend_')
+                edgecolor = "grey",linewidth = 0.5,s = 6,label = '_nolegend_')
     
     
     ax1.scatter([],[], color = "k",\
                 edgecolor = 'None',linewidth = 1,s = 8,label = 'Observed')
     ax1.scatter([],[], color = "None",\
-                edgecolor = 'k',linewidth = 1,s = 6,label = 'Estimated')
+                edgecolor = 'grey',linewidth = 1,s = 6,label = 'Estimated')
     ax1.legend(prop={'size': FS-1})
     ax1.set_ylabel('LFMC')
     # ax1.set_xticklabels(range(len(rmse)))
@@ -387,6 +387,66 @@ def site_mean_anomalies():
         plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
+def site_mean_anomalies_fill():
+    
+    df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
+    df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
+    
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = df.groupby('Landcover').true_mean.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    df['lc_order'] = df['Landcover'].map(lc_order)
+    df.sort_values(by=['lc_order','true_mean'], inplace = True)
+    df['Sites'] = range(len(df))
+    df['colors'] = df['Landcover'].map(color_dict)
+    ### mean rmse values store
+
+    # df = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (DC,2))
+    for lc in df.Landcover.unique():
+        sub = df.loc[df.Landcover==lc]
+        ax1.fill_between(sub.Sites, sub.true_mean- sub.true_sd, sub.true_mean + sub.true_sd,\
+                         color = sub.colors,label = '_nolegend_',alpha = 0.7,edgecolor = "None")
+        ax1.fill_between(sub.Sites, sub.pred_mean- sub.pred_sd, sub.pred_mean + sub.pred_sd,\
+                         color = 'grey',label = '_nolegend_',alpha = 0.7,edgecolor = "None")
+    ax1.scatter(df.Sites,df.true_mean, color = list(df.colors),\
+                edgecolor = 'k',linewidth = 0.5,s=10,label = '_nolegend_')
+    
+    
+    ax1.errorbar(x = df.Sites, y = df.pred_mean, yerr = df.pred_sd,fmt = 'o',\
+                 c = 'None',ecolor='grey',linewidth = 0.5,capsize=1,\
+                 capthick = 0.5,zorder = -1,label = '_nolegend_')
+    ax1.scatter(df.Sites,df.pred_mean, color = "None",\
+                edgecolor = "grey",linewidth = 0.5,s = 6,label = '_nolegend_')
+    
+    
+    ax1.scatter([],[], color = "k",\
+                edgecolor = 'None',linewidth = 1,s = 8,label = 'Observed')
+    ax1.scatter([],[], color = "None",\
+                edgecolor = 'grey',linewidth = 1,s = 6,label = 'Estimated')
+    ax1.legend(prop={'size': FS-1})
+    ax1.set_ylabel('LFMC')
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_xlabel('Sites')
+    # ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    # change_width(ax1, 1)
+    # ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+
 def time_series():
    #%% timeseries for three sites
     new_frame = frame.copy()
@@ -446,6 +506,66 @@ def time_series():
         plt.savefig(os.path.join(dir_figures,'time_series.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
+def time_series_R2():
+   #%% timeseries for three sites
+    new_frame = frame.copy()
+    new_frame.index = pd.to_datetime(new_frame.date)
+    rmse = new_frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()
+    
+    fig, (ax2, ax3, ax4) = plt.subplots(3,1,figsize = (SC,4))
+    
+    for site, ax in zip([0,63,-1], [ax2, ax3, ax4]):
+        sub = new_frame.loc[new_frame.site == rmse.index[site]]
+        
+        lc = lc_dict[encoder.inverse_transform(sub['forest_cover(t)'].\
+                                                   astype(int).unique()[0])]
+        if ax == ax4:       
+            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = 'observed', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
+        else:
+            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = '_nolegend_', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
+        
+        sub.plot(y = 'percent(t)_hat', linestyle = '--', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = 'estimated',color = color_dict[lc], mew= 0.3, ms = 3, lw = 1, rot = 0)
+        if ax==ax3:
+            ax.set_ylabel('LFMC(%)') 
+        ax.set_xlabel('')
+        ax.legend(prop ={'size':7}, loc = 'lower right')
+        #set ticks every week
+        # ax.xaxis.set_major_locator(mdates.YearLocator())
+        #set major ticks format
+        # ax.xaxis.set_major_formatter(mdates.DateFormatter('%yyyy'))
+        
+        
+        ax.set_xlim(pd.to_datetime(['May-2015','31-Dec-2018']))
+        # ax.xaxis.grid(True, which="major", linestyle='--')
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(
+                                                interval=6))
+        ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
+        # ax.xaxis.grid(True, which="minor")
+        # ax.yaxis.grid()
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('\n%Y'))
+        # ax.set_xticklabels(ha='center')
+        plt.sca(ax)
+        plt.xticks(ha='center')    
+        ax.tick_params(axis='both', which='minor', labelsize=FS - 2)
+        if ax == ax2 or ax == ax3:
+            plt.setp(ax.get_xmajorticklabels(), visible=False)
+            plt.setp(ax.get_xminorticklabels(), visible=False)   
+    
+    ax2.annotate('a.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')  
+    ax3.annotate('b.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold') 
+    ax4.annotate('c.', xy=(-0.2, 1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold') 
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'time_series.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+
 def landcover_table():
     groupby = 'forest_cover(t)'
     frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
@@ -851,9 +971,10 @@ def main():
     # seasonal_anomaly()
     # bar_chart()
     # time_series()
+    time_series_R2()
     # bar_chart_sd()
     # bar_chart_time()
-    site_mean_anomalies()
+    # site_mean_anomalies()
     # bar_chart_site_anomalies_R2()
     # scatter_plot()
     # landcover_table()
