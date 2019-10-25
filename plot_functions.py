@@ -331,6 +331,62 @@ def bar_chart_time():
     plt.show()
 
 #%% performance by landcover table
+def site_mean_anomalies():
+    
+    df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
+    df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
+    
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = df.groupby('Landcover').true_mean.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    df['lc_order'] = df['Landcover'].map(lc_order)
+    df.sort_values(by=['lc_order','true_mean'], inplace = True)
+    df['Sites'] = range(len(df))
+    df['colors'] = df['Landcover'].map(color_dict)
+    ### mean rmse values store
+
+    # df = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    # rmse.join(lc_rmse, on = 'Landcover')
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (DC,2))
+    ax1.errorbar(x = df.Sites, y = df.true_mean, yerr = df.true_sd,fmt = 'o',\
+                 c = 'None',ecolor='k',linewidth = 0.5,capsize=1,capthick = 0.5,\
+                 zorder = -1,label = '_nolegend_')
+    ax1.scatter(df.Sites,df.true_mean, color = list(df.colors),\
+                edgecolor = 'k',linewidth = 0.5,s=10,label = '_nolegend_')
+    
+    
+    ax1.errorbar(x = df.Sites, y = df.pred_mean, yerr = df.pred_sd,fmt = 'o',\
+                 c = 'None',ecolor='grey',linewidth = 0.5,capsize=1,\
+                 capthick = 0.5,zorder = -1,label = '_nolegend_')
+    ax1.scatter(df.Sites,df.pred_mean, color = "None",\
+                edgecolor = "grey",linewidth = 1,s = 6,label = '_nolegend_')
+    
+    
+    ax1.scatter([],[], color = "k",\
+                edgecolor = 'None',linewidth = 1,s = 8,label = 'Observed')
+    ax1.scatter([],[], color = "None",\
+                edgecolor = 'k',linewidth = 1,s = 6,label = 'Estimated')
+    ax1.legend(prop={'size': FS-1})
+    ax1.set_ylabel('LFMC')
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_xlabel('Sites')
+    # ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    # change_width(ax1, 1)
+    # ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
 def time_series():
    #%% timeseries for three sites
     new_frame = frame.copy()
@@ -797,7 +853,8 @@ def main():
     # time_series()
     # bar_chart_sd()
     # bar_chart_time()
-    bar_chart_site_anomalies_R2()
+    site_mean_anomalies()
+    # bar_chart_site_anomalies_R2()
     # scatter_plot()
     # landcover_table()
     # microwave_importance()
