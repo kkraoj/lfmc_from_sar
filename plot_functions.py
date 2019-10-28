@@ -62,9 +62,9 @@ lc_dict = {14: 'crop',
 color_dict = {'Closed broadleaf deciduous':'darkorange',
               'Closed needleleaf evergreen': 'forestgreen',
               'Mixed forest':'darkslategrey',
-              'Shrub/grassland' :'olive' ,
-              'Shrubland':'darkgoldenrod',
-              'Grassland':'lawngreen',
+              'Shrub/grassland' :'y' ,
+              'Shrubland':'tan',
+              'Grassland':'lime',
               }  
 
 pkl_file = open(os.path.join(dir_data,'encoder.pkl'), 'rb')
@@ -446,7 +446,6 @@ def site_mean_anomalies_fill():
         plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-
 def time_series():
    #%% timeseries for three sites
     new_frame = frame.copy()
@@ -565,7 +564,6 @@ def time_series_R2():
         plt.savefig(os.path.join(dir_figures,'time_series.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-
 def landcover_table():
     groupby = 'forest_cover(t)'
     frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
@@ -638,8 +636,7 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     ax.set_ylim(axis_lim)
     ax.set_xticks(ticks)
     ax.set_yticks(ticks)
-    # plt.tight_layout()
-        
+    # plt.tight_layout()      
 def scatter_plot():
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
     grid = plt.GridSpec(1, 3, wspace=0.6, figure = fig)
@@ -672,9 +669,17 @@ def scatter_plot():
     x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
     y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
     
-    plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
-                 ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
-            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
+    ####################doing some inv DELETE LATER.
+    x = ndf.groupby(['site']).apply(lambda x: ((x['percent(t)'] - x['percent(t)'].mean())/x['percent(t)'].mean())).values
+    y = ndf.groupby(['site']).apply(lambda x: ((x['percent(t)_hat'] - x['percent(t)_hat'].mean())/x['percent(t)_hat'].mean())).values
+      
+    plot_pred_actual(x, y,ax = ax3,ticks = [-1,-0.5,-0,0.5,1],\
+                 ms = 40, axis_lim = [-1,1], xlabel = "$\\frac{LFMC_{obs} - \overline{LFMC_{obs}}}{\overline{LFMC_{obs}}}$", \
+            ylabel = "$\\frac{LFMC_{est} - \overline{LFMC_{est}}}{\overline{LFMC_{est}}}$",mec = 'grey', mew = 0)
+    ##############################
+    # plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
+                 # ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
+            # ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
     ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')  
     ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
@@ -685,6 +690,46 @@ def scatter_plot():
         plt.savefig(os.path.join(dir_figures,'scatter_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()   
+def scatter_plot_R2():
+
+    df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    df['colors'] = df['Landcover'].map(color_dict)
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['CV'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std()/df['percent(t)'].mean())
+    # x = frame['percent(t)'].values
+    # y = frame['percent(t)_hat'].values
+    # fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
+    # grid = plt.GridSpec(1, 3, wspace=0.6, figure = fig)
+    
+      
+    # ax1 = plt.subplot(grid[0,0])
+    # ax2 = plt.subplot(grid[0, 1])
+    # ax3 = plt.subplot(grid[0, 2])
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['site_mean_error'],df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = 10,linewidth = 0.5)
+    ax.set_ylabel("$R^2_{test}$")
+    ax.set_xlabel("$\overline{LFMC_{obs}} - \overline{LFMC_{est}}$ (%)")
+    ax.set_ylim(0,1)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['true_sd'],df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = 10,linewidth = 0.5)
+    ax.set_ylabel("$R^2_{test}$")
+    ax.set_xlabel("$SD(LFMC_{obs})$ (%)")
+    ax.set_ylim(0,1)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['CV'],df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = 10,linewidth = 0.5)
+    ax.set_ylabel("$R^2_{test}$")
+    ax.set_xlabel("CV = $\\frac{SD(LFMC_{obs})}{\overline{LFMC_{obs}}}$")
+    ax.set_ylim(0,1)
+    # ax.set_ylim(0,1)
 def microwave_importance():
     
     
@@ -939,8 +984,6 @@ def nfmd_sites():
                                  dpi =DPI, bbox_inches="tight")
     
     plt.show()
-    
-
 def seasonal_anomaly():
     seasonal_mean = pd.read_pickle(os.path.join(dir_data,'seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION))
     frame.date = pd.to_datetime(frame.date)
@@ -968,15 +1011,17 @@ def seasonal_anomaly():
 save_fig = False
 
 def main():
+    # g=2
     # seasonal_anomaly()
-    # bar_chart()
+    bar_chart()
     # time_series()
-    time_series_R2()
+    # time_series_R2()
     # bar_chart_sd()
     # bar_chart_time()
     # site_mean_anomalies()
     # bar_chart_site_anomalies_R2()
     # scatter_plot()
+    # scatter_plot_R2()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
