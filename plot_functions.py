@@ -22,6 +22,8 @@ import cartopy.crs as ccrs
 
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import gaussian_kde
+from skmisc.loess import loess,loess_model
+
 
 from osgeo import gdal
 
@@ -85,40 +87,46 @@ def change_width(ax, new_value) :
 
         # we recenter the bar
         patch.set_x(patch.get_x() + diff * .5)
-
 def bar_chart():
     rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
     rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
     rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
     rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
-    
+    rmse['ubrmse'] = frame.groupby('site').apply(\
+      lambda df: ubrmse(df['percent(t)'],df['percent(t)_hat']))
+    ### mean rmse values store
+    lc_rmse = frame.groupby('forest_cover(t)').apply(\
+        lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
+    lc_rmse.index = encoder.inverse_transform(lc_rmse.index.astype(int))
+    lc_rmse.index =  lc_rmse.index.map(lc_dict)
+    lc_rmse.index.name = 'Landcover'
+    lc_rmse.name = 'lc_rmse'
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
     
     ### sort by landcover then ascending
-    lc_order = rmse.groupby('Landcover').RMSE.mean().sort_values()
+    lc_order = lc_rmse.sort_values()
     lc_order.loc[:] = range(len(lc_order))
     rmse['lc_order'] = rmse['Landcover'].map(lc_order)
     rmse.sort_values(by=['lc_order','RMSE'], inplace = True)
     rmse['Sites'] = range(len(rmse))
-    ## SD
-    rmse['SD'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
 
-    ### mean rmse values store
-    lc_rmse = rmse.groupby('Landcover').RMSE.mean().sort_values()
-    lc_rmse.name = 'lc_rmse'
-    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
-    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
-    # rmse.join(lc_rmse, on = 'Landcover')
-    
-    fig, (ax1,ax2) = plt.subplots(1,2, figsize = (DC,4))
-    grid = plt.GridSpec(1,2, wspace=0.4, hspace=0.15, figure = fig)
-           
-    colors = lc_rmse.index.map(color_dict)
+    fig, _ = plt.subplots(2,3, figsize = (DC,4))
+    grid = plt.GridSpec(3, 2, wspace=0.4, hspace=0.15, figure = fig)
+    ax1 = plt.subplot(grid[0:, 0])
+    ax2 = plt.subplot(grid[0, 1])
+    ax3 = plt.subplot(grid[1, 1])
+    ax4 = plt.subplot(grid[2, 1])       
+    colors = lc_order.index.map(color_dict)
     sns.barplot(x="Sites", y="RMSE", data=rmse, ax = ax1, hue = 'Landcover', \
-                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
+                dodge = False,palette=sns.color_palette(colors),\
+                edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
+    ax1.plot(rmse.Sites, rmse.lc_rmse, '-',color='darkgrey',alpha = 0.8,\
              label = 'Overall landcover RMSE')
+    ## plot ubrmse
+    ax1.plot(rmse.Sites, rmse.ubrmse,'D',color = 'k',ms = 1,\
+             label = 'ubRMSE',zorder = 2,mew = 0)
    
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
@@ -127,74 +135,98 @@ def bar_chart():
     change_width(ax1, 1)
     ax1.set_ylim(0,90)
 
- 
-    #name panels
-    ax1.annotate('a.', xy=(-0.12, 1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')  
-    ax2.annotate('b.', xy=(-0.12, 1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')      
-
-    ####SD
-
-    ### mean rmse values store
-    lc_sd = frame.groupby('forest_cover(t)').apply(lambda df: df['percent(t)'].std())
-    lc_sd.name = 'lc_sd'
-    lc_sd.index = encoder.inverse_transform(lc_sd.index.astype(int))
-    lc_sd.index = lc_sd.index.map(lc_dict)
-    lc_sd.index.name = 'Landcover'
-
-    # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
-    rmse = pd.merge(rmse, lc_sd, on = 'Landcover')    
-    
     ##### plotting 
-    colors = lc_rmse.index.map(color_dict)
-    sns.barplot(x="Sites", y="SD", data=rmse, ax = ax2, hue = 'Landcover', \
-                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
-                )
-    ## plot mean rmse points
-    ax2.plot(rmse.index, rmse.lc_sd, '--',color='sienna',alpha = 0.8,\
-             label = 'Overall landcover SD')
-    ax2.set_ylim(0,90)
-    ax2.set_xticks([])
-    ax2.set_yticks([0,20,40,60,80])
-    # ax1.set_xticklabels([0,25,50,75,100,124])
-    change_width(ax2, 1)
-    # ax2.set_ylim(-0.05,1.05)
-    # ax2.set_ylabel('SD')
-    h2,l2 = ax2.get_legend_handles_labels()
-     # ax1.bar(rmse.index, rmse.values, width = 1)
     handles, labels = ax1.get_legend_handles_labels()
     handles.append(handles.pop(0))
     labels.append(labels.pop(0))
-    handles.append(h2[0])
-    labels.append(l2[0])
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    ax1.legend(handles, labels, loc = 'upper left',prop={'size': 7},frameon = False)
     
-    ax1.legend(handles, labels,loc = 'upper left',prop={'size': 7})
-    ax2.get_legend().remove()
-    
+    #%% timeseries for three sites
+    new_frame = frame.copy()
+    new_frame.index = pd.to_datetime(new_frame.date)
+    rmse = new_frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()
+
+    for site, ax in zip([8,63,-8], [ax2, ax3, ax4]):
+        sub = new_frame.loc[new_frame.site == rmse.index[site]]
+
+        lc = lc_dict[encoder.inverse_transform(sub['forest_cover(t)'].\
+                                                   astype(int).unique()[0])]
+        if ax == ax4:       
+            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = 'observed', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
+        else:
+            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = '_nolegend_', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
+
+        sub.plot(y = 'percent(t)_hat', linestyle = '--', markeredgecolor = 'k', ax = ax,\
+                marker = 'o', label = 'estimated',color = color_dict[lc], mew= 0.3, ms = 3, lw = 1, rot = 0)
+        if ax==ax3:
+            ax.set_ylabel('LFMC(%)') 
+        ax.set_xlabel('')
+        ax.legend(prop ={'size':7})
+        #set ticks every week
+        # ax.xaxis.set_major_locator(mdates.YearLocator())
+        #set major ticks format
+        # ax.xaxis.set_major_formatter(mdates.DateFormatter('%yyyy'))
 
 
+        ax.set_xlim(pd.to_datetime(['Jul-2015','31-Dec-2018']))
+        # ax.xaxis.grid(True, which="major", linestyle='--')
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(
+                                                interval=6))
+        ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
+        # ax.xaxis.grid(True, which="minor")
+        # ax.yaxis.grid()
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('\n%Y'))
+        # ax.set_xticklabels(ha='center')
+        plt.sca(ax)
+        plt.xticks(ha='center')    
+        ax.tick_params(axis='both', which='minor', labelsize=FS - 2)
+        if ax == ax2 or ax == ax3:
+            plt.setp(ax.get_xmajorticklabels(), visible=False)
+            plt.setp(ax.get_xminorticklabels(), visible=False)   
+    #name panels
+    ax1.annotate('a.', xy=(-0.15, 1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold') 
+    ax2.annotate('b.', xy=(-0.28, 1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold')
+    ax3.annotate('c.', xy=(-0.28, 1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold') 
+    ax4.annotate('d.', xy=(-0.28, 1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold') 
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-
-
+def ubrmse(true,pred):
+    return np.sqrt(mean_squared_error(true-true.mean(),pred-pred.mean()))  
+def hatching(patches,hatch = '/'):
+    for i, bar in enumerate(patches):
+        bar.set_hatch(hatch)
+        
 def bar_chart_sd():
-    rmse = pd.DataFrame({'SD':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    rmse = pd.DataFrame({'ubrmse':frame.groupby('site').apply(\
+      lambda df: ubrmse(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
     rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
     rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
-    
-    
+    rmse['RMSE'] = frame.groupby('site').apply(\
+        lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
+    rmse['SD'] = frame.groupby('site').apply(\
+            lambda df: df['percent(t)'].std())
+    rmse['color'] = rmse['Landcover'].map(color_dict)
+    order_by = 'RMSE'
     ### sort by landcover then ascending
-    lc_order = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_order = rmse.groupby('Landcover')[order_by].mean().sort_values()
     lc_order.loc[:] = range(len(lc_order))
     rmse['lc_order'] = rmse['Landcover'].map(lc_order)
-    rmse.sort_values(by=['lc_order','SD'], inplace = True)
+    rmse.sort_values(by=['lc_order',order_by], inplace = True)
     rmse['Sites'] = range(len(rmse))
     ### mean rmse values store
-    lc_rmse = rmse.groupby('Landcover').SD.mean().sort_values()
+    lc_rmse = rmse.groupby('Landcover')[order_by].mean().sort_values()
     lc_rmse.name = 'lc_rmse'
     # lc_rmse.index = [6.5,55,72,95,106.5,122.5]
     rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
@@ -203,25 +235,43 @@ def bar_chart_sd():
     fig, ax1 = plt.subplots(1,1, figsize = (SC,4))
     colors = lc_rmse.index.map(color_dict)
     # colors = ['darkslategrey','forestgreen','olive','darkgoldenrod','darkorange','lawngreen']
-    sns.barplot(x="Sites", y="SD", data=rmse, ax = ax1, hue = 'Landcover', \
-                dodge = False,palette=sns.color_palette(colors),edgecolor = 'w',linewidth = 0.04,
-                )
+    rmse.plot(x="Sites", y="ubrmse", kind ='bar',color = rmse['color'], ax= ax1,\
+              linewidth = 0.2, edgecolor = 'k')
+    rmse.plot(x="Sites", y="RMSE", kind ='bar',color = rmse['color'], ax= ax1,\
+              linewidth = 0.04, edgecolor = 'k',zorder = -1)
+    hatching(ax1.patches[125:250],'xxxxxxxxxxxxxxxx')
+    # rmse.plot(x="Sites", y="SD", kind ='bar',color = 'white', ax= ax1,\
+    #           linewidth = 0.2, edgecolor = rmse['color'],zorder = -2)
+    # hatching(ax1.patches[250:],'.........')
+    mpl.rcParams['hatch.linewidth'] = 0.1  # previous pdf hatch linewidth
+
+    # sns.barplot(x="Sites", y="ubrmse", data=rmse, ax = ax1, hue = 'Landcover', \
+    #             dodge = False,palette=sns.color_palette(colors),edgecolor = 'k',linewidth = 0.04)
+    # sns.barplot(x="Sites", y="RMSE", data=rmse, ax = ax1, hue = 'Landcover', \
+    #             dodge = False,palette=sns.color_palette(colors),edgecolor = 'k',linewidth = 0.04,
+    #             zorder = -1,alpha = 0.8)
+    # sns.barplot(x="Sites", y="SD", data=rmse, ax = ax1, hue = 'Landcover', \
+    #             dodge = False,palette=sns.color_palette(colors),edgecolor = 'k',linewidth = 0.04,\
+    #             zorder = -2,alpha = 0.4)
+
     ## plot mean rmse points
     # ax1.plot(rmse.index, rmse.lc_rmse, '-',color='sienna',alpha = 0.8,\
              # label = 'Mean landcover SD')
     # ax1.bar(rmse.index, rmse.values, width = 1)
     handles, labels = ax1.get_legend_handles_labels()
-    handles.append(handles.pop(0))
-    labels.append(labels.pop(0))
+    handles = handles[:6]
+    labels = labels[:6]
+    # handles.append(handles.pop(0))
+    # labels.append(labels.pop(0))
     
-    ax1.legend(handles, labels,prop={'size': 7})
-    ax1.set_ylabel('$R^2_{test}$')
+    ax1.legend(handles, labels,prop={'size': 7},loc = 'upper left')
+    ax1.set_ylabel('RMSE')
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
     # ax1.set_yticks([0,20,40,60,80])
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax1, 1)
-    # ax1.set_ylim(0,90)
+    ax1.set_ylim(0,90)
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
                                  dpi =DPI, bbox_inches="tight")
@@ -454,7 +504,7 @@ def time_series():
     
     fig, (ax2, ax3, ax4) = plt.subplots(3,1,figsize = (SC,4))
     
-    for site, ax in zip([0,63,-1], [ax2, ax3, ax4]):
+    for site, ax in zip([6,63,-6], [ax2, ax3, ax4]):
         sub = new_frame.loc[new_frame.site == rmse.index[site]]
         
         lc = lc_dict[encoder.inverse_transform(sub['forest_cover(t)'].\
@@ -511,59 +561,32 @@ def time_series_R2():
     new_frame.index = pd.to_datetime(new_frame.date)
     rmse = new_frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()
     
-    fig, (ax2, ax3, ax4) = plt.subplots(3,1,figsize = (SC,4))
+    for site in range(len(rmse)):
+        fig, ax = plt.subplots(1,1,figsize = (SC,1.5))
     
-    for site, ax in zip([0,63,-1], [ax2, ax3, ax4]):
         sub = new_frame.loc[new_frame.site == rmse.index[site]]
         
         lc = lc_dict[encoder.inverse_transform(sub['forest_cover(t)'].\
                                                    astype(int).unique()[0])]
-        if ax == ax4:       
-            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
+        sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
                 marker = 'o', label = 'observed', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
-        else:
-            sub.plot(y = 'percent(t)', linestyle = '-', markeredgecolor = 'k', ax = ax,\
-                marker = 'o', label = '_nolegend_', color = 'grey', mew =0.3,ms = 3,linewidth = 1 )
-        
+      
         sub.plot(y = 'percent(t)_hat', linestyle = '--', markeredgecolor = 'k', ax = ax,\
                 marker = 'o', label = 'estimated',color = color_dict[lc], mew= 0.3, ms = 3, lw = 1, rot = 0)
-        if ax==ax3:
-            ax.set_ylabel('LFMC(%)') 
+        ax.set_ylabel('LFMC(%)') 
         ax.set_xlabel('')
         ax.legend(prop ={'size':7}, loc = 'lower right')
-        #set ticks every week
-        # ax.xaxis.set_major_locator(mdates.YearLocator())
-        #set major ticks format
-        # ax.xaxis.set_major_formatter(mdates.DateFormatter('%yyyy'))
-        
-        
-        ax.set_xlim(pd.to_datetime(['May-2015','31-Dec-2018']))
-        # ax.xaxis.grid(True, which="major", linestyle='--')
+
         ax.xaxis.set_minor_locator(mdates.MonthLocator(
                                                 interval=6))
         ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
-        # ax.xaxis.grid(True, which="minor")
-        # ax.yaxis.grid()
+
         ax.xaxis.set_major_locator(mdates.YearLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter('\n%Y'))
-        # ax.set_xticklabels(ha='center')
         plt.sca(ax)
         plt.xticks(ha='center')    
         ax.tick_params(axis='both', which='minor', labelsize=FS - 2)
-        if ax == ax2 or ax == ax3:
-            plt.setp(ax.get_xmajorticklabels(), visible=False)
-            plt.setp(ax.get_xminorticklabels(), visible=False)   
-    
-    ax2.annotate('a.', xy=(-0.2, 1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')  
-    ax3.annotate('b.', xy=(-0.2, 1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold') 
-    ax4.annotate('c.', xy=(-0.2, 1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold') 
-    if save_fig:
-        plt.savefig(os.path.join(dir_figures,'time_series.eps'), \
-                                 dpi =DPI, bbox_inches="tight")
-    plt.show()
+        ax.set_title('$R^2$ = %0.2f'%rmse[site]) 
 def landcover_table():
     groupby = 'forest_cover(t)'
     frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
@@ -694,12 +717,17 @@ def scatter_plot_R2():
 
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
+    df['site_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean())
+    df['RMSE'] = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
     df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
     df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
     df['Landcover'] = df['Landcover'].map(lc_dict)
     df['colors'] = df['Landcover'].map(color_dict)
     df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
     df['CV'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std()/df['percent(t)'].mean())
+    df['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1])
+    df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
+    df.sort_values(by = 'N_obs',inplace = True, ascending = False)
     # x = frame['percent(t)'].values
     # y = frame['percent(t)_hat'].values
     # fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
@@ -722,14 +750,57 @@ def scatter_plot_R2():
     ax.set_ylabel("$R^2_{test}$")
     ax.set_xlabel("$SD(LFMC_{obs})$ (%)")
     ax.set_ylim(0,1)
-    
+        
     fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
     ax.scatter(df['CV'],df['$R^2_{test}$'],color = df['colors'],\
                 edgecolor = 'grey',s = 10,linewidth = 0.5)
     ax.set_ylabel("$R^2_{test}$")
     ax.set_xlabel("CV = $\\frac{SD(LFMC_{obs})}{\overline{LFMC_{obs}}}$")
     ax.set_ylim(0,1)
-    # ax.set_ylim(0,1)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['site_mean_error'].abs(),df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = 10,linewidth = 0.5)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['RMSE'],df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = df['N_obs'],linewidth = 0.5,alpha = 0.9)
+    ax.set_ylabel("$R^2_{test}$")
+    ax.set_xlabel("RMSE")
+    ax.set_ylim(0,1)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['site_mean'],df['$R^2_{test}$'],color = df['colors'],\
+                edgecolor = 'grey',s = df['N_obs'],linewidth = 0.5,alpha = 0.9)
+    ax.set_ylabel("$R^2_{test}$")
+    ax.set_xlabel("site_mean")
+    ax.set_ylim(0,1)
+    
+    fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    ax.scatter(df['CV'],df['R'],color = df['colors'],\
+                edgecolor = 'grey',s = df['N_obs'],linewidth = 0.5,alpha = 0.9)
+   
+    ### fit
+    l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
+    l.fit()
+    new_x = np.linspace(df['CV'].min(),df['CV'].max())
+    pred = l.predict(new_x, stderror=True)
+    conf = pred.confidence()
+    lowess = pred.values
+    ll = conf.lower
+    ul = conf.upper
+    
+    ax.plot(new_x, lowess,color = 'grey',zorder = -1)
+    ax.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = -1)
+    
+    ## axis 
+    ax.set_ylabel("$R$")
+    ax.set_xlabel("$CV$")
+    ax.set_ylim(-1,1)
+    ax.set_xticks([0,0.2,0.4,0.6])
+    pred = l.predict(df['CV'], stderror=False).values
+    R2 = r2_score(df['R'],pred)
+    print('[INFO] R2 = %0.2f'%R2)    
 def microwave_importance():
     
     
@@ -978,7 +1049,6 @@ def nfmd_sites():
     ax3.scatter([],[],label = 'West USA',marker = 'h',s=10,color = 'grey')    
     ax3.legend(prop={'size': FS-3},frameon = False,handletextpad =-0.3,\
                borderpad=0.2,bbox_to_anchor = (1.02,1.02))
-    
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'sites.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
@@ -1007,13 +1077,11 @@ def seasonal_anomaly():
     y = newframe['percent(t)_hat'] - newframe['percent_seasonal_mean'].values
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
-
-save_fig = False
-
+save_fig = True
 def main():
     # g=2
     # seasonal_anomaly()
-    bar_chart()
+    # bar_chart()
     # time_series()
     # time_series_R2()
     # bar_chart_sd()
