@@ -622,7 +622,7 @@ def landcover_table():
 #%% prediction scatter plots after CV
 def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette().as_hex()), axis_lim = [-25,50],\
                  xlabel = "None", ylabel = "None", ticks = None,\
-                 ms = 8, mec ='', mew = 0, ax = None):
+                 ms = 8, mec ='', mew = 0, ax = None,annotation = True,oneone=True):
     # plt.axis('scaled')
     ax.set_aspect('equal', 'box')
 
@@ -639,8 +639,8 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     idx = z.argsort()
     x, y, z = x[idx], y[idx], z[idx]
     plot = ax.scatter(x,y, c=z, s=ms, edgecolor=mec, cmap = cmap, linewidth = mew)
-    
-    ax.plot(axis_lim,axis_lim, lw =.2, color = 'grey')
+    if oneone:
+        ax.plot(axis_lim,axis_lim, lw =.2, color = 'grey')
     
     # ax.yaxis.set_major_formatter(mtick.PercentFormatter())
     # ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -652,13 +652,16 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     R2 = r2_score(x,y)
     model_rmse = np.sqrt(mean_squared_error(x,y))
     model_bias = np.mean(pred_y - test_y)
-    ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
+    if annotation:
+        ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
                     xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
-    ax.set_xlim(axis_lim)
-    ax.set_ylim(axis_lim)
-    ax.set_xticks(ticks)
-    ax.set_yticks(ticks)
+    if axis_lim:
+        ax.set_xlim(axis_lim)
+        ax.set_ylim(axis_lim)
+    if ticks:
+        ax.set_xticks(ticks)
+        ax.set_yticks(ticks)
     # plt.tight_layout()      
 def scatter_plot():
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
@@ -713,6 +716,71 @@ def scatter_plot():
         plt.savefig(os.path.join(dir_figures,'scatter_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()   
+def R_vs_CV():
+    df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
+    df['site_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean())
+    df['RMSE'] = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    df['colors'] = df['Landcover'].map(color_dict)
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['CV'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std()/df['percent(t)'].mean())
+    df['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1])
+    df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
+    df.sort_values(by = 'N_obs',inplace = True, ascending = False)
+    
+    
+    fig,ax = plt.subplots(figsize = (SC,SC))
+    
+    plot_pred_actual(df['CV'], df['R'],ax = ax,\
+                 ms = 40, xlabel = "$CV$", \
+            ylabel = "$R$",mec = 'grey', mew = 0.2,
+            annotation = False, oneone=False)
+
+    # fig,ax = plt.subplots(figsize = (0.5*SC,0.5*SC))
+    # ax.scatter(df['CV'],df['R'],color = df['colors'],\
+    #             edgecolor = 'grey',s = df['N_obs'],linewidth = 0.5,alpha = 0.9)
+   
+    ### fit
+    l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
+    l.fit()
+    new_x = np.linspace(df['CV'].min(),df['CV'].max())
+    pred = l.predict(new_x, stderror=True)
+    conf = pred.confidence()
+    lowess = pred.values
+    ll = conf.lower
+    ul = conf.upper
+    
+    ax.plot(new_x, lowess,color = 'grey',zorder = 1,alpha = 0.7)
+    ax.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = 2)
+    
+    ## axis 
+    ax.set_ylabel("$R$")
+    ax.set_xlabel("$CV$")
+    ax.set_ylim(-1,1.05)
+    ax.set_xlim(0,0.6)
+    ax.set_xticks([0,0.2,0.4,0.6])
+    ax.set_yticks([-1,-0.5,0,0.5,1])
+    pred = l.predict(df['CV'], stderror=False).values
+    R2 = r2_score(df['R'],pred)
+    ax.set_aspect('auto')
+    
+    # Hide the right and top spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_ticks_position('bottom')
+    print('[INFO] R2 = %0.2f'%R2) 
+    
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'R_vs_CV.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show() 
+    
 def scatter_plot_R2():
 
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
@@ -1090,6 +1158,7 @@ def main():
     # bar_chart_site_anomalies_R2()
     # scatter_plot()
     # scatter_plot_R2()
+    R_vs_CV()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
