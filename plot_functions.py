@@ -694,18 +694,10 @@ def scatter_plot():
     
     x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
     y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
-    
-    ####################doing some inv DELETE LATER.
-    x = ndf.groupby(['site']).apply(lambda x: ((x['percent(t)'] - x['percent(t)'].mean())/x['percent(t)'].mean())).values
-    y = ndf.groupby(['site']).apply(lambda x: ((x['percent(t)_hat'] - x['percent(t)_hat'].mean())/x['percent(t)_hat'].mean())).values
-      
-    plot_pred_actual(x, y,ax = ax3,ticks = [-1,-0.5,-0,0.5,1],\
-                 ms = 40, axis_lim = [-1,1], xlabel = "$\\frac{LFMC_{obs} - \overline{LFMC_{obs}}}{\overline{LFMC_{obs}}}$", \
-            ylabel = "$\\frac{LFMC_{est} - \overline{LFMC_{est}}}{\overline{LFMC_{est}}}$",mec = 'grey', mew = 0)
-    ##############################
-    # plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
-                 # ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
-            # ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
+
+    plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
+                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
+            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
     ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')  
     ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
@@ -716,6 +708,100 @@ def scatter_plot():
         plt.savefig(os.path.join(dir_figures,'scatter_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()   
+def scatter_plot_all_4():
+    fig, _ = plt.subplots(2,2, figsize = (DC*2/3,DC*2/3))
+    grid = plt.GridSpec(2,2, wspace=0.6, figure = fig)
+    
+    ax1 = plt.subplot(grid[0,0])
+    ax2 = plt.subplot(grid[0, 1])
+    ax3 = plt.subplot(grid[1, 0])
+    ax4 = plt.subplot(grid[1, 1])
+    ##############################
+
+    x = frame['percent(t)'].values
+    y = frame['percent(t)_hat'].values
+    
+    plot_pred_actual(x, y,ax = ax1,ticks = [0,100,200,300],\
+        ms = 40, axis_lim = [0,300], xlabel = "$LFMC_{obs}$ (%)", \
+        ylabel = "$LFMC_{est}$ (%)",mec = 'grey', mew = 0)
+    
+    ##############################
+    t = frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
+    x = t['percent(t)'].values
+    y = t['percent(t)_hat'].values
+    
+    plot_pred_actual(x, y,ax = ax2,\
+                 ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_{obs}}$ (%)", \
+            ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0.3, ticks = [50,100,150,200])
+    ##############################
+    ndf = frame[['site','date','percent(t)','percent(t)_hat']]
+    
+    x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
+    y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
+    
+    plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
+                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
+            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
+    ##############################
+    df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
+    df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
+    df['site_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean())
+    df['RMSE'] = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    df['colors'] = df['Landcover'].map(color_dict)
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['CV'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std()/df['percent(t)'].mean())
+    df['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1])
+    df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
+    df.sort_values(by = 'N_obs',inplace = True, ascending = False)
+
+    plot_pred_actual(df['CV'], df['R'],ax = ax4,\
+                 ms = 40, xlabel = "$CV$", \
+            ylabel = "$R$",mec = 'grey', mew = 0.2,
+            annotation = False, oneone=False)
+    ### fit
+    l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
+    l.fit()
+    new_x = np.linspace(df['CV'].min(),df['CV'].max())
+    pred = l.predict(new_x, stderror=True)
+    conf = pred.confidence()
+    lowess = pred.values
+    ll = conf.lower
+    ul = conf.upper
+    pred = l.predict(df['CV'], stderror=False).values
+    R2 = r2_score(df['R'],pred)    
+    ax4.plot(new_x, lowess,color = 'grey',zorder = 1,alpha = 0.7)
+    ax4.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = 2)
+    ## axis 
+    ax4.annotate('$R^2$=%0.2f'%R2, xy=(0.98, 0.2), xycoords='axes fraction',\
+                ha='right',va='top')
+    ax4.set_ylim(-1,1.05)
+    ax4.set_xlim(0,0.6)
+    ax4.set_xticks([0,0.2,0.4,0.6])
+    ax4.set_yticks([-1,-0.5,0,0.5,1])    
+    ax4.set_aspect(0.3,'box')
+    # Hide the right and top spines
+    for ax in [ax1,ax2,ax3,ax4]:
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+    print('[INFO] R2 = %0.2f'%R2) 
+
+    ##############################
+    ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')  
+    ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')      
+    ax3.annotate('c.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')
+    ax4.annotate('d.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'scatter_plot_all_4.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()   
+
 def R_vs_CV():
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
@@ -1145,23 +1231,24 @@ def seasonal_anomaly():
     y = newframe['percent(t)_hat'] - newframe['percent_seasonal_mean'].values
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
-save_fig = True
+save_fig = False
 def main():
-    # g=2
-    # seasonal_anomaly()
     # bar_chart()
+    # scatter_plot()
+    # landcover_table()
+    # microwave_importance()
+    # nfmd_sites()
+    scatter_plot_all_4()
+    
+    # g=2
+    # seasonal_anomaly()    
     # time_series()
     # time_series_R2()
     # bar_chart_sd()
     # bar_chart_time()
     # site_mean_anomalies()
-    # bar_chart_site_anomalies_R2()
-    # scatter_plot()
+    # bar_chart_site_anomalies_R2()   
     # scatter_plot_R2()
-    R_vs_CV()
-    # landcover_table()
-    # microwave_importance()
-    # nfmd_sites()
-    
+    # R_vs_CV()
 if __name__ == '__main__':
     main()
