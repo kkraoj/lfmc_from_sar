@@ -759,7 +759,7 @@ def scatter_plot_all_4():
 
     plot_pred_actual(df['CV'], df['R'],ax = ax4,\
                  ms = 40, xlabel = "$CV$", \
-            ylabel = "$R$",mec = 'grey', mew = 0.2,
+            ylabel = "$R$",mec = 'grey', mew = 0.3,
             annotation = False, oneone=False)
     ### fit
     l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
@@ -775,7 +775,7 @@ def scatter_plot_all_4():
     ax4.plot(new_x, lowess,color = 'grey',zorder = 1,alpha = 0.7)
     ax4.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = 2)
     ## axis 
-    ax4.annotate('$R^2$=%0.2f'%R2, xy=(0.98, 0.2), xycoords='axes fraction',\
+    ax4.annotate('$R^2_{test}$=%0.2f'%R2, xy=(0.98, 0.2), xycoords='axes fraction',\
                 ha='right',va='top')
     ax4.set_ylim(-1,1.05)
     ax4.set_xlim(0,0.6)
@@ -1231,7 +1231,7 @@ def seasonal_anomaly():
     y = newframe['percent(t)_hat'] - newframe['percent_seasonal_mean'].values
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
-save_fig = False
+save_fig = True
 def main():
     # bar_chart()
     # scatter_plot()
@@ -1239,7 +1239,6 @@ def main():
     # microwave_importance()
     # nfmd_sites()
     scatter_plot_all_4()
-    
     # g=2
     # seasonal_anomaly()    
     # time_series()
