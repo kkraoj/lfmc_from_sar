@@ -109,7 +109,10 @@ def bar_chart():
     rmse['lc_order'] = rmse['Landcover'].map(lc_order)
     rmse.sort_values(by=['lc_order','RMSE'], inplace = True)
     rmse['Sites'] = range(len(rmse))
-
+    
+    
+    count = (rmse['ubrmse']<=0.5*rmse['RMSE']).mean()
+    
     fig, _ = plt.subplots(2,3, figsize = (DC,4))
     grid = plt.GridSpec(3, 2, wspace=0.4, hspace=0.15, figure = fig)
     ax1 = plt.subplot(grid[0:, 0])
@@ -201,6 +204,9 @@ def bar_chart():
         plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
+    
+    print('[INFO] Percentage of sites with ubRMSE <= 0.5*RMSE = %0.1f'%count*100)
+    
 def ubrmse(true,pred):
     return np.sqrt(mean_squared_error(true-true.mean(),pred-pred.mean()))  
 def hatching(patches,hatch = '/'):
@@ -1231,14 +1237,15 @@ def seasonal_anomaly():
     y = newframe['percent(t)_hat'] - newframe['percent_seasonal_mean'].values
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
-save_fig = True
+save_fig = False
 def main():
-    # bar_chart()
+    bar_chart()
     # scatter_plot()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    scatter_plot_all_4()
+    # scatter_plot_all_4()
+    
     # g=2
     # seasonal_anomaly()    
     # time_series()
