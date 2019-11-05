@@ -29,6 +29,7 @@ from osgeo import gdal
 
 from dirs import dir_data, dir_codes, dir_figures
 from fnn_smoothed_anomaly_all_sites import plot_importance, plot_usa
+from QC_of_sites import clean_fmc
 import pickle
 from matplotlib.colors import ListedColormap
 
@@ -1238,8 +1239,27 @@ def seasonal_anomaly():
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
 save_fig = False
+
+def rmsd(df):
+    df.index = df.date
+    df = df.groupby('fuel').resample('1d').asfreq()['percent'].interpolate()
+    df = df.reset_index()
+    df.index = df.date
+    df = df.pivot(values = 'percent', columns = 'fuel')
+    corr = df.corr().min().min()
+    return corr
+
+    
+def sites_QC():
+    df = pd.read_pickle(os.path.join(dir_data,'fmc_24_may_2019'))
+    df = clean_fmc(df, quality = 'all same')
+    df = df.groupby('site').apply(rmsd)
+    df.hist()
+    # print('[INFO] 10th percentile correlation = %0.2f'%df.quantile(1))
+    
+    
 def main():
-    bar_chart()
+    # bar_chart()
     # scatter_plot()
     # landcover_table()
     # microwave_importance()
@@ -1256,5 +1276,6 @@ def main():
     # bar_chart_site_anomalies_R2()   
     # scatter_plot_R2()
     # R_vs_CV()
+    # sites_QC()
 if __name__ == '__main__':
     main()

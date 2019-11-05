@@ -21,11 +21,13 @@ def clean_fmc(df, quality = 'pure species'):
     df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
                            'Duff (DC)', '1-hour','10-hour','100-hour',\
                            '1000-hour', 'Moss, Dead (DMC)' ])]
-    good_sites = pd.read_excel('fuel_moisture/NFMD_sites_QC.xls', index_col = 0)
+    good_sites = pd.read_excel(os.path.join(dir_data,'fuel_moisture/NFMD_sites_QC.xls'), index_col = 0)
     if quality =='pure species':
         choose = good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['only 1'])),'site']
     elif quality =='medium':
         choose = good_sites.loc[(good_sites.include==1),'site']
+    elif quality =='all same':
+        choose = good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['all same'])),'site']
     elif quality =='pure+all same':
         choose = good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['only 1', 'all same'])),'site']
     elif quality =='only mixed':
