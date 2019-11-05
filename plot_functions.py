@@ -23,6 +23,10 @@ import cartopy.crs as ccrs
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import gaussian_kde
 from skmisc.loess import loess,loess_model
+from sklearn import datasets, linear_model
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+from scipy import stats
 
 
 from osgeo import gdal
@@ -808,7 +812,6 @@ def scatter_plot_all_4():
         plt.savefig(os.path.join(dir_figures,'scatter_plot_all_4.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()   
-
 def R_vs_CV():
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
@@ -872,8 +875,7 @@ def R_vs_CV():
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'R_vs_CV.eps'), \
                                  dpi =DPI, bbox_inches="tight")
-    plt.show() 
-    
+    plt.show()   
 def scatter_plot_R2():
 
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
@@ -1214,7 +1216,11 @@ def nfmd_sites():
         plt.savefig(os.path.join(dir_figures,'sites.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     
+
     plt.show()
+    print('[INFO] Mean MAP in West USA = %d mm/yr, in sites = %d mm/yr'%(np.nanmean(p), latlon.ppt.mean()))
+    print('[INFO] Mean MAT in West USA = %d C, in sites = %d C'%(np.nanmean(t), latlon.temp.mean()))
+    print('[INFO] Mean Elevation in West USA = %d m, in sites = %d m'%(np.nanmean(e), latlon.elevation.mean()))
 def seasonal_anomaly():
     seasonal_mean = pd.read_pickle(os.path.join(dir_data,'seasonal_mean_all_sites_%s_31_may_2019'%RESOLUTION))
     frame.date = pd.to_datetime(frame.date)
@@ -1238,8 +1244,6 @@ def seasonal_anomaly():
     y = newframe['percent(t)_hat'] - newframe['percent_seasonal_mean'].values
     print('[INFO] Seasonal anomaly RMSE : %.1f' %mean_squared_error(x,y)**0.5)
     print('[INFO] Seasonal anomaly R2 : %.2f' %r2_score(x,y))
-save_fig = False
-
 def rmsd(df):
     df.index = df.date
     df = df.groupby('fuel').resample('1d').asfreq()['percent'].interpolate()
@@ -1248,16 +1252,40 @@ def rmsd(df):
     df = df.pivot(values = 'percent', columns = 'fuel')
     corr = df.corr().min().min()
     return corr
-
-    
 def sites_QC():
     df = pd.read_pickle(os.path.join(dir_data,'fmc_24_may_2019'))
     df = clean_fmc(df, quality = 'all same')
     df = df.groupby('site').apply(rmsd)
     df.hist()
     # print('[INFO] 10th percentile correlation = %0.2f'%df.quantile(1))
+def rmse_vs_climatology():
+    latlon = pd.read_csv(r"D:\Krishna\projects\vwc_from_radar\data\whittaker\nfmd_sites_climatology.csv")
+    latlon.index = latlon.Site
+    latlon['rmse'] = frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))   
+    latlon['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1]) 
+
+    slope, intercept, r_value, p_value, std_err = stats.linregress(latlon['ppt'].values,latlon['rmse'].values)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize = (DC,2.3), sharey = True)
     
+    # ax1.set_ylim(-1,1)
+    sns.regplot(latlon.ppt, latlon.rmse, ax = ax1)
+    ax1.set_xlabel('MAP (mm.yr$^{-1}$)')
+    ax1.set_ylabel('Site RMSE')
     
+    sns.regplot(latlon.temp, latlon.rmse, ax = ax2)
+    ax2.set_xlabel('MAT ($^o$C)')
+    ax2.set_ylabel('')
+    
+    sns.regplot(latlon.elevation, latlon.rmse, ax = ax3)
+    #ax.scatter(latlon.elevation, latlon.rmse)
+    ax3.set_xlabel('Elevation (m)')
+    ax3.set_ylabel('')
+    
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'rmse_climate_topo.jpg'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+# save_fig = True    
 def main():
     # bar_chart()
     # scatter_plot()
@@ -1265,7 +1293,7 @@ def main():
     # microwave_importance()
     # nfmd_sites()
     # scatter_plot_all_4()
-    
+    rmse_vs_climatology()
     # g=2
     # seasonal_anomaly()    
     # time_series()
@@ -1277,5 +1305,6 @@ def main():
     # scatter_plot_R2()
     # R_vs_CV()
     # sites_QC()
+    
 if __name__ == '__main__':
     main()
