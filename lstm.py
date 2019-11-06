@@ -108,7 +108,6 @@ microwave_inputs = ['vv','vh']
 optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
 mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
 dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
-
 static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
                     'silt', 'sand', 'clay']
 
@@ -948,6 +947,88 @@ if CV:
 
     frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
 
+
+#%% CV with only optical data
+CV = False # hard coded
+if CV:
+    frame = pd.DataFrame()
+    # model = build_model()
+    for fold in range(FOLDS):
+        print('[INFO] Fold: %1d'%fold)
+        inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
+        cols = [col for col in dataset.columns if col.split('(')[0] in inputs]
+        cols = list(dataset.columns[:3]) + cols# adding percent , site , and date
+        trimmed_dataset = dataset.loc[:,cols]
+        
+        _,_, reframed, \
+            train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+            scaler, encoder = split_train_test(trimmed_dataset, inputs =inputs, int_lag = int_lag, CV = CV, fold = fold)
+        
+
+  
+        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_without_microwave_fold_%d.hdf5'%(SAVENAME, fold))
+        
+        checkpoint = ModelCheckpoint(filepath, save_best_only=True)
+    
+        callbacks_list = [checkpoint, earlystopping]
+        model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
+        history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
+                            validation_data=(test_Xr, test_y), verbose=0, shuffle=False,\
+                            callbacks=callbacks_list)
+        model = load_model(filepath) # once trained, load best model
+        inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+        frame = frame.append(pred_frame)
+    x = frame['percent(t)'].values
+    y =  frame['percent(t)_hat'].values
+    rmse = np.sqrt(mean_squared_error(x,y))
+    plot_pred_actual(x, y,  np.corrcoef(x, y)[0,1]**2, rmse, ms = 30,\
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
+
+    frame.to_csv(os.path.join(dir_data,'model_predictions_without_microwave_all_sites.csv'))
+    
+#%% CV with optical data and random strings
+CV = False # hard coded
+if CV:
+    frame = pd.DataFrame()
+    # model = build_model()
+    inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
+    keepcols = [col for col in dataset.columns if col.split('(')[0] in inputs]
+    keepcols = list(dataset.columns[:3]) + keepcols# adding percent , site , and date
+    rand_dataset = dataset.copy()
+    np.random.seed(0)
+    rand_dataset.loc[:,[col for col in rand_dataset.columns if col not in keepcols]] =\
+        np.random.uniform(size = (rand_dataset.shape[0],133))        
+    for fold in range(FOLDS):
+        print('[INFO] Fold: %1d'%fold)
+        
+        
+        
+        _,_, reframed, \
+            train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
+            scaler, encoder = split_train_test(rand_dataset, inputs =inputs, int_lag = int_lag, CV = CV, fold = fold)
+        
+
+  
+        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_without_microwave_fold_%d.hdf5'%(SAVENAME, fold))
+        
+        checkpoint = ModelCheckpoint(filepath, save_best_only=True)
+    
+        callbacks_list = [checkpoint, earlystopping]
+        model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
+        history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
+                            validation_data=(test_Xr, test_y), verbose=0, shuffle=False,\
+                            callbacks=callbacks_list)
+        model = load_model(filepath) # once trained, load best model
+        inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
+        frame = frame.append(pred_frame)
+    x = frame['percent(t)'].values
+    y =  frame['percent(t)_hat'].values
+    rmse = np.sqrt(mean_squared_error(x,y))
+    plot_pred_actual(x, y,  np.corrcoef(x, y)[0,1]**2, rmse, ms = 30,\
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
+    
 #%% RMSE vs sites. bar chart
 
 # frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
