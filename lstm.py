@@ -1001,15 +1001,11 @@ if CV:
         np.random.uniform(size = (rand_dataset.shape[0],133))        
     for fold in range(FOLDS):
         print('[INFO] Fold: %1d'%fold)
-        
-        
-        
+    
         _,_, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-            scaler, encoder = split_train_test(rand_dataset, inputs =inputs, int_lag = int_lag, CV = CV, fold = fold)
-        
+            scaler, encoder = split_train_test(rand_dataset, int_lag = int_lag, CV = CV, fold = fold)
 
-  
         filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_without_microwave_fold_%d.hdf5'%(SAVENAME, fold))
         
         checkpoint = ModelCheckpoint(filepath, save_best_only=True)
