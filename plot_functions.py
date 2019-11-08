@@ -866,6 +866,13 @@ def climatology_maps():
     ax.add_feature(shape_feature,facecolor = "None",linewidth=0.5)
     ax.outline_patch.set_edgecolor('white')
     
+    ax1.annotate('a.', xy=(0.2, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')  
+    ax2.annotate('b.', xy=(0.2, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')      
+    ax3.annotate('c.', xy=(0.2, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')
+    
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'climatology_map.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
