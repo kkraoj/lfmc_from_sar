@@ -50,7 +50,7 @@ ZOOM=1.0
 FS=10*ZOOM
 PPT = 0
 DPI = 300
-
+sns.set_style('ticks')
 #%% fix plot dims
 mpl.rcParams['font.size'] = FS
 SC = 3.54331
@@ -134,8 +134,8 @@ def bar_chart():
                 edgecolor = 'w',linewidth = 0.04,
                 )
     ## plot mean rmse points
-    ax1.plot(rmse.Sites, rmse.lc_rmse, '-',color='darkgrey',alpha = 0.8,\
-             label = 'Overall landcover RMSE')
+    # ax1.plot(rmse.Sites, rmse.lc_rmse, '-',color='darkgrey',alpha = 0.8,\
+    #          label = 'Overall landcover RMSE')
     ## plot ubrmse
     ax1.plot(rmse.Sites, rmse.ubrmse,'D',color = 'k',ms = 1,\
              label = 'ubRMSE',zorder = 2,mew = 0)
@@ -145,14 +145,14 @@ def bar_chart():
     ax1.set_yticks([0,20,40,60,80])
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax1, 1)
-    ax1.set_ylim(0,90)
+    ax1.set_ylim(0,80)
 
     ##### plotting 
     handles, labels = ax1.get_legend_handles_labels()
     handles.append(handles.pop(0))
     labels.append(labels.pop(0))
-    handles.append(handles.pop(0))
-    labels.append(labels.pop(0))
+    # handles.append(handles.pop(0))
+    # labels.append(labels.pop(0))
     ax1.legend(handles, labels, loc = 'upper left',prop={'size': 7},frameon = False)
     
     #%% timeseries for three sites
@@ -214,7 +214,52 @@ def bar_chart():
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
     
-    print('[INFO] Percentage of sites with ubRMSE <= 0.5*RMSE = %0.1f'%count*100)   
+    print('[INFO] Percentage of sites with ubRMSE <= 0.5*RMSE = %0.1f'%(count*100))   
+def get_cdf(inseries):
+    A, Aedges = np.histogram(inseries, bins =80, range = (5,70))
+    #cumsum and normalize to get cdf rather than pdf
+    A = np.cumsum(A)
+    A = A/A[-1]
+    #convert bin edges to bin centers
+    Acenters = (Aedges[:-1]+Aedges[1:])/2
+    series = pd.Series(Acenters, index = A)
+    series= series.loc[~series.index.duplicated(keep = 'last')]
+    new_index = np.linspace(0,1,num = 500)
+    series = series.reindex(list(set(new_index)|set(series.index)))
+    series =  series.sort_index()
+    series.interpolate(limit_direction = 'both',inplace = True,method = 'spline',order = 4)
+    series = series.reindex(new_index)
+    return series
+# def where_to_fill(ux, u, rx, r):
+    
+
+def rmse_vs_ubrmse_hist():
+    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda \
+       df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
+    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
+    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
+    rmse['ubrmse'] = frame.groupby('site').apply(\
+      lambda df: ubrmse(df['percent(t)'],df['percent(t)_hat']))
+    r = get_cdf(rmse.RMSE)
+    u = get_cdf(rmse.ubrmse)
+    # r.drop(r.index[[5, 9, 16, 20, 25, 30,50]], inplace = True)
+
+    fig, ax = plt.subplots(figsize = (SC, SC))
+    ax.plot(u.values, u.index,color = 'gold',label = 'ubRMSE')
+    ax.plot(r.values, r.index, color = 'darkslateblue',label = 'RMSE')
+    
+    
+    ax.fill_betweenx(u.index, u.values, x2 = r.values, where = u.values <=0.5*r.values,\
+                     facecolor = 'None',alpha = 0.6,label = 'ubRMSE < 0.8*RMSE',\
+                     hatch = 'xxxxxx', edgecolor = 'k')
+    ax.legend()
+    # rmse.RMSE.plot.hist(ax = ax, cumulative=True, histtype='step', bins = 1000, alpha = 0.8, color = 'darkslateblue')
+    # rmse.ubrmse.plot.hist(ax = ax, cumulative=True, histtype='step', bins = 1000, alpha = 0.8, color = 'gold')
+    ax.set_xlim(0,80)   
+    ax.set_ylabel('Cumulative Density of Sites')
+    ax.set_xlabel('Site-error')
+    
 def ubrmse(true,pred):
     return np.sqrt(mean_squared_error(true-true.mean(),pred-pred.mean()))  
 def hatching(patches,hatch = '/'):
@@ -356,51 +401,6 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
     # plt.tight_layout()      
-def scatter_plot():
-    fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize = (DC,DC/3))
-    grid = plt.GridSpec(1, 3, wspace=0.6, figure = fig)
-    
-    ax1 = plt.subplot(grid[0,0])
-    ax2 = plt.subplot(grid[0, 1])
-    ax3 = plt.subplot(grid[0, 2])
-    
-    
-    x = frame['percent(t)'].values
-    y = frame['percent(t)_hat'].values
-    
-    plot_pred_actual(x, y,ax = ax1,ticks = [0,100,200,300],\
-        ms = 40, axis_lim = [0,300], xlabel = "$LFMC_{obs}$ (%)", \
-        ylabel = "$LFMC_{est}$ (%)",mec = 'grey', mew = 0)
-    
-
-    t = frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
-    x = t['percent(t)'].values
-    y = t['percent(t)_hat'].values
-    
-    plot_pred_actual(x, y,ax = ax2,\
-                 ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_{obs}}$ (%)", \
-            ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0.3, ticks = [50,100,150,200])
-    
-    
-    
-    ndf = frame[['site','date','percent(t)','percent(t)_hat']]
-    
-    x = ndf.groupby(['site']).apply(lambda x: (x['percent(t)'] - x['percent(t)'].mean())).values
-    y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
-
-    plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
-                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
-            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
-    ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')  
-    ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')      
-    ax3.annotate('c.', xy=(-0.28, 1.1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')
-    if save_fig:
-        plt.savefig(os.path.join(dir_figures,'scatter_plot.eps'), \
-                                 dpi =DPI, bbox_inches="tight")
-    plt.show()   
 def scatter_plot_all_4():
     fig, _ = plt.subplots(2,2, figsize = (DC*2/3,DC*2/3))
     grid = plt.GridSpec(2,2, wspace=0.6, figure = fig)
@@ -877,10 +877,9 @@ def climatology_maps():
         plt.savefig(os.path.join(dir_figures,'climatology_map.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-save_fig = True    
+save_fig = False    
 def main():
     # bar_chart()
-    # scatter_plot()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
@@ -888,7 +887,8 @@ def main():
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
-    climatology_maps()
+    # climatology_maps()
+    rmse_vs_ubrmse_hist()
     
 if __name__ == '__main__':
     main()
