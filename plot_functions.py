@@ -795,13 +795,13 @@ def rmse_vs_climatology():
 # save_fig = True    
 def climatology_maps():
     
-    subplot_kw = dict(projection=ccrs.PlateCarree())
+    subplot_kw = dict(projection=ccrs.LambertConformal())
     states = os.path.join(dir_data,'usa_shapefile/west_usa/west_usa_shapefile_lcc.shp')
     shape_feature = ShapelyFeature(Reader(states).geometries(),
-                                ccrs.PlateCarree(), edgecolor='black')
+                                ccrs.LambertConformal(), edgecolor='black')
     
     fig, (ax1,ax2,ax3) = plt.subplots(1,3,figsize=(DC,SC), subplot_kw=subplot_kw)
-
+    
     ax=ax1
     fname = os.path.join(dir_data,'whittaker/ppt_lcc.tif')
     ds = gdal.Open(fname)
@@ -813,14 +813,16 @@ def climatology_maps():
     my_cmap = sns.light_palette("royalblue", as_cmap=True)
     
     img = ax.imshow(data,extent = extent , 
-                    origin='upper', transform=ccrs.PlateCarree(),cmap =  my_cmap,\
+                    origin='upper', transform=ccrs.LambertConformal(),cmap =  my_cmap,\
                     vmin = 0, vmax = 4000)
-
+    ax.add_feature(shape_feature,facecolor = "None",linewidth=0.5)
+    ax.outline_patch.set_edgecolor('white')
     # cax1.annotate('MAP (mm/yr)', xy = (0.,0.94), ha = 'left', va = 'bottom')
     fig.colorbar(img,ax=ax,fraction=0.036, pad=0.04, ticks = [0,1000,2000,3000,4000]) 
     ax.annotate('MAP (mm/yr)', xy=(0.8,1), xycoords='axes fraction',\
                 ha='left',va='bottom')
-
+    
+    ###########################################################################
     ax=ax2
     fname = os.path.join(dir_data,'whittaker/temp_lcc.tif')
     ds = gdal.Open(fname)
@@ -831,18 +833,18 @@ def climatology_maps():
               gt[3] + ds.RasterYSize * gt[5], gt[3])
     my_cmap = sns.light_palette("#feb308", as_cmap=True)
     
-    ax.add_feature(shape_feature,facecolor = "None", zorder = 2)
+    
     img = ax.imshow(data,extent = extent , 
-                    origin='upper', transform=ccrs.PlateCarree(),cmap =  my_cmap,\
+                    origin='upper', transform=ccrs.LambertConformal(),cmap =  my_cmap,\
                     vmin = 0, vmax = 20)
-    
-    
+    ax.add_feature(shape_feature,facecolor = "None",linewidth=0.5)
+    ax.outline_patch.set_edgecolor('white')    
 
     # cax1.annotate('MAP (mm/yr)', xy = (0.,0.94), ha = 'left', va = 'bottom')
     fig.colorbar(img,ax=ax,fraction=0.036, pad=0.04, ticks = [-10,0,10,20]) 
     ax.annotate('MAT ($^o$C)', xy=(0.8,1), xycoords='axes fraction',\
                 ha='left',va='bottom')
-    
+    ###########################################################################
     ax=ax3
     fname = os.path.join(dir_data,'whittaker/elevation_lcc.tif')
     ds = gdal.Open(fname)
@@ -854,13 +856,21 @@ def climatology_maps():
     my_cmap = sns.light_palette("seagreen", as_cmap=True)
     
     img = ax.imshow(data,extent = extent , 
-                    origin='upper', transform=ccrs.PlateCarree(),cmap =  my_cmap,\
+                    origin='upper', transform=ccrs.LambertConformal(),cmap =  my_cmap,\
                     vmin = 0, vmax = 4000)
 
     # cax1.annotate('MAP (mm/yr)', xy = (0.,0.94), ha = 'left', va = 'bottom')
     fig.colorbar(img,ax=ax,fraction=0.036, pad=0.04, ticks = [0,1000,2000,3000,4000]) 
     ax.annotate('Elevation (m)', xy=(0.8,1), xycoords='axes fraction',\
                 ha='left',va='bottom')
+    ax.add_feature(shape_feature,facecolor = "None",linewidth=0.5)
+    ax.outline_patch.set_edgecolor('white')
+    
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'climatology_map.jpg'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+save_fig = True    
 def main():
     # bar_chart()
     # scatter_plot()

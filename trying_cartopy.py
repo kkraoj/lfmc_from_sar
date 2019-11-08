@@ -42,10 +42,10 @@ def main():
 
     # ax.add_feature(cfeature.LAND)
     # ax.add_feature(cfeature.COASTLINE)
-    fname = r'D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k.shp'
+    fname = r'D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/west_usa_shapefile_lcc.shp'
 
     shape_feature = ShapelyFeature(Reader(fname).geometries(),
-                                ccrs.PlateCarree(), edgecolor='black')
+                                ccrs.LambertConformal(), edgecolor='black')
     ax.add_feature(shape_feature,facecolor = "None")
     # ax.add_feature(cfeature.)
     # ax.add_feature(states_provinces, edgecolor='gray')
