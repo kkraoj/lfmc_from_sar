@@ -212,73 +212,13 @@ def bar_chart():
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
-    plt.show()
-       
+    plt.show()       
 def ubrmse(true,pred):
     return np.sqrt(mean_squared_error(true-true.mean(),pred-pred.mean()))  
 def hatching(patches,hatch = '/'):
     for i, bar in enumerate(patches):
         bar.set_hatch(hatch)
 #%% performance by landcover table
-def site_mean_anomalies_fill():
-    
-    df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
-    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
-    df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
-    df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
-    
-    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
-    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
-    df['Landcover'] = df['Landcover'].map(lc_dict)
-    
-    
-    ### sort by landcover then ascending
-    lc_order = df.groupby('Landcover').true_mean.mean().sort_values()
-    lc_order.loc[:] = range(len(lc_order))
-    df['lc_order'] = df['Landcover'].map(lc_order)
-    df.sort_values(by=['lc_order','true_mean'], inplace = True)
-    df['Sites'] = range(len(df))
-    df['colors'] = df['Landcover'].map(color_dict)
-    ### mean rmse values store
-
-    # df = pd.merge(rmse, lc_rmse, on = 'Landcover')
-    # rmse.join(lc_rmse, on = 'Landcover')
-    
-    fig, ax1 = plt.subplots(1,1, figsize = (DC,2))
-    for lc in df.Landcover.unique():
-        sub = df.loc[df.Landcover==lc]
-        ax1.fill_between(sub.Sites, sub.true_mean- sub.true_sd, sub.true_mean + sub.true_sd,\
-                         color = sub.colors,label = '_nolegend_',alpha = 0.7,edgecolor = "None")
-        ax1.fill_between(sub.Sites, sub.pred_mean- sub.pred_sd, sub.pred_mean + sub.pred_sd,\
-                         color = 'grey',label = '_nolegend_',alpha = 0.7,edgecolor = "None")
-    ax1.scatter(df.Sites,df.true_mean, color = list(df.colors),\
-                edgecolor = 'k',linewidth = 0.5,s=10,label = '_nolegend_')
-    
-    
-    ax1.errorbar(x = df.Sites, y = df.pred_mean, yerr = df.pred_sd,fmt = 'o',\
-                 c = 'None',ecolor='grey',linewidth = 0.5,capsize=1,\
-                 capthick = 0.5,zorder = -1,label = '_nolegend_')
-    ax1.scatter(df.Sites,df.pred_mean, color = "None",\
-                edgecolor = "grey",linewidth = 0.5,s = 6,label = '_nolegend_')
-    
-    
-    ax1.scatter([],[], color = "k",\
-                edgecolor = 'None',linewidth = 1,s = 8,label = 'Observed')
-    ax1.scatter([],[], color = "None",\
-                edgecolor = 'grey',linewidth = 1,s = 6,label = 'Estimated')
-    ax1.legend(prop={'size': FS-1})
-    ax1.set_ylabel('LFMC')
-    # ax1.set_xticklabels(range(len(rmse)))
-    ax1.set_xticks([])
-    ax1.set_xlabel('Sites')
-    # ax1.set_yticks([0,20,40,60,80])
-    # ax1.set_xticklabels([0,25,50,75,100,124])
-    # change_width(ax1, 1)
-    # ax1.set_ylim(0,90)
-    if save_fig:
-        plt.savefig(os.path.join(dir_figures,'bar_plot_sd.eps'), \
-                                 dpi =DPI, bbox_inches="tight")
-    plt.show()
 def landcover_table():
     groupby = 'forest_cover(t)'
     frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
@@ -831,6 +771,41 @@ def climatology_maps():
         plt.savefig(os.path.join(dir_figures,'climatology_map.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
+def lc_bar():
+    df = pd.DataFrame({'sites':frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df = df.groupby('Landcover').count()
+    # df.sites /= df.sites.sum()
+    df['study_area'] = [0.055510608, 0.213934613, 0.039317878, 0.063920033, 0.42991891, 0.151684868]
+    df/= df.sum()
+    df.index = df.index.map(lc_dict)
+    df['Landcover'] = df.index
+    fig, (ax1,ax2) = plt.subplots(1,2,figsize = (DC,SC),sharey = True)
+    
+    colors = df.index.map(color_dict)
+    sns.barplot(x="Landcover", y="sites", data=df, ax = ax1, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),\
+                edgecolor = 'lightgrey',linewidth = 1,
+                )
+    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45,horizontalalignment='right')
+
+    sns.barplot(x="Landcover", y="study_area", data=df, ax = ax2, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),\
+                edgecolor = 'lightgrey',linewidth = 1,
+                )
+    ax2.legend_.remove()
+    ax1.set_xlabel('')
+    ax2.set_xlabel('')
+    ax1.set_ylabel('Proportion of sites')
+    ax2.set_ylabel('Proportion of study area')
+    ax2.set_xticklabels(ax1.get_xticklabels(), rotation=45,horizontalalignment='right')
+    handles, labels = ax1.get_legend_handles_labels()
+    ax1.legend(handles, labels, loc = 'upper right',prop={'size': 7},frameon = False)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'lc_bar.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show() 
 save_fig = True    
 def main():
     # bar_chart()
@@ -841,7 +816,7 @@ def main():
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
-    climatology_maps()
-        
+    # climatology_maps()
+    lc_bar()    
 if __name__ == '__main__':
     main()
