@@ -213,53 +213,7 @@ def bar_chart():
         plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-    
-    print('[INFO] Percentage of sites with ubRMSE <= 0.5*RMSE = %0.1f'%(count*100))   
-def get_cdf(inseries):
-    A, Aedges = np.histogram(inseries, bins =80, range = (5,70))
-    #cumsum and normalize to get cdf rather than pdf
-    A = np.cumsum(A)
-    A = A/A[-1]
-    #convert bin edges to bin centers
-    Acenters = (Aedges[:-1]+Aedges[1:])/2
-    series = pd.Series(Acenters, index = A)
-    series= series.loc[~series.index.duplicated(keep = 'last')]
-    new_index = np.linspace(0,1,num = 500)
-    series = series.reindex(list(set(new_index)|set(series.index)))
-    series =  series.sort_index()
-    series.interpolate(limit_direction = 'both',inplace = True,method = 'spline',order = 4)
-    series = series.reindex(new_index)
-    return series
-# def where_to_fill(ux, u, rx, r):
-    
-
-def rmse_vs_ubrmse_hist():
-    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda \
-       df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
-    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
-    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
-    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
-    rmse['ubrmse'] = frame.groupby('site').apply(\
-      lambda df: ubrmse(df['percent(t)'],df['percent(t)_hat']))
-    r = get_cdf(rmse.RMSE)
-    u = get_cdf(rmse.ubrmse)
-    # r.drop(r.index[[5, 9, 16, 20, 25, 30,50]], inplace = True)
-
-    fig, ax = plt.subplots(figsize = (SC, SC))
-    ax.plot(u.values, u.index,color = 'gold',label = 'ubRMSE')
-    ax.plot(r.values, r.index, color = 'darkslateblue',label = 'RMSE')
-    
-    
-    ax.fill_betweenx(u.index, u.values, x2 = r.values, where = u.values <=0.5*r.values,\
-                     facecolor = 'None',alpha = 0.6,label = 'ubRMSE < 0.8*RMSE',\
-                     hatch = 'xxxxxx', edgecolor = 'k')
-    ax.legend()
-    # rmse.RMSE.plot.hist(ax = ax, cumulative=True, histtype='step', bins = 1000, alpha = 0.8, color = 'darkslateblue')
-    # rmse.ubrmse.plot.hist(ax = ax, cumulative=True, histtype='step', bins = 1000, alpha = 0.8, color = 'gold')
-    ax.set_xlim(0,80)   
-    ax.set_ylabel('Cumulative Density of Sites')
-    ax.set_xlabel('Site-error')
-    
+       
 def ubrmse(true,pred):
     return np.sqrt(mean_squared_error(true-true.mean(),pred-pred.mean()))  
 def hatching(patches,hatch = '/'):
@@ -836,12 +790,12 @@ def climatology_maps():
     
     img = ax.imshow(data,extent = extent , 
                     origin='upper', transform=ccrs.LambertConformal(),cmap =  my_cmap,\
-                    vmin = 0, vmax = 20)
+                    vmin = 0, vmax = 25)
     ax.add_feature(shape_feature,facecolor = "None",linewidth=0.5)
     ax.outline_patch.set_edgecolor('white')    
 
     # cax1.annotate('MAP (mm/yr)', xy = (0.,0.94), ha = 'left', va = 'bottom')
-    fig.colorbar(img,ax=ax,fraction=0.036, pad=0.04, ticks = [-10,0,10,20]) 
+    fig.colorbar(img,ax=ax,fraction=0.036, pad=0.04, ticks = [-10,0,10,20,25]) 
     ax.annotate('MAT ($^o$C)', xy=(0.8,1), xycoords='axes fraction',\
                 ha='left',va='bottom')
     ###########################################################################
@@ -877,7 +831,7 @@ def climatology_maps():
         plt.savefig(os.path.join(dir_figures,'climatology_map.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-save_fig = False    
+save_fig = True    
 def main():
     # bar_chart()
     # landcover_table()
@@ -887,8 +841,7 @@ def main():
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
-    # climatology_maps()
-    rmse_vs_ubrmse_hist()
-    
+    climatology_maps()
+        
 if __name__ == '__main__':
     main()
