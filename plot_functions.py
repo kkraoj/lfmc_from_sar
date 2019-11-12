@@ -285,7 +285,7 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     model_rmse = np.sqrt(mean_squared_error(x,y))
     model_bias = np.mean(pred_y - test_y)
     if annotation:
-        ax.annotate('$R^2_{test}=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
+        ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
                     xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
     if axis_lim:
@@ -812,11 +812,11 @@ def main():
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    # scatter_plot_all_4()
+    scatter_plot_all_4()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
     # climatology_maps()
-    lc_bar()    
+    # lc_bar()    
 if __name__ == '__main__':
     main()
