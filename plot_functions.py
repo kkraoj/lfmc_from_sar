@@ -807,17 +807,92 @@ def lc_bar():
         plt.savefig(os.path.join(dir_figures,'lc_bar.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show() 
-save_fig = True    
+def site_mean_anomalies_fill():
+
+    df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
+    df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
+    df['pred_cv'] = df['pred_sd']/df['pred_mean']
+    df['true_cv'] = df['true_sd']/df['true_mean']
+    
+    df['true_75'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.75))
+    df['true_25'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.25))
+    df['pred_75'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.75))
+    df['pred_25'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.25))
+    
+    
+    df['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    df['Landcover'] = encoder.inverse_transform(df['Landcover'].values)
+    df['Landcover'] = df['Landcover'].map(lc_dict)
+    
+    
+    ### sort by landcover then ascending
+    lc_order = df.groupby('Landcover').true_mean.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    df['lc_order'] = df['Landcover'].map(lc_order)
+    df.sort_values(by=['lc_order','true_mean'], inplace = True)
+    df.sort_values(by='true_mean', inplace = True)
+    df['Sites'] = range(len(df))
+    df['colors'] = df['Landcover'].map(color_dict)
+    fig, ax1 = plt.subplots(1,1, figsize = (0.75*DC,SC))
+    ax1.fill_between(df.Sites, df.true_mean - df.true_sd, df.true_mean + df.true_sd,\
+                      color = 'grey',label = '_nolegend_',alpha = 0.25,linewidth = 0)
+    ax1.fill_between(df.Sites,df.pred_mean - df.pred_sd,df.pred_mean + df.pred_sd,\
+                      color = 'purple',label = '_nolegend_',alpha = 0.25,linewidth = 0)
+    ax1.plot(df.Sites,df.true_mean, '-',color = "grey",\
+                linewidth = 1,label = 'Observed')
+    ax1.plot(df.Sites,df.pred_mean, '-',color = "purple",\
+                linewidth = 1,label = 'Estimated')
+    ax1.legend(prop={'size': FS-1}, loc = 'upper left')
+    ax1.set_ylabel('LFMC (%)')
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_xlabel('Sites')
+    # ax1.set_yticks([0,20,40,60,80])
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    # change_width(ax1, 1)
+    # ax1.set_ylim(0,90)
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'site_mean_CV.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
+def site_cv():
+    df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
+    df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
+    df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
+    df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
+    df['pred_cv'] = df['pred_sd']/df['pred_mean']
+    df['true_cv'] = df['true_sd']/df['true_mean']
+    
+    df['true_75'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.75))
+    df['true_25'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.25))
+    df['pred_75'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.75))
+    df['pred_25'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.25))
+    
+    fig, ax = plt.subplots(1,1,figsize = (0.5*SC,0.5*SC))
+        
+    plot_pred_actual(df['true_cv'],df['pred_cv'],ax = ax,ticks = [0,0.2,0.4,0.6],\
+        ms = 30, axis_lim = [0,0.6], xlabel = "CV$_{obs}$", \
+        ylabel = "CV$_{est}$",mec = 'grey', mew = 0.3,annotation = False)
+    R2= r2_score(df.true_cv, df.pred_cv)
+    ax.annotate('$R^2$=%0.2f\nMBE=-0.1'%R2, xy=(0.1, 0.95), xycoords='axes fraction',\
+                ha='left',va='top')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+save_fig = False    
 def main():
     # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    scatter_plot_all_4()
+    # scatter_plot_all_4()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
     # climatology_maps()
     # lc_bar()    
+    # site_mean_anomalies_fill()
+    site_cv()
 if __name__ == '__main__':
     main()
