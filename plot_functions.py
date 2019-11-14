@@ -295,14 +295,13 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
     # plt.tight_layout()      
-def scatter_plot_all_4():
-    fig, _ = plt.subplots(2,2, figsize = (DC*2/3,DC*2/3))
-    grid = plt.GridSpec(2,2, wspace=0.6, figure = fig)
+def scatter_plot_all_3():
+    fig, _ = plt.subplots(1,3, figsize = (DC,DC/3))
+    grid = plt.GridSpec(1,3, wspace=0.6, figure = fig)
     
     ax1 = plt.subplot(grid[0,0])
     ax2 = plt.subplot(grid[0, 1])
-    ax3 = plt.subplot(grid[1, 0])
-    ax4 = plt.subplot(grid[1, 1])
+    ax3 = plt.subplot(grid[0,2])
     ##############################
 
     x = frame['percent(t)'].values
@@ -344,37 +343,10 @@ def scatter_plot_all_4():
     df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
     df.sort_values(by = 'N_obs',inplace = True, ascending = False)
 
-    plot_pred_actual(df['CV'], df['R'],ax = ax4,\
-                 ms = 40, xlabel = "$CV$", \
-            ylabel = "$R$",mec = 'grey', mew = 0.3,
-            annotation = False, oneone=False)
-    ### fit
-    l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
-    l.fit()
-    new_x = np.linspace(df['CV'].min(),df['CV'].max())
-    pred = l.predict(new_x, stderror=True)
-    conf = pred.confidence()
-    lowess = pred.values
-    ll = conf.lower
-    ul = conf.upper
-    pred = l.predict(df['CV'], stderror=False).values
-    R2 = r2_score(df['R'],pred)    
-    ax4.plot(new_x, lowess,color = 'grey',zorder = 1,alpha = 0.7)
-    ax4.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = 2)
-    ## axis 
-    ax4.annotate('$R^2$=%0.2f'%R2, xy=(0.98, 0.2), xycoords='axes fraction',\
-                ha='right',va='top')
-    ax4.set_ylim(-1,1.05)
-    ax4.set_xlim(0,0.6)
-    ax4.set_xticks([0,0.2,0.4,0.6])
-    ax4.set_yticks([-1,-0.5,0,0.5,1])    
-    ax4.set_aspect(0.3,'box')
-    ax4.set_ylabel('$r$')
     # Hide the right and top spines
-    for ax in [ax1,ax2,ax3,ax4]:
+    for ax in [ax1,ax2,ax3]:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
-    print('[INFO] R2 = %0.2f'%R2) 
 
     ##############################
     ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
@@ -383,10 +355,8 @@ def scatter_plot_all_4():
                 ha='right',va='bottom', weight = 'bold')      
     ax3.annotate('c.', xy=(-0.28, 1.1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')
-    ax4.annotate('d.', xy=(-0.28, 1.1), xycoords='axes fraction',\
-                ha='right',va='bottom', weight = 'bold')
     if save_fig:
-        plt.savefig(os.path.join(dir_figures,'scatter_plot_all_4.eps'), \
+        plt.savefig(os.path.join(dir_figures,'scatter_plot_all_3.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()   
 def microwave_importance():
@@ -807,37 +777,80 @@ def lc_bar():
         plt.savefig(os.path.join(dir_figures,'lc_bar.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show() 
-
 def site_cv():
     df = pd.DataFrame({'true_mean':frame.groupby('site').apply(lambda df: df['percent(t)'].mean()).sort_values()})
     df['true_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)'].std())
     df['pred_mean'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].mean())
     df['pred_sd'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].std())
     df['pred_cv'] = df['pred_sd']/df['pred_mean']
-    df['true_cv'] = df['true_sd']/df['true_mean']
+    df['CV'] = df['true_sd']/df['true_mean']
     
     df['true_75'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.75))
     df['true_25'] = frame.groupby('site').apply(lambda df: df['percent(t)'].quantile(0.25))
     df['pred_75'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.75))
     df['pred_25'] = frame.groupby('site').apply(lambda df: df['percent(t)_hat'].quantile(0.25))
+    df['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1])
+    df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
+
+    fig, _ = plt.subplots(1,2,figsize = (SC,0.5*SC))
+    grid = plt.GridSpec(1,2, wspace=0.45, figure = fig)
     
-    fig, ax = plt.subplots(1,1,figsize = (0.5*SC,0.5*SC))
-        
-    plot_pred_actual(df['true_cv'],df['pred_cv'],ax = ax,ticks = [0,0.2,0.4,0.6],\
-        ms = 30, axis_lim = [0,0.6], xlabel = "CV$_{obs}$", \
+    ax1 = plt.subplot(grid[0,0])
+    ax2 = plt.subplot(grid[0, 1])
+
+    plot_pred_actual(df['CV'], df['R'],ax = ax2,\
+                 ms = 25, xlabel = "CV$_{obs}$", \
+            ylabel = "$r$",mec = 'grey', mew = 0.3,
+            annotation = False, oneone=False)
+    ### fit
+    l = loess(df['CV'],df['R'],span = 1,degree = 2,weights = df['N_obs'])
+    l.fit()
+    new_x = np.linspace(df['CV'].min(),df['CV'].max())
+    pred = l.predict(new_x, stderror=True)
+    conf = pred.confidence()
+    lowess = pred.values
+    ll = conf.lower
+    ul = conf.upper
+    pred = l.predict(df['CV'], stderror=False).values
+    R2 = r2_score(df['R'],pred)    
+    ax2.plot(new_x, lowess,color = 'grey',zorder = 1,alpha = 0.7)
+    ax2.fill_between(new_x,ll,ul,color = 'grey',alpha=.33,zorder = 2, linewidth = 0)
+    ## axis 
+    # ax1.annotate('$R^2$=%0.2f'%R2, xy=(0.98, 0.2), xycoords='axes fraction',\
+                # ha='right',va='top')
+    ax2.set_ylim(-1,1.05)
+    ax2.set_xlim(0,0.6)
+    ax2.set_xticks([0,0.2,0.4,0.6])
+    ax2.set_yticks([-1,-0.5,0,0.5,1])    
+    ax2.set_aspect(0.3,'box')
+    ax2.set_ylabel('$r$',labelpad = -1)
+    plot_pred_actual(df['CV'],df['pred_cv'],ax = ax1,ticks = [0,0.2,0.4,0.6],\
+        ms = 25, axis_lim = [0,0.6], xlabel = "CV$_{obs}$", \
         ylabel = "CV$_{est}$",mec = 'grey', mew = 0.3,annotation = False)
-    R2= r2_score(df.true_cv, df.pred_cv)
-    ax.annotate('$R^2$=%0.2f\nMBE=-0.1'%R2, xy=(0.1, 0.95), xycoords='axes fraction',\
-                ha='left',va='top')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
+    R2= r2_score(df.CV, df.pred_cv,sample_weight =  df['N_obs'])
+    print(R2)
+    # ax2.annotate('$R^2$=%0.2f\nMBE=-0.1'%R2, xy=(0.1, 0.95), xycoords='axes fraction',\
+                # ha='left',va='top')
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    
+    ax1.annotate('a.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')  
+    ax2.annotate('b.', xy=(-0.28, 1.1), xycoords='axes fraction',\
+                ha='right',va='bottom', weight = 'bold')
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'scatter_plot_cv.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
 save_fig = False    
 def main():
     # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    # scatter_plot_all_4()
+    # scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
