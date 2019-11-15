@@ -143,6 +143,7 @@ def bar_chart():
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
     ax1.set_yticks([0,20,40,60,80])
+    ax1.set_ylabel('RMSE (%)')
     # ax1.set_xticklabels([0,25,50,75,100,124])
     change_width(ax1, 1)
     ax1.set_ylim(0,80)
@@ -290,7 +291,7 @@ def plot_pred_actual(test_y, pred_y, weights = None, \
     model_rmse = np.sqrt(mean_squared_error(x,y))
     model_bias = np.mean(pred_y - test_y)
     if annotation:
-        ax.annotate('$R^2=%0.2f$\nRMSE = %0.1f\nBias = %0.1f'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
+        ax.annotate('$R^2=%0.2f$\nRMSE = %0.1f%%\nBias = %0.1f%%'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
                     xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
     if axis_lim:
@@ -325,6 +326,10 @@ def scatter_plot_all_3():
                  ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_{obs}}$ (%)", \
             ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', \
             mew = 0.3, ticks = [50,100,150,200],weights = weights)
+    n = np.abs(x-y)/x
+    n = n[n>=0.2]
+    n = len(n)/len(x)*100
+    print('[INFO] %d%% sites had bias >= 20%%'%np.round(n))
     ##############################
     ndf = frame[['site','date','percent(t)','percent(t)_hat']]
     
@@ -348,7 +353,16 @@ def scatter_plot_all_3():
     df['R'] = frame.groupby('site').apply(lambda df: np.corrcoef(df['percent(t)'],df['percent(t)_hat'])[0,1])
     df['N_obs'] = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
     df.sort_values(by = 'N_obs',inplace = True, ascending = False)
-
+    
+    df = frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
+    df = frame.groupby(['forest_cover(t)','site']).apply(lambda \
+            df:(df['percent(t)']-df['percent(t)_hat']).mean()/df['percent(t)'].mean()).reset_index()
+    df.columns = ['landcover','site','bias']
+    df =  df.groupby('landcover').apply(lambda df: (df['bias'].abs()>=0.2).mean())
+    df.index = encoder.inverse_transform(df.index.astype(int).values)
+    df.index = df.index.map(lc_dict)
+    df.sort_values(inplace = True)
+    
     # Hide the right and top spines
     for ax in [ax1,ax2,ax3]:
         ax.spines['right'].set_visible(False)
@@ -364,6 +378,8 @@ def scatter_plot_all_3():
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'scatter_plot_all_3.eps'), \
                                  dpi =DPI, bbox_inches="tight")
+    
+        
     plt.show()   
 def microwave_importance():
     
@@ -852,7 +868,7 @@ def site_cv():
     plt.show()
 save_fig = True    
 def main():
-    # bar_chart()
+    bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
