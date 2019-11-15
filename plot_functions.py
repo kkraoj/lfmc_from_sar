@@ -252,15 +252,19 @@ def landcover_table():
     # table.to_latex(os.path.join(dir_figures,'model_performance_by_lc.tex'))
 
 #%% prediction scatter plots after CV
-def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette().as_hex()), axis_lim = [-25,50],\
+def plot_pred_actual(test_y, pred_y, weights = None, \
+                     cmap = ListedColormap(sns.cubehelix_palette().as_hex()), \
+                     axis_lim = [-25,50],\
                  xlabel = "None", ylabel = "None", ticks = None,\
-                 ms = 8, mec ='', mew = 0, ax = None,annotation = True,oneone=True):
+                 ms = 8, mec ='', mew = 0, ax = None,annotation = True,\
+                 oneone=True):
     # plt.axis('scaled')
     ax.set_aspect('equal', 'box')
 
     x = test_y
     y = pred_y
-    
+
+        
     non_nan_ind=np.where(~np.isnan(x))[0]
     x=x.take(non_nan_ind);y=y.take(non_nan_ind)
     non_nan_ind=np.where(~np.isnan(y))[0]
@@ -281,11 +285,12 @@ def plot_pred_actual(test_y, pred_y, cmap = ListedColormap(sns.cubehelix_palette
     ax.set_yticks(ax.get_xticks())
 #    ax.set_xticks([-50,0,50,100])
 #    ax.set_yticks([-50,0,50,100])
-    R2 = r2_score(x,y)
+
+    R2 = r2_score(x,y,sample_weight = weights)
     model_rmse = np.sqrt(mean_squared_error(x,y))
     model_bias = np.mean(pred_y - test_y)
     if annotation:
-        ax.annotate('$R^2=%0.2f$\n$RMSE=%0.1f$\n$MBE=%0.1f$'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
+        ax.annotate('$R^2=%0.2f$\nRMSE = %0.1f\nBias = %0.1f'%(np.floor(R2*100)/100, model_rmse, np.abs(model_bias)), \
                     xy=(0.03, 0.97), xycoords='axes fraction',\
                     ha='left',va='top')
     if axis_lim:
@@ -315,10 +320,11 @@ def scatter_plot_all_3():
     t = frame.groupby('site')['percent(t)','percent(t)_hat'].mean()
     x = t['percent(t)'].values
     y = t['percent(t)_hat'].values
-    
+    weights = frame.groupby('site').apply(lambda df: len(df['percent(t)']))
     plot_pred_actual(x, y,ax = ax2,\
                  ms = 40, axis_lim = [50,200], xlabel = "$\overline{LFMC_{obs}}$ (%)", \
-            ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0.3, ticks = [50,100,150,200])
+            ylabel = "$\overline{LFMC_{est}}$ (%)",mec = 'grey', \
+            mew = 0.3, ticks = [50,100,150,200],weights = weights)
     ##############################
     ndf = frame[['site','date','percent(t)','percent(t)_hat']]
     
@@ -844,19 +850,19 @@ def site_cv():
         plt.savefig(os.path.join(dir_figures,'scatter_plot_cv.eps'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()
-save_fig = False    
+save_fig = True    
 def main():
     # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    # scatter_plot_all_3()
+    scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
     # climatology_maps()
     # lc_bar()    
     # site_mean_anomalies_fill()
-    site_cv()
+    # site_cv()
 if __name__ == '__main__':
     main()
