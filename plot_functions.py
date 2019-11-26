@@ -137,9 +137,10 @@ def bar_chart():
     # ax1.plot(rmse.Sites, rmse.lc_rmse, '-',color='darkgrey',alpha = 0.8,\
     #          label = 'Overall landcover RMSE')
     ## plot ubrmse
-    ax1.plot(rmse.Sites, rmse.ubrmse,'D',color = 'k',ms = 1,\
+    ax1.plot(rmse.Sites, rmse.ubrmse,'D',color = 'k',ms = 1.5,\
+             label = '_nolegend_',zorder = 2,mew = 0)
+    ax1.plot([], [],'D',color = 'k',ms = 2.5,\
              label = 'ubRMSE',zorder = 2,mew = 0)
-   
     # ax1.set_xticklabels(range(len(rmse)))
     ax1.set_xticks([])
     ax1.set_yticks([0,20,40,60,80])
@@ -211,7 +212,7 @@ def bar_chart():
     ax4.annotate('d.', xy=(-0.28, 1), xycoords='axes fraction',\
                  ha='right',va='bottom', weight = 'bold') 
     if save_fig:
-        plt.savefig(os.path.join(dir_figures,'bar_plot.eps'), \
+        plt.savefig(os.path.join(dir_figures,'bar_plot.tif'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show()       
 def ubrmse(true,pred):
@@ -337,8 +338,8 @@ def scatter_plot_all_3():
     y = ndf.groupby(['site']).apply(lambda x: (x['percent(t)_hat'] - x['percent(t)_hat'].mean())).values
     
     plot_pred_actual(x, y,ax = ax3,ticks = [-100,-50,0,50,100],\
-                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC_{obs} - \overline{LFMC_{obs}}$ (%)", \
-            ylabel = "$LFMC_{est} - \overline{LFMC_{est}}$ (%)",mec = 'grey', mew = 0)
+                  ms = 40, axis_lim = [-100,100], xlabel = "$LFMC^{'}_{obs}$ (%)", \
+            ylabel = "$LFMC^{'}_{est}$ (%)",mec = 'grey', mew = 0)
     ##############################
     df = pd.DataFrame({'$R^2_{test}$':frame.groupby('site').apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).sort_values()})
     df['site_mean_error'] = frame.groupby('site').apply(lambda df: df['percent(t)'].mean() - df['percent(t)_hat'].mean())
@@ -880,48 +881,66 @@ def inter_annual_anomaly():
     rmse = np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))
     print('[INFO] Mean SON predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
     
+    ############################################################################3
     df = pd.read_pickle(os.path.join(dir_data,'fmc_24_may_2019'))
     df.date = pd.to_datetime(df.date)
     df.loc[df.percent>=1000,'percent'] = np.nan
     df = df.loc[~df.fuel.isin(['1-Hour','10-Hour','100-Hour', '1000-Hour',\
                             'Duff (DC)', '1-hour','10-hour','100-hour',\
                             '1000-hour', 'Moss, Dead (DMC)' ])]
-    df = df[df.date.dt.year>=2004]
+    #CONDITION
+    # df = df[df.date.dt.year>=2004]
+    ###########################################################################
+    df = df.loc[(df.date.dt.month>=6)&(df.date.dt.month<=8)]
+    cols = ['site','date','percent(t)','percent(t)_hat']
+    nf = frame.loc[(frame.date.dt.month>=6)&(frame.date.dt.month<=8),cols]
+    
     check_sites = df.groupby(['site',df.date.dt.year]).percent.count().reset_index()
-    check_sites = check_sites.loc[check_sites.percent>=10] #more than 10 measurements each year
+     #CONDITION
+    #more than X measurements should exist in each season
+    check_sites = check_sites.loc[check_sites.percent>=6] 
     to_keep = check_sites.groupby('site').date.count()
-    to_keep = to_keep[to_keep>=10].index # record available from more than 10 years
+     #CONDITION
+    # record available from more than 10 years
+    to_keep = to_keep[to_keep>=10].index 
     df = df.loc[df.site.isin(to_keep)]
     high_std_sites = df.groupby('site').percent.std()
+     #CONDITION
     # high_std_sites.sort_values().plot()
-    high_std_sites = high_std_sites.loc[high_std_sites>=20].index
+    high_std_sites = high_std_sites.loc[high_std_sites>=0].index
     df = df.loc[df.site.isin(high_std_sites)]
     def calc_anomaly(df):
         df['true_anomaly_%s'%sub.name] =  df['percent(t)'].mean() - df[sub.name]
         df['pred_anomaly_%s'%sub.name] =  df['percent(t)_hat'].mean() - df[sub.name]
         return df
     
-    sub = df.loc[(df.date.dt.month>=7)&(df.date.dt.month<=9)]
-    sub = sub.groupby('site')['percent'].mean()
-    sub.name = 'son'
-    df = frame.loc[(frame.date.dt.month>=7)&(frame.date.dt.month<=9)]
-    df = df.join(sub, on = 'site')
-    df.dropna(subset=[sub.name],inplace = True)
-
-    anomaly = df.groupby(['site',df.date.dt.year]).apply(calc_anomaly)  
-    len(anomaly.site.unique()) 
-    corr = np.corrcoef(anomaly['true_anomaly_%s'%sub.name],\
-                  anomaly['pred_anomaly_%s'%sub.name])
-    print(corr)
-    r2 = r2_score(anomaly['true_anomaly_%s'%sub.name],\
-                  anomaly['pred_anomaly_%s'%sub.name])
-    rmse = np.sqrt(mean_squared_error(anomaly['true_anomaly_%s'%sub.name],\
-                                      anomaly['pred_anomaly_%s'%sub.name]))
-    print('[INFO] Mean SON predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
+    sub = df.groupby('site')['percent'].mean()
+    sub.name = 'jja'
+    
+    nf = nf.join(sub, on = 'site')
+    nf.dropna(subset=[sub.name],inplace = True)
+    
+    throw = nf.groupby(['site',nf.date.dt.year]).date.count()
+     #CONDITION
+    # atleast X values should exist in 3 month period
+    throw = throw[throw<4].index.get_level_values(0).unique() 
+    nf = nf.loc[~nf.site.isin(throw)]
+    nf = nf.groupby(['site',nf.date.dt.year]).apply(calc_anomaly)  
+    nf.drop_duplicates(subset = ['true_anomaly_%s'%sub.name,'pred_anomaly_%s'%sub.name], inplace = True)
+    # print(nf)
+    # corr = np.corrcoef(anomaly['true_anomaly_%s'%sub.name],\
+    #               anomaly['pred_anomaly_%s'%sub.name])
+    # print(corr)
+    r2 = r2_score(nf['true_anomaly_%s'%sub.name],\
+                  nf['pred_anomaly_%s'%sub.name])
+    rmse = np.sqrt(mean_squared_error(nf['true_anomaly_%s'%sub.name],\
+                                      nf['pred_anomaly_%s'%sub.name]))
+    print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
+    print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
           
-save_fig = False    
+save_fig = True    
 def main():
-    # bar_chart()
+    bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
@@ -933,6 +952,6 @@ def main():
     # lc_bar()    
     # site_mean_anomalies_fill()
     # site_cv()
-    inter_annual_anomaly()
+    # inter_annual_anomaly()
 if __name__ == '__main__':
     main()
