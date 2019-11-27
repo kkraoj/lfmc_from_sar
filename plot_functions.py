@@ -224,27 +224,25 @@ def hatching(patches,hatch = '/'):
 def landcover_table():
     groupby = 'forest_cover(t)'
     frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
-
-    frame = frame.loc[frame[groupby]==0]
-    groupby = 'site'
     table = pd.DataFrame({'RMSE':frame.groupby(groupby).apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))}).round(1)
     table['R2'] = frame.groupby(groupby).apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).round(2)
     table['N_obs'] = frame.groupby(groupby).apply(lambda df: df.shape[0])
     table['N_sites'] = frame.groupby(groupby).apply(lambda df: len(df.site.unique()))
     table['MBE'] = frame.groupby(groupby).apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
-    table['SD'] = frame.groupby(groupby).apply(lambda df: df['percent(t)'].std().round(1))
+    table['Site_SD'] = frame.groupby([groupby,'site'])['percent(t)'].std().\
+                        groupby(groupby).mean().round(1)
     table['Mean'] = frame.groupby(groupby).apply(lambda df: df['percent(t)'].mean().round(1))
 
     ### works only with original encoder!!
     
-    # table.index = encoder.inverse_transform(table.index.astype(int))
-    # table.index = table.index.map(lc_dict)
-    # table.index.name = 'landcover'
-    table = table[['N_sites','N_obs','SD','RMSE','R2','MBE','Mean']]
+    table.index = encoder.inverse_transform(table.index.astype(int))
+    table.index = table.index.map(lc_dict)
+    table.index.name = 'landcover'
+    table = table[['N_sites','N_obs','Site_SD','RMSE','R2','MBE','Mean']]
     table.sort_values('R2',inplace = True)
     overall = table.sum()
     overall.name = 'Overall'
-    overall['SD'] = 41.6
+    overall['Site_SD'] = table['Site_SD'].mean().round(1)
     overall['RMSE'] = 25.0
     overall['R2'] = 0.63
     overall['MBE'] = 1.9
@@ -923,7 +921,7 @@ def inter_annual_anomaly():
     throw = nf.groupby(['site',nf.date.dt.year]).date.count()
      #CONDITION
     # atleast X values should exist in 3 month period
-    throw = throw[throw<1].index.get_level_values(0).unique() 
+    throw = throw[throw<0].index.get_level_values(0).unique() 
     nf = nf.loc[~nf.site.isin(throw)]
     nf = nf.groupby(['site',nf.date.dt.year]).apply(calc_anomaly)  
     nf.drop_duplicates(subset = ['true_anomaly_%s'%sub.name,'pred_anomaly_%s'%sub.name], inplace = True)
@@ -941,7 +939,7 @@ def inter_annual_anomaly():
 save_fig = False    
 def main():
     # bar_chart()
-    # landcover_table()
+    landcover_table()
     # microwave_importance()
     # nfmd_sites()
     # scatter_plot_all_3()
@@ -952,6 +950,6 @@ def main():
     # lc_bar()    
     # site_mean_anomalies_fill()
     # site_cv()
-    inter_annual_anomaly()
+    # inter_annual_anomaly()
 if __name__ == '__main__':
     main()
