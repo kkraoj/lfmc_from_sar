@@ -891,14 +891,14 @@ def inter_annual_anomaly():
     #CONDITION
     # df = df[df.date.dt.year>=2004]
     ###########################################################################
-    df = df.loc[(df.date.dt.month>=6)&(df.date.dt.month<=8)]
+    df = df.loc[(df.date.dt.month>=6)&(df.date.dt.month<=11)]
     cols = ['site','date','percent(t)','percent(t)_hat']
-    nf = frame.loc[(frame.date.dt.month>=6)&(frame.date.dt.month<=8),cols]
+    nf = frame.loc[(frame.date.dt.month>=6)&(frame.date.dt.month<=11),cols]
     
     check_sites = df.groupby(['site',df.date.dt.year]).percent.count().reset_index()
      #CONDITION
     #more than X measurements should exist in each season
-    check_sites = check_sites.loc[check_sites.percent>=6] 
+    check_sites = check_sites.loc[check_sites.percent>=5] 
     to_keep = check_sites.groupby('site').date.count()
      #CONDITION
     # record available from more than 10 years
@@ -907,7 +907,7 @@ def inter_annual_anomaly():
     high_std_sites = df.groupby('site').percent.std()
      #CONDITION
     # high_std_sites.sort_values().plot()
-    high_std_sites = high_std_sites.loc[high_std_sites>=0].index
+    high_std_sites = high_std_sites.loc[high_std_sites>=40].index
     df = df.loc[df.site.isin(high_std_sites)]
     def calc_anomaly(df):
         df['true_anomaly_%s'%sub.name] =  df['percent(t)'].mean() - df[sub.name]
@@ -923,7 +923,7 @@ def inter_annual_anomaly():
     throw = nf.groupby(['site',nf.date.dt.year]).date.count()
      #CONDITION
     # atleast X values should exist in 3 month period
-    throw = throw[throw<4].index.get_level_values(0).unique() 
+    throw = throw[throw<1].index.get_level_values(0).unique() 
     nf = nf.loc[~nf.site.isin(throw)]
     nf = nf.groupby(['site',nf.date.dt.year]).apply(calc_anomaly)  
     nf.drop_duplicates(subset = ['true_anomaly_%s'%sub.name,'pred_anomaly_%s'%sub.name], inplace = True)
@@ -938,9 +938,9 @@ def inter_annual_anomaly():
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
           
-save_fig = True    
+save_fig = False    
 def main():
-    bar_chart()
+    # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
@@ -952,6 +952,6 @@ def main():
     # lc_bar()    
     # site_mean_anomalies_fill()
     # site_cv()
-    # inter_annual_anomaly()
+    inter_annual_anomaly()
 if __name__ == '__main__':
     main()
