@@ -228,7 +228,7 @@ def landcover_table():
     table['R2'] = frame.groupby(groupby).apply(lambda df: r2_score(df['percent(t)'],df['percent(t)_hat'])).round(2)
     table['N_obs'] = frame.groupby(groupby).apply(lambda df: df.shape[0])
     table['N_sites'] = frame.groupby(groupby).apply(lambda df: len(df.site.unique()))
-    table['MBE'] = frame.groupby(groupby).apply(lambda df: (df['percent(t)'] - df['percent(t)_hat']).mean()).round(1)
+    table['MBE'] = frame.groupby(groupby).apply(lambda df: (df['percent(t)_hat'] - df['percent(t)']).mean()).round(1)
     table['Site_SD'] = frame.groupby([groupby,'site'])['percent(t)'].std().\
                         groupby(groupby).mean().round(1)
     table['Mean'] = frame.groupby(groupby).apply(lambda df: df['percent(t)'].mean().round(1))
@@ -942,7 +942,7 @@ def main():
     landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    # scatter_plot_all_3()
+    scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
