@@ -74,43 +74,45 @@ def get_value(filename, mx, my, band = 1):
 #latlon.to_pickle('data/map/static_features')
 
 #%%add dynamic features
-
-latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
-MoY = 10
-date = '%02d-01-2019'%(MoY)
-####sar
-raw_opt_bands = ['blue','green','red','nir','swir']
-raw_sar_bands = ['vh','vv']
-for lag in range(3, -1, -1):
-    band_names = dict(zip(range(1,6),raw_opt_bands))
-    for band in band_names.keys():
-        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2019-%02d-01_cloudsnowfree_l8.tif'%(MoY-lag),\
-        latlon.longitude.values, latlon.latitude.values, band = band)
-    latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
+for MoY in range(1, 13):
+    latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
     
-    latlon['ndvi'] = (latlon.nir - latlon.red)/(latlon.nir + latlon.red)
-    latlon['ndwi'] = (latlon.nir - latlon.swir)/(latlon.nir + latlon.swir)
-    latlon['nirv'] = latlon.nir*latlon.ndvi
+    date = '2019-%02d-01'%(MoY)
+    print('[INFO] Making feature file for %s'%date)
+    ####sar
+    raw_opt_bands = ['blue','green','red','nir','swir']
+    raw_sar_bands = ['vh','vv']
+    for lag in range(3, -1, -1):
+        lag_date = (pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d')
+        band_names = dict(zip(range(1,6),raw_opt_bands))
+        for band in band_names.keys():
+            latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\%s_cloudsnowfree_l8.tif'%lag_date,\
+            latlon.longitude.values, latlon.latitude.values, band = band)
+        latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
+        
+        latlon['ndvi'] = (latlon.nir - latlon.red)/(latlon.nir + latlon.red)
+        latlon['ndwi'] = (latlon.nir - latlon.swir)/(latlon.nir + latlon.swir)
+        latlon['nirv'] = latlon.nir*latlon.ndvi
+        
+        band_names = dict(zip(range(1,3),raw_sar_bands))
+        for band in band_names.keys():
+            latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\%s_sar.tif'%lag_date,\
+            latlon.longitude.values, latlon.latitude.values, band = band)
+        latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
+        latlon['vh_vv'] = latlon.vh - latlon.vv
+        
+        ## mixed inputs
+        for num in raw_sar_bands:
+            for den in raw_opt_bands:
+                latlon['%s_%s'%(num, den)] = latlon[num]/latlon[den]
+        
+        if lag!=0:
+            latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t-%d)'%lag)
+        else:
+            latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t)')
     
-    band_names = dict(zip(range(1,3),raw_sar_bands))
-    for band in band_names.keys():
-        latlon[band_names[band]] = get_value(r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\2019-%02d-01_sar.tif'%(MoY-lag),\
-        latlon.longitude.values, latlon.latitude.values, band = band)
-    latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
-    latlon['vh_vv'] = latlon.vh - latlon.vv
-    
-    ## mixed inputs
-    for num in raw_sar_bands:
-        for den in raw_opt_bands:
-            latlon['%s_%s'%(num, den)] = latlon[num]/latlon[den]
-    
-    if lag!=0:
-        latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t-%d)'%lag)
-    else:
-        latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t)')
-
-latlon.to_csv('data/map/dynamic_features_%s.csv'%date)
-    
+    latlon.to_csv('data/map/map_features/dynamic_features_%s.csv'%date)
+        
 
 
 
