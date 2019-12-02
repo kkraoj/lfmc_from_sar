@@ -935,14 +935,22 @@ def inter_annual_anomaly():
                                       nf['pred_anomaly_%s'%sub.name]))
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
-          
-save_fig = True    
+def corr_color_bar():
+    a = np.array([[-1,1]])
+    plt.figure(figsize=(0.2,3))
+    plt.imshow(a, cmap="RdYlGn")
+    plt.gca().set_visible(False)
+    cax = plt.axes([0.1, 0.2, 0.8, 0.6])
+    plt.colorbar(orientation="vertical", cax=cax, ticks = [-1,-0.5,0,0.5,1])
+    # pl.savefig("colorbar.pdf")    
+
+save_fig = False    
 def main():
     # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    scatter_plot_all_3()
+    # scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
@@ -951,5 +959,6 @@ def main():
     # site_mean_anomalies_fill()
     # site_cv()
     # inter_annual_anomaly()
+    # corr_color_bar()
 if __name__ == '__main__':
     main()
