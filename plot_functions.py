@@ -375,7 +375,7 @@ def scatter_plot_all_3():
     ax3.annotate('c.', xy=(-0.28, 1.1), xycoords='axes fraction',\
                 ha='right',va='bottom', weight = 'bold')
     if save_fig:
-        plt.savefig(os.path.join(dir_figures,'scatter_plot_all_3.eps'), \
+        plt.savefig(os.path.join(dir_figures,'scatter_plot_all_3.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     
         
@@ -936,10 +936,10 @@ def inter_annual_anomaly():
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
           
-save_fig = False    
+save_fig = True    
 def main():
     # bar_chart()
-    landcover_table()
+    # landcover_table()
     # microwave_importance()
     # nfmd_sites()
     scatter_plot_all_3()
