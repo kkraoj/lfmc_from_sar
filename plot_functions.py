@@ -22,9 +22,10 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Polygon, Patch
 
 import cartopy.crs as ccrs
-from osgeo import gdal, osr
+from osgeo import gdal, osr, gdal_array
 from cartopy.feature import ShapelyFeature 
 from cartopy.io.shapereader import Reader
+
 
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import gaussian_kde
@@ -179,6 +180,7 @@ def bar_chart():
         if ax==ax3:
             ax.set_ylabel('LFMC (%)') 
         ax.set_xlabel('')
+        ax.set_title(rmse.index[site])
         ax.legend(prop ={'size':7})
         #set ticks every week
         # ax.xaxis.set_major_locator(mdates.YearLocator())
@@ -935,14 +937,6 @@ def inter_annual_anomaly():
                                       nf['pred_anomaly_%s'%sub.name]))
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
-def corr_color_bar():
-    a = np.array([[-1,1]])
-    plt.figure(figsize=(0.2,3))
-    plt.imshow(a, cmap="RdYlGn")
-    plt.gca().set_visible(False)
-    cax = plt.axes([0.1, 0.2, 0.8, 0.6])
-    plt.colorbar(orientation="vertical", cax=cax, ticks = [-1,-0.5,0,0.5,1])
-    # pl.savefig("colorbar.pdf")    
 
 save_fig = False    
 def main():
@@ -960,5 +954,7 @@ def main():
     # site_cv()
     # inter_annual_anomaly()
     # corr_color_bar()
+    # scatter_lfmc_vpd()
+    lfmc_vpd_corr_bar()
 if __name__ == '__main__':
     main()
