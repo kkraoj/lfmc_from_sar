@@ -257,9 +257,9 @@ def landcover_table():
 def plot_pred_actual(test_y, pred_y, weights = None, \
                      cmap = ListedColormap(sns.cubehelix_palette().as_hex()), \
                      axis_lim = [-25,50],\
-                 xlabel = "None", ylabel = "None", ticks = None,\
-                 ms = 8, mec ='', mew = 0, ax = None,annotation = True,\
-                 oneone=True):
+                     xlabel = "None", ylabel = "None", ticks = None,\
+                     ms = 8, mec ='', mew = 0, ax = None,annotation = True,\
+                     oneone=True):
     # plt.axis('scaled')
     ax.set_aspect('equal', 'box')
 
