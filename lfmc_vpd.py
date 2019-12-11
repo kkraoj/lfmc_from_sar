@@ -79,7 +79,7 @@ def sample(x,y,sampling_ratio = 10000):
 def scatter_lfmc_vpd_by_lc():
     arr = gdal_array.LoadFile(os.path.join(dir_data,'gee/vpdmax_lfmc_lc_2019_500.tif'))    
     ## subsetting for law VPD locations only
-    # arr[0,arr[0,:,:]>25] = np.nan
+    arr[0,arr[0,:,:]>25] = np.nan
     x = arr[1,:,:].flatten()
     y = arr[0,:,:].flatten()
     xarr = arr[1,:,:].flatten()

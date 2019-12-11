@@ -48,9 +48,9 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 model = load_model(filepath)
 
-for MoY in range(1, 13):
+for MoY in range(7, 8):
     
-    date = '2019-%02d-01'%(MoY)
+    date = '2018-%02d-01'%(MoY)
     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
     fname = 'map/dynamic_maps/fmc_map_%s'%date
     dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
@@ -111,7 +111,13 @@ for MoY in range(1, 13):
     inv_yhat = None
 
 #%% fmc map
-
+params = {"ytick.color" : "w",
+          "xtick.color" : "w",
+          "axes.labelcolor" : "w",
+          "axes.edgecolor" : "w"}
+plt.rcParams.update(params)
+date = '2019-10-01'
+fname = 'map/dynamic_maps/fmc_map_%s'%date
 latlon = pd.read_pickle(fname)
 # mask = pd.read_csv('map/mask_classified_2018_07_01.csv')
 # mask = mask[mask['mask']>0]
@@ -152,11 +158,11 @@ m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/
 
 
 
-# cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
+cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
     
-# cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom')
-# cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4))
-# cax.set_yticklabels(['<50','100','150','>200']) 
+cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
+cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4))
+cax.set_yticklabels(['<50','100','150','>200']) 
 
 ax.axis('off')
 plt.savefig(os.path.join(dir_figures,'pred_%s.tiff'%date), \

@@ -37,7 +37,6 @@ from scipy import stats
 
 
 
-
 from dirs import dir_data, dir_codes, dir_figures
 from fnn_smoothed_anomaly_all_sites import plot_importance, plot_usa
 from QC_of_sites import clean_fmc
@@ -665,7 +664,7 @@ def rmse_vs_climatology():
     # ax1.set_ylim(-1,1)
     sns.regplot(latlon.ppt, latlon.rmse, ax = ax1)
     ax1.set_xlabel('MAP (mm.yr$^{-1}$)')
-    ax1.set_ylabel('Site RMSE')
+    ax1.set_ylabel('Site RMSE (%)')
     
     sns.regplot(latlon.temp, latlon.rmse, ax = ax2)
     ax2.set_xlabel('MAT ($^o$C)')
@@ -938,7 +937,7 @@ def inter_annual_anomaly():
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
 
-save_fig = False    
+save_fig = True    
 def main():
     # bar_chart()
     # landcover_table()
