@@ -48,67 +48,67 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 model = load_model(filepath)
 
-for MoY in range(7, 8):
+# for MoY in range(7, 8):
     
-    date = '2018-%02d-01'%(MoY)
-    print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-    fname = 'map/dynamic_maps/fmc_map_%s'%date
-    dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
-    # dyn.to_pickle('map/dynamic_features_%s'%date)
-    dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
-    # inputs.to_pickle('map/inputs_%s'%date)
-    # static = None
-    dyn = None
-    # inputs = None
+#     date = '2018-%02d-01'%(MoY)
+#     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
+#     fname = 'map/dynamic_maps/fmc_map_%s'%date
+#     dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
+#     # dyn.to_pickle('map/dynamic_features_%s'%date)
+#     dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
+#     # inputs.to_pickle('map/inputs_%s'%date)
+#     # static = None
+#     dyn = None
+#     # inputs = None
     
-    # dataset = pd.read_pickle('map/inputs_%s'%date)
-    # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
-    dataset = dataset.reindex(sorted(dataset.columns), axis=1)
+#     # dataset = pd.read_pickle('map/inputs_%s'%date)
+#     # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
+#     dataset = dataset.reindex(sorted(dataset.columns), axis=1)
     
-    ### add percent col to start
-    dataset['percent(t)'] = 100 #dummy
-    cols = list(dataset.columns.values)
-    cols.remove('percent(t)')
-    cols.remove('latitude')
-    cols.remove('longitude')
-    cols = ['latitude', 'longitude','percent(t)']+cols
-    dataset = dataset[cols]
+#     ### add percent col to start
+#     dataset['percent(t)'] = 100 #dummy
+#     cols = list(dataset.columns.values)
+#     cols.remove('percent(t)')
+#     cols.remove('latitude')
+#     cols.remove('longitude')
+#     cols = ['latitude', 'longitude','percent(t)']+cols
+#     dataset = dataset[cols]
     
-    #predictions only on previously trained landcovers
-    dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
-    dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
-    
-    for col in dataset.columns:
-        if 'forest_cover' in col:
-            dataset[col] = dataset['forest_cover(t)']
-    
-    ##scale
-    dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
-    dataset.dropna(inplace = True)
-    # dataset.fillna(method = 'ffill',inplace = True)
-    # dataset.fillna(method = 'bfill',inplace = True)
-    scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
-    dataset.loc[:,2:] = scaled #skip latlon
-    dataset.drop('percent(t)',axis = 1, inplace = True)
-    scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
-    # np.save('map/scaled_%s.npy'%date, scaled)
-    
-    yhat = model.predict(scaled)
-    
-    scaled = None
-    
-    inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-    # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-    yhat = None
-    
-    # dataset = pd.read_pickle('map/inputs_%s'%date)
-    #predictions only on previously trained landcovers
+    # #predictions only on previously trained landcovers
     # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+    # dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
     
-    dataset['pred_fmc'] = inv_yhat
-    dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
-    dataset = None
-    inv_yhat = None
+    # for col in dataset.columns:
+    #     if 'forest_cover' in col:
+    #         dataset[col] = dataset['forest_cover(t)']
+    
+    # ##scale
+    # dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
+    # dataset.dropna(inplace = True)
+    # # dataset.fillna(method = 'ffill',inplace = True)
+    # # dataset.fillna(method = 'bfill',inplace = True)
+    # scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
+    # dataset.loc[:,2:] = scaled #skip latlon
+    # dataset.drop('percent(t)',axis = 1, inplace = True)
+    # scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
+    # # np.save('map/scaled_%s.npy'%date, scaled)
+    
+    # yhat = model.predict(scaled)
+    
+    # scaled = None
+    
+    # inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+    # # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+    # yhat = None
+    
+    # # dataset = pd.read_pickle('map/inputs_%s'%date)
+    # #predictions only on previously trained landcovers
+    # # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+    
+    # dataset['pred_fmc'] = inv_yhat
+    # dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
+    # dataset = None
+    # inv_yhat = None
 
 #%% fmc map
 params = {"ytick.color" : "w",
@@ -116,7 +116,7 @@ params = {"ytick.color" : "w",
           "axes.labelcolor" : "w",
           "axes.edgecolor" : "w"}
 plt.rcParams.update(params)
-date = '2019-10-01'
+date = '2018-07-01'
 fname = 'map/dynamic_maps/fmc_map_%s'%date
 latlon = pd.read_pickle(fname)
 # mask = pd.read_csv('map/mask_classified_2018_07_01.csv')
@@ -128,6 +128,8 @@ fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
 
 m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
         projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
+# m = Basemap(llcrnrlon=-123.55,llcrnrlat=38.21,urcrnrlon=-121.77,urcrnrlat=40.45,
+#         projection='lcc',lat_1=33,lat_2=45,lon_0=-95) #mendocino fire
 # load the shapefile, use the name 'states'
 m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
                     name='states', drawbounds=True)
@@ -147,7 +149,7 @@ colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b7
 cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
 
 plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-                s=0.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
+                s=.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
                     marker='s',latlon = True, zorder = 2,\
                     vmin = 50, vmax = 200)
 

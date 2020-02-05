@@ -74,10 +74,10 @@ def get_value(filename, mx, my, band = 1):
 #latlon.to_pickle('data/map/static_features')
 
 #%%add dynamic features
-for MoY in range(1, 13):
+for MoY in range(7, 8):
     latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
     
-    date = '2019-%02d-01'%(MoY)
+    date = '2018-%02d-01'%(MoY)
     print('[INFO] Making feature file for %s'%date)
     ####sar
     raw_opt_bands = ['blue','green','red','nir','swir']

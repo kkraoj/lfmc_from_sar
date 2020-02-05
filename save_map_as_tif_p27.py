@@ -16,8 +16,8 @@ from datetime import datetime
 
 
 
-for MoY in range(1, 13):
-    date = '2019-%02d-01'%(MoY)
+for MoY in range(7, 8):
+    date = '2018-%02d-01'%(MoY)
     print('[INFO] Making lfmc tif for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
     #fname = 'map/fmc_map_%s'%date
     fname = r'D:\Krishna\projects\vwc_from_radar\data\map\dynamic_maps\fmc_map_%s'%date

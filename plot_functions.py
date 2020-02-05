@@ -60,7 +60,7 @@ DC = 7.48031
 lc_dict = {14: 'crop',
             20: 'crop',
             30: 'crop',
-                50: 'Closed broadleaf deciduous',
+            50: 'Closed broadleaf deciduous',
             70: 'Closed needleleaf evergreen',
             90: 'Mixed forest',
             100:'Mixed forest',
@@ -796,7 +796,7 @@ def lc_bar():
     handles, labels = ax1.get_legend_handles_labels()
     ax1.legend(handles, labels, loc = 'upper right',prop={'size': 7},frameon = False)
     if save_fig:
-        plt.savefig(os.path.join(dir_figures,'lc_bar.eps'), \
+        plt.savefig(os.path.join(dir_figures,'lc_bar.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     plt.show() 
 def site_cv():
@@ -937,7 +937,7 @@ def inter_annual_anomaly():
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
 
-save_fig = True    
+save_fig =False 
 def main():
     # bar_chart()
     # landcover_table()
@@ -948,12 +948,12 @@ def main():
     # g=2
     # sites_QC()
     # climatology_maps()
-    # lc_bar()    
+    lc_bar()    
     # site_mean_anomalies_fill()
     # site_cv()
     # inter_annual_anomaly()
     # corr_color_bar()
     # scatter_lfmc_vpd()
-    lfmc_vpd_corr_bar()
+    # lfmc_vpd_corr_bar()
 if __name__ == '__main__':
     main()
