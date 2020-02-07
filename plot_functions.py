@@ -85,7 +85,7 @@ pkl_file.close()
 #%% RMSE vs sites. bar chart
 
 frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
-
+frame.date = pd.to_datetime(frame.date)
 def change_width(ax, new_value) :
     for patch in ax.patches :
         current_width = patch.get_width()
@@ -938,22 +938,57 @@ def inter_annual_anomaly():
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
 
 save_fig =False 
+
+def seasonal_errors():
+    fig, ax = plt.subplots(figsize = (SC,SC))
+    frame.groupby(frame.date.dt.month)['percent(t)'].count().plot.bar(ax=ax, color = 'k')
+    ax.set_xlabel('MoY')
+    ax.set_ylabel('No. of LFMC measurements')
+    
+    fig, ax = plt.subplots(figsize = (SC,SC))
+    frame.groupby(frame.date.dt.month).apply(lambda df: \
+                 np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
+                                     ).plot.bar(ax=ax, color = 'k')
+    ax.set_xlabel('MoY')
+    ax.set_ylabel('RMSE (%)')
+    
+    fig, ax = plt.subplots(figsize = (SC,SC))
+    frame.groupby(frame.date.dt.month).apply(lambda df: \
+                 r2_score(df['percent(t)'],df['percent(t)_hat'])\
+                                     ).plot.bar(ax=ax, color = 'k')
+    ax.set_xlabel('MoY')
+    ax.set_ylabel('R$^2$')
+    
+    frame['forest_cover(t)'] =  encoder.inverse_transform(frame['forest_cover(t)'].astype(int))
+    frame['forest_cover(t)'] = frame['forest_cover(t)'].map(lc_dict)
+    
+   errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
+                 np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
+                                     ).unstack()
+   counts =  frame.groupby(['forest_cover(t)',frame.date.dt.month])['percent(t)'].count().unstack()
+   errors.T.corrwith(counts.T).plot.bar(ax=ax, color = 'k')
+   
+   fig, ax = plt.subplots(figsize = (SC,0.5*SC))
+   sns.heatmap(df, vmin=0, vmax=60, ax = ax)
+   
+   
 def main():
     # bar_chart()
     # landcover_table()
     # microwave_importance()
     # nfmd_sites()
-    # scatter_plot_all_3()
+#     scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
     # climatology_maps()
-    lc_bar()    
+#    lc_bar()    
     # site_mean_anomalies_fill()
     # site_cv()
     # inter_annual_anomaly()
     # corr_color_bar()
     # scatter_lfmc_vpd()
     # lfmc_vpd_corr_bar()
+    seasonal_errors()
 if __name__ == '__main__':
     main()
