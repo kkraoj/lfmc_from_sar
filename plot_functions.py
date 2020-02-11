@@ -962,16 +962,21 @@ def seasonal_errors():
     frame['forest_cover(t)'] =  encoder.inverse_transform(frame['forest_cover(t)'].astype(int))
     frame['forest_cover(t)'] = frame['forest_cover(t)'].map(lc_dict)
     
-   errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
-                 np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
-                                     ).unstack()
-   counts =  frame.groupby(['forest_cover(t)',frame.date.dt.month])['percent(t)'].count().unstack()
-   errors.T.corrwith(counts.T).plot.bar(ax=ax, color = 'k')
+#    errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
+#                     np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
+#                                         ).unstack()
+#    counts =  frame.groupby(['forest_cover(t)',frame.date.dt.month])['percent(t)'].count().unstack()
+#    errors.T.corrwith(counts.T).plot.bar(ax=ax, color = 'k')
+#       
+#    fig, ax = plt.subplots(figsize = (SC,0.5*SC))
+#    sns.heatmap(df, vmin=0, vmax=60, ax = ax)
    
-   fig, ax = plt.subplots(figsize = (SC,0.5*SC))
-   sns.heatmap(df, vmin=0, vmax=60, ax = ax)
-   
-   
+def compare_with_previous_studies():
+    dennison = 'Bitter Canyon 1', 'Bitter Canyon 2' , 'Bouquet Canyon' , 'Clark Motorway', 'La Tuna Canyon' , 'Laurel Canyon' , 'Pico Canyon', 'Placerita Canyon', 'Schueren Road', 'Sycamore Canyon' , 'Trippet Ranch' , 'Woolsey Canyon'
+    qi = ['Little Cottonwood', 'Hobble Creek', 'Maple Canyon', 'Squaw Peak', 'Black Cedar', 'Vernon', 'Mud Springs' , 'Muskrat', 'Sevier Reservoir', 'Black Cedar']
+    subset = frame.loc[frame.site.isin(qi)].groupby(level=1).apply(lambda df: \
+                 r2_score(df['percent(t)'],df['percent(t)_hat'])\
+                                     )
 def main():
     # bar_chart()
     # landcover_table()

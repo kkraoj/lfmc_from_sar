@@ -106,6 +106,7 @@ os.chdir(dir_data)
 
 microwave_inputs = ['vv','vh']
 optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
+optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv','vari','ndii']
 mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
 dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
 static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
@@ -122,6 +123,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
     for site in df.site.unique():
         df_sub = df.loc[df.site==site]
         df_sub = reindex(df_sub,resolution = resolution)
+        # no interpolation for LFMC meas. Just reindex to closest 15th day.
         # df_sub = interpolate(df_sub, 'percent', resolution = resolution, max_gap = max_gap)
         master = master.append(df_sub, ignore_index = True, sort = False)
     ## static inputs    
@@ -132,6 +134,9 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
     ### optical
     
     df = pd.read_pickle('landsat8_500m_cloudless')
+    ### adding VARI and NDII7
+    df['vari'] = (df.green - df.red)/(df.green+df.red-df.blue)
+    df['ndii'] = (df.nir - df['b7'])/(df.nir + df['b7'])
     # for var in optical_inputs:
     opt = pd.DataFrame()
     for site in master.site.unique():
@@ -284,17 +289,17 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 ##input options 
 SEED = 0
 np.random.seed(SEED)
-RELOADINPUT = True
+RELOADINPUT = False
 OVERWRITEINPUT = False
-LOAD_MODEL = True
+LOAD_MODEL = False
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
-INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+INPUTNAME = 'lstm_input_data_pure+all_same_vari+ndii_11_feb_2020_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_vari+ndii_11_feb_2020_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
@@ -739,54 +744,50 @@ high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 #%% sensitivity
 os.chdir(dir_data)
 def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
-                      batch_size = BATCHSIZE):
-
-    rmse_diff = pd.DataFrame(index = ['microwave','optical'],\
-                              columns = range(iterations))
-    r2_diff = pd.DataFrame(index = ['microwave','optical'],\
-                              columns = range(iterations))
-    for itr in range(iterations):
-        for feature_set in rmse_diff.index.values:
-            print('[INFO] Fitting model for %s inputs only'%feature_set)
-            if feature_set =='microwave':
-                inputs = list(set(all_inputs)-set(optical_inputs))
-                _, _, reframed, \
-                train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
-                scaler,_ = \
-                split_train_test(dataset, \
-                                  inputs = inputs )
-            elif feature_set=='optical':           
-                inputs = list(set(all_inputs)-set(microwave_inputs)-set(mixed_inputs))
-                _, _, reframed, \
-                train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
-                scaler,_ = \
-                split_train_test(dataset, \
-                      inputs = inputs)
-            model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
+                      batch_size = BATCHSIZE, CV = True):
+    """
+    infer importance of different static parameters
+    """
+    rmse_diff = pd.DataFrame(index = static_inputs,\
+                              columns = range(FOLDS))
+    r2_diff = pd.DataFrame(index = static_inputs,\
+                              columns = range(FOLDS))
+    ctr = 0
+    for feature in rmse_diff.index.values:
+        for fold in range(FOLDS):
+            print('[INFO] Fitting model for all features except %s, fold %1d'%(feature, fold))
+            inputs = list(set(all_inputs)-set(feature))
+            _, _, reframed, \
+            train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
+            scaler,_ = \
+            split_train_test(dataset, int_lag = int_lag, CV = CV, fold = fold, inputs = inputs)
+            if ctr ==0:
+                model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
 
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
                     validation_data=(test_Xr, test_y), verbose=0, shuffle=False)
+            ### need to add early stopping
             _,_,_, sample_rmse, sample_r2  = predict(model, test_Xr, test_X,\
                                           test, reframed, scaler, inputs)
             
-            rmse_diff.loc[feature_set, itr] = sample_rmse - rmse
-            r2_diff.loc[feature_set, itr] = sample_r2 - r2
+            rmse_diff.loc[feature, fold] = sample_rmse - rmse
+            r2_diff.loc[feature, fold] = sample_r2 - r2
     rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
     rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
-    rmse_diff.drop(range(iterations),axis = 'columns', inplace = True)
+    rmse_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
     rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
     
     r2_diff['mean'] = r2_diff.mean(axis = 'columns')
     r2_diff['sd'] = r2_diff.drop('mean',axis = 'columns').std(axis = 'columns')
-    r2_diff.drop(range(iterations),axis = 'columns', inplace = True)
+    r2_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
     r2_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
     return rmse_diff, r2_diff
 
-# rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
-# print(rmse_diff)
-# print(r2_diff)
+#rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
+#print(rmse_diff)
+#print(r2_diff)
 #    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
 #%% data availability bar plot across features
     
@@ -945,7 +946,7 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
-    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites_vari+ndii.csv'))
 
 
 #%% CV with only optical data
@@ -962,10 +963,8 @@ if CV:
         
         _,_, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
-            scaler, encoder = split_train_test(trimmed_dataset, inputs =inputs, int_lag = int_lag, CV = CV, fold = fold)
-        
-
-  
+            scaler, encoder = split_train_test(trimmed_dataset, inputs =inputs, \
+                                   int_lag = int_lag, CV = CV, fold = fold)
         filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_without_microwave_fold_%d.hdf5'%(SAVENAME, fold))
         
         checkpoint = ModelCheckpoint(filepath, save_best_only=True)
@@ -1025,6 +1024,7 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
     
+
 #%% RMSE vs sites. bar chart
 
 # frame = pd.read_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
