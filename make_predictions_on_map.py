@@ -39,10 +39,10 @@ pkl_file.close()
 
 # fname = 'map/fmc_map_2018_07_01_v2'
 #%% prediction
-# static = pd.read_csv('map/static_features.csv', index_col = 0)
+#static = pd.read_csv('map/static_features.csv', index_col = 0)
 # static.to_pickle('map/static_features')
 
-static = pd.read_pickle('map/static_features')
+#static = pd.read_pickle('map/static_features')
 SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratios'%('1M','3M')
 filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
@@ -163,11 +163,11 @@ m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/
 cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
     
 cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
-cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4))
+cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
 cax.set_yticklabels(['<50','100','150','>200']) 
 
 ax.axis('off')
-plt.savefig(os.path.join(dir_figures,'pred_%s.tiff'%date), \
+plt.savefig(os.path.join(dir_figures,'pred_%s_v2.tiff'%date), \
                                   dpi =300, bbox_inches="tight",transparent = True)
 plt.show()
 
@@ -195,4 +195,26 @@ plt.show()
 # hist.plot(kind = 'bar', ax = ax)
 # ax.set_ylabel('No. of pixels')
 
+#%% make color bar only
+params = {"ytick.color" : "w",
+          "xtick.color" : "w",
+          "axes.labelcolor" : "w",
+          "axes.edgecolor" : "w"}
+plt.rcParams.update(params)
 
+colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
+          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
+          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
+          
+cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
+plot = ax.imshow([[]],cmap = cmap,vmin = 50, vmax = 200)
+fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
+cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
+cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
+cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
+cax.set_yticklabels(['<50','100','150','>200'], color = "w") 
+
+ax.axis('off')
+plt.savefig(os.path.join(dir_figures,'colorbar.tiff'), \
+                                  dpi =300, bbox_inches="tight",transparent = True)
+plt.show()

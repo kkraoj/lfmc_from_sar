@@ -937,46 +937,81 @@ def inter_annual_anomaly():
     print('[INFO] Stats calculated for %d sites'%len(nf.site.unique()))
     print('[INFO] Mean SON inter-annual anomaly predictability: R2 = %0.2f, RMSE = %0.1f'%(r2,rmse))
 
-save_fig =False 
+
 
 def seasonal_errors():
-    fig, ax = plt.subplots(figsize = (SC,SC))
-    frame.groupby(frame.date.dt.month)['percent(t)'].count().plot.bar(ax=ax, color = 'k')
-    ax.set_xlabel('MoY')
-    ax.set_ylabel('No. of LFMC measurements')
-    
-    fig, ax = plt.subplots(figsize = (SC,SC))
-    frame.groupby(frame.date.dt.month).apply(lambda df: \
-                 np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
-                                     ).plot.bar(ax=ax, color = 'k')
-    ax.set_xlabel('MoY')
-    ax.set_ylabel('RMSE (%)')
-    
-    fig, ax = plt.subplots(figsize = (SC,SC))
-    frame.groupby(frame.date.dt.month).apply(lambda df: \
-                 r2_score(df['percent(t)'],df['percent(t)_hat'])\
-                                     ).plot.bar(ax=ax, color = 'k')
-    ax.set_xlabel('MoY')
-    ax.set_ylabel('R$^2$')
-    
     frame['forest_cover(t)'] =  encoder.inverse_transform(frame['forest_cover(t)'].astype(int))
     frame['forest_cover(t)'] = frame['forest_cover(t)'].map(lc_dict)
+    fig, (ax1,ax2) = plt.subplots(2,1, figsize = (0.875*SC,SC), sharex = True)
     
-#    errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
-#                     np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
-#                                         ).unstack()
+
+    ax = ax1
+    frame.groupby(frame.date.dt.month)['percent(t)'].count().plot.bar(ax=ax, \
+                 color = 'k',edgecolor='grey',width = 0.5)
+#    ax.set_xlabel('MoY')
+    ax.set_ylabel('LFMC samples')
+    ax.set_yticks([0,250,500])
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=.05)
+    cax.remove()
+    plt.minorticks_off()
+#    fig, ax = plt.subplots(figsize = (SC,SC))
+#    frame.groupby(frame.date.dt.month).apply(lambda df: \
+#                 np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
+#                                     ).plot.bar(ax=ax, color = 'k')
+#    ax.set_xlabel('MoY')
+#    ax.set_ylabel('RMSE (%)')
+#    
+#    fig, ax = plt.subplots(figsize = (SC,SC))
+#    frame.groupby(frame.date.dt.month).apply(lambda df: \
+#                 r2_score(df['percent(t)'],df['percent(t)_hat'])\
+#                                     ).plot.bar(ax=ax, color = 'k')
+#    ax.set_xlabel('MoY')
+#    ax.set_ylabel('R$^2$')
+    
+
+    
+    errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
+                     np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
+                                         ).unstack()
 #    counts =  frame.groupby(['forest_cover(t)',frame.date.dt.month])['percent(t)'].count().unstack()
 #    errors.T.corrwith(counts.T).plot.bar(ax=ax, color = 'k')
-#       
-#    fig, ax = plt.subplots(figsize = (SC,0.5*SC))
-#    sns.heatmap(df, vmin=0, vmax=60, ax = ax)
+    ax = ax2  
+    plot = ax.imshow(errors, vmin=0, vmax=60)
+    current_cmap = mpl.cm.get_cmap()
+    current_cmap.set_bad(color='grey')
+    ax.set_ylabel('')
+    ax.set_yticks(range(6))
+    labels = list(errors.index)
+    labels[0] = 'Closed broadleaf\ndeciduous'
+    labels[1] = 'Closed needleleaf\nevergreen'
+    labels.append(labels.pop(1))
+    
+    ax.set_yticklabels(labels)
+    
+    ax.set_xticklabels(['Jan','','','Apr','','','Jul','','','Oct','',''])
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=.05)
+    cax.annotate('RMSE (%)', xy=(0.5, 1.05), xycoords='axes fraction',\
+                 ha='center',va='bottom') 
+    plt.colorbar(plot, cax=cax, extend='max')
+    ax1.annotate('a.', xy=(-0.5, 1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold') 
+    ax2.annotate('b.', xy=(-0.5, 1.1), xycoords='axes fraction',\
+                 ha='right',va='bottom', weight = 'bold')
+    plt.minorticks_off()
+    if save_fig:
+        plt.savefig(os.path.join(dir_figures,'seasonal_errors.eps'), \
+                                 dpi =DPI, bbox_inches="tight")
+    plt.show()
    
 def compare_with_previous_studies():
     dennison = 'Bitter Canyon 1', 'Bitter Canyon 2' , 'Bouquet Canyon' , 'Clark Motorway', 'La Tuna Canyon' , 'Laurel Canyon' , 'Pico Canyon', 'Placerita Canyon', 'Schueren Road', 'Sycamore Canyon' , 'Trippet Ranch' , 'Woolsey Canyon'
     qi = ['Little Cottonwood', 'Hobble Creek', 'Maple Canyon', 'Squaw Peak', 'Black Cedar', 'Vernon', 'Mud Springs' , 'Muskrat', 'Sevier Reservoir', 'Black Cedar']
-    subset = frame.loc[frame.site.isin(qi)].groupby(level=1).apply(lambda df: \
-                 r2_score(df['percent(t)'],df['percent(t)_hat'])\
-                                     )
+    df = frame.loc[frame.site.isin(qi)]
+    r2_score(df['percent(t)'],df['percent(t)_hat'])
+    
+save_fig =True
 def main():
     # bar_chart()
     # landcover_table()
