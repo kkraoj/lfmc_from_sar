@@ -106,7 +106,7 @@ os.chdir(dir_data)
 
 microwave_inputs = ['vv','vh']
 optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
-optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv','vari','ndii']
+#optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv','vari','ndii']
 mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
 dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
 static_inputs = ['slope', 'elevation', 'canopy_height','forest_cover',\
@@ -289,17 +289,17 @@ def series_to_supervised(df, n_in=1, dropnan=False):
 ##input options 
 SEED = 0
 np.random.seed(SEED)
-RELOADINPUT = False
+RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = False
+LOAD_MODEL = True
 OVERWRITE = False
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
-INPUTNAME = 'lstm_input_data_pure+all_same_vari+ndii_11_feb_2020_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_vari+ndii_11_feb_2020_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
 
 ##modeling options
 EPOCHS = int(20e3)
@@ -308,7 +308,7 @@ DROPOUT = 0.05
 TRAINRATIO = 0.70
 LOSS = 'mse'
 LAG = '3M'
-RETRAINEPOCHS = int(20e3)
+RETRAINEPOCHS = int(5e3)
 FOLDS = 3
 CV = False
 
@@ -766,7 +766,7 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
-                    validation_data=(test_Xr, test_y), verbose=0, shuffle=False)
+                    validation_data=(test_Xr, test_y), verbose=0, shuffle=False, callbacks = [earlystopping])
             ### need to add early stopping
             _,_,_, sample_rmse, sample_r2  = predict(model, test_Xr, test_X,\
                                           test, reframed, scaler, inputs)
@@ -786,9 +786,14 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
     return rmse_diff, r2_diff
 
 #rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
-#print(rmse_diff)
-#print(r2_diff)
-#    rmse_diff.to_pickle(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_%s'%save_name))
+save_name = "static_variables_importance"
+rmse_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name), index_col = 1)
+r2_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
+print(rmse_diff)
+print(r2_diff)
+plot_importance(rmse_diff,rmse)
+#rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name))
+#rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
 #%% data availability bar plot across features
     
 
@@ -946,7 +951,7 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
-    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites_vari+ndii.csv'))
+    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
 
 
 #%% CV with only optical data

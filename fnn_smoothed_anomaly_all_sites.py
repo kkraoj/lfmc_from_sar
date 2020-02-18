@@ -387,8 +387,8 @@ def rename_importance_chart_labels(ax):
     ax.set_yticklabels(new_labels)
     return ax
         
-def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",\
-                    zoom = 1, figname = None, dpi = 600):
+def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE (%)",\
+                    zoom = 1, figname = None, dpi = 300):
     Df = pd.DataFrame(rmse_diff)
     Df=Df.sort_values('mean')
     Df=append_color_importance(Df)
@@ -396,7 +396,7 @@ def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",
     Df['mean']+=model_rmse
 #    Df.loc[Df.index!='elevation','mean'] = 0
 #    Df['mean'] = 0
-    fig, ax = plt.subplots(figsize = (zoom*5,zoom*8), dpi = dpi)
+    fig, ax = plt.subplots(figsize = (zoom*2,zoom*3), dpi = dpi)
     Df['mean'].plot.barh(width=0.8,color=Df.color,xerr=Df['sd'],\
            error_kw=dict(ecolor='grey', lw=1, capsize=2, capthick=1), ax=ax)
     ax.set_xlabel(xlabel)
@@ -407,7 +407,7 @@ def plot_importance(rmse_diff, model_rmse, xlabel = "RMSE Shift (%FMC anomaly)",
     legend_elements = [Patch(facecolor=green, edgecolor=None,label='Optical'),\
                        Patch(facecolor=brown, edgecolor=None,label='Static'),\
                         Patch(facecolor=blue, edgecolor=None,label='Microwave')]
-    ax.legend(handles=legend_elements,frameon=True, title='Variable Type')
+#    ax.legend(handles=legend_elements,frameon=True, title='Variable Type')
 #    if model_rmse
     ax.axvline(model_rmse, ls = '--',color = 'k')
     ax.annotate('$Model$  \n$RMSE$  ',\

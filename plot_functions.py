@@ -1015,7 +1015,7 @@ save_fig =True
 def main():
     # bar_chart()
     # landcover_table()
-    # microwave_importance()
+     microwave_importance()
     # nfmd_sites()
 #     scatter_plot_all_3()
     # rmse_vs_climatology()
@@ -1029,6 +1029,6 @@ def main():
     # corr_color_bar()
     # scatter_lfmc_vpd()
     # lfmc_vpd_corr_bar()
-    seasonal_errors()
+#    seasonal_errors()
 if __name__ == '__main__':
     main()
