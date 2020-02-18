@@ -135,21 +135,33 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
     
     df = pd.read_pickle('landsat8_500m_cloudless')
     ### adding VARI and NDII7
-    df['vari'] = (df.green - df.red)/(df.green+df.red-df.blue)
-    df['ndii'] = (df.nir - df['b7'])/(df.nir + df['b7'])
+#    df['vari'] = (df.green - df.red)/(df.green+df.red-df.blue)
+#    df['ndii'] = (df.nir - df['b7'])/(df.nir + df['b7'])
     # for var in optical_inputs:
     opt = pd.DataFrame()
+    uncer = pd.DataFrame()
     for site in master.site.unique():
         if site in df.site.values:
             df_sub = df.loc[df.site==site]  
             feature_sub = interpolate(df_sub, var = optical_inputs, resolution = resolution, max_gap = max_gap)
             feature_sub['site'] = site
             opt = opt.append(feature_sub, ignore_index = True, sort = False)
+            ###calc incertainty introduced by interpolating 
+            df_sub = reindex(df_sub,resolution = resolution)
+            row = ((df_sub[optical_inputs] - feature_sub[optical_inputs])/feature_sub[optical_inputs]).abs().mean()
+            row.name = site
+            row['n'] = df_sub.shape[0]
+            uncer = uncer.append(row)
+            
         else:
             if site not in no_inputs_sites:
                 print('[INFO]\tsite skipped :\t%s'%site)
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')         
+    uncer.to_csv(os.path.join(dir_data,'optical_uncertainty.csv'))
+    sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
+    print(sum_diffs.sum()/uncer['n'].sum())
+    
     ### sar
     df = pd.read_pickle('sar_ascending_30_apr_2019')
     # for var in microwave_inputs:
@@ -160,12 +172,20 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
             feature_sub = interpolate(df_sub, var = microwave_inputs, resolution = resolution, max_gap = max_gap)
             feature_sub['site'] = site
             micro = micro.append(feature_sub, ignore_index = True, sort = False)
+            
+            ###calc incertainty introduced by interpolating 
+            df_sub = reindex(df_sub,resolution = resolution)
+            row = ((df_sub[microwave_inputs] - feature_sub[microwave_inputs])/df_sub[microwave_inputs]).abs().mean()
+            row.name = site
+            row['n'] = df_sub.shape[0]
+            uncer = uncer.append(row)
         else:
             if site not in no_inputs_sites:
                 print('[INFO]\tsite skipped :\t%s'%site)
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')          
-        
+    uncer.to_csv(os.path.join(dir_data,'microwave_uncertainty.csv'))    
+    
     dyn = pd.merge(opt,micro, on=['date','site'], how = 'outer')
     ## micro/opt inputs
     for num in microwave_inputs:
