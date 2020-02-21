@@ -26,7 +26,7 @@ sns.set_style('ticks')
 from keras.models import load_model
 
 
-
+enlarge = 1
 os.chdir(dir_data)
 
 pkl_file = open('encoder.pkl', 'rb')
@@ -111,65 +111,65 @@ model = load_model(filepath)
     # inv_yhat = None
 
 #%% fmc map
-params = {"ytick.color" : "w",
-          "xtick.color" : "w",
-          "axes.labelcolor" : "w",
-          "axes.edgecolor" : "w"}
-plt.rcParams.update(params)
-date = '2018-07-01'
-fname = 'map/dynamic_maps/fmc_map_%s'%date
-latlon = pd.read_pickle(fname)
-# mask = pd.read_csv('map/mask_classified_2018_07_01.csv')
-# mask = mask[mask['mask']>0]
+#params = {"ytick.color" : "w",
+#          "xtick.color" : "w",
+#          "axes.labelcolor" : "w",
+#          "axes.edgecolor" : "w"}
+#plt.rcParams.update(params)
+#date = '2018-07-01'
+#fname = 'map/dynamic_maps/fmc_map_%s'%date
+#latlon = pd.read_pickle(fname)
+## mask = pd.read_csv('map/mask_classified_2018_07_01.csv')
+## mask = mask[mask['mask']>0]
+#
 
-enlarge = 1
-
-fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
-
-m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
-        projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
-# m = Basemap(llcrnrlon=-123.55,llcrnrlat=38.21,urcrnrlon=-121.77,urcrnrlat=40.45,
-#         projection='lcc',lat_1=33,lat_2=45,lon_0=-95) #mendocino fire
-# load the shapefile, use the name 'states'
-m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
-                    name='states', drawbounds=True)
-# m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
-                # name='states', drawbounds=True) 
-
-patches   = []
-
-for info, shape in zip(m.states_info, m.states):
-    patches.append(Polygon(np.array(shape), True) )
-ax.add_collection(PatchCollection(patches, facecolor= 'grey', edgecolor='k', linewidths=0.8))
-
-colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
-          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
-          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
-          
-cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
-
-plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-                s=.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
-                    marker='s',latlon = True, zorder = 2,\
-                    vmin = 50, vmax = 200)
-
-#### add mask
-
-m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
-                    name='states', drawbounds=True, linewidth = 0.5)
-
-
-
-cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
-    
-cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
-cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
-cax.set_yticklabels(['<50','100','150','>200']) 
-
-ax.axis('off')
-plt.savefig(os.path.join(dir_figures,'pred_%s_v2.tiff'%date), \
-                                  dpi =300, bbox_inches="tight",transparent = True)
-plt.show()
+#
+#fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
+#
+#m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
+#        projection='lcc',lat_1=33,lat_2=45,lon_0=-95)
+## m = Basemap(llcrnrlon=-123.55,llcrnrlat=38.21,urcrnrlon=-121.77,urcrnrlat=40.45,
+##         projection='lcc',lat_1=33,lat_2=45,lon_0=-95) #mendocino fire
+## load the shapefile, use the name 'states'
+#m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+#                    name='states', drawbounds=True)
+## m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapfile/states', 
+#                # name='states', drawbounds=True) 
+#
+#patches   = []
+#
+#for info, shape in zip(m.states_info, m.states):
+#    patches.append(Polygon(np.array(shape), True) )
+#ax.add_collection(PatchCollection(patches, facecolor= 'grey', edgecolor='k', linewidths=0.8))
+#
+#colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
+#          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
+#          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
+#          
+#cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
+#
+#plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
+#                s=.01,c=latlon.pred_fmc.values,cmap =cmap ,edgecolor = 'w',linewidth = 0,\
+#                    marker='s',latlon = True, zorder = 2,\
+#                    vmin = 50, vmax = 200)
+#
+##### add mask
+#
+#m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+#                    name='states', drawbounds=True, linewidth = 0.5)
+#
+#
+#
+#cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
+#    
+#cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
+#cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
+#cax.set_yticklabels(['<50','100','150','>200']) 
+#
+#ax.axis('off')
+#plt.savefig(os.path.join(dir_figures,'pred_%s_v2.tiff'%date), \
+#                                  dpi =300, bbox_inches="tight",transparent = True)
+#plt.show()
 
 #%% . hist of lc 
 # lc_dict = {14: 'crop',
@@ -196,23 +196,24 @@ plt.show()
 # ax.set_ylabel('No. of pixels')
 
 #%% make color bar only
-params = {"ytick.color" : "w",
-          "xtick.color" : "w",
-          "axes.labelcolor" : "w",
-          "axes.edgecolor" : "w"}
+color = 'k'
+params = {"ytick.color" : "k",
+          "xtick.color" : "k",
+          "axes.labelcolor" : "k",
+          "axes.edgecolor" : "k"}
 plt.rcParams.update(params)
-
+fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
 colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
           '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
           '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
           
 cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
 plot = ax.imshow([[]],cmap = cmap,vmin = 50, vmax = 200)
-fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
+
 cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
-cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = "w")
+cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = color)
 cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
-cax.set_yticklabels(['<50','100','150','>200'], color = "w") 
+cax.set_yticklabels(['<50','100','150','>200'], color = color) 
 
 ax.axis('off')
 plt.savefig(os.path.join(dir_figures,'colorbar.tiff'), \

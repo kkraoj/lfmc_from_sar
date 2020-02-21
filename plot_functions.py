@@ -974,11 +974,16 @@ def seasonal_errors():
     errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
                      np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))\
                                          ).unstack()
+    
+    ## checking bias 
+    errors =  frame.groupby(['forest_cover(t)',frame.date.dt.month]).apply(lambda df: \
+                     (df['percent(t)_hat'] -  df['percent(t)']).mean()
+                                         ).unstack()
 #    counts =  frame.groupby(['forest_cover(t)',frame.date.dt.month])['percent(t)'].count().unstack()
 #    errors.T.corrwith(counts.T).plot.bar(ax=ax, color = 'k')
     ax = ax2  
-    plot = ax.imshow(errors, vmin=0, vmax=60)
-    current_cmap = mpl.cm.get_cmap()
+    plot = ax.imshow(errors, vmin=0, vmax=50, cmap = 'magma_r')
+    current_cmap = mpl.cm.magma_r
     current_cmap.set_bad(color='grey')
     ax.set_ylabel('')
     ax.set_yticks(range(6))
@@ -1010,12 +1015,14 @@ def compare_with_previous_studies():
     qi = ['Little Cottonwood', 'Hobble Creek', 'Maple Canyon', 'Squaw Peak', 'Black Cedar', 'Vernon', 'Mud Springs' , 'Muskrat', 'Sevier Reservoir', 'Black Cedar']
     df = frame.loc[frame.site.isin(qi)]
     r2_score(df['percent(t)'],df['percent(t)_hat'])
+    mean_squared_error(df['percent(t)'],df['percent(t)_hat'])**0.5
+    
     
 save_fig =True
 def main():
     # bar_chart()
     # landcover_table()
-     microwave_importance()
+#     microwave_importance()
     # nfmd_sites()
 #     scatter_plot_all_3()
     # rmse_vs_climatology()
@@ -1029,6 +1036,6 @@ def main():
     # corr_color_bar()
     # scatter_lfmc_vpd()
     # lfmc_vpd_corr_bar()
-#    seasonal_errors()
+    seasonal_errors()
 if __name__ == '__main__':
     main()

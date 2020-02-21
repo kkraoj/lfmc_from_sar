@@ -148,7 +148,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
             opt = opt.append(feature_sub, ignore_index = True, sort = False)
             ###calc incertainty introduced by interpolating 
             df_sub = reindex(df_sub,resolution = resolution)
-            row = ((df_sub[optical_inputs] - feature_sub[optical_inputs])/feature_sub[optical_inputs]).abs().mean()
+            row = ((df_sub[optical_inputs] - feature_sub[optical_inputs])).abs().mean()
             row.name = site
             row['n'] = df_sub.shape[0]
             uncer = uncer.append(row)
@@ -161,11 +161,12 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
     uncer.to_csv(os.path.join(dir_data,'optical_uncertainty.csv'))
     sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
     print(sum_diffs.sum()/uncer['n'].sum())
-    
+    ## 6.7% with respect to max range
     ### sar
     df = pd.read_pickle('sar_ascending_30_apr_2019')
     # for var in microwave_inputs:
     micro = pd.DataFrame()
+    uncer = pd.DataFrame()
     for site in master.site.unique():
         if site in df.site.values:
             df_sub = df.loc[df.site==site]  
@@ -175,7 +176,7 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
             
             ###calc incertainty introduced by interpolating 
             df_sub = reindex(df_sub,resolution = resolution)
-            row = ((df_sub[microwave_inputs] - feature_sub[microwave_inputs])/df_sub[microwave_inputs]).abs().mean()
+            row = ((df_sub[microwave_inputs] - feature_sub[microwave_inputs])).abs().mean()
             row.name = site
             row['n'] = df_sub.shape[0]
             uncer = uncer.append(row)
@@ -185,7 +186,9 @@ def make_df(quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')          
     uncer.to_csv(os.path.join(dir_data,'microwave_uncertainty.csv'))    
-    
+    sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
+    print(sum_diffs.sum()/uncer['n'].sum())
+    # 3.0% with respect to max range
     dyn = pd.merge(opt,micro, on=['date','site'], how = 'outer')
     ## micro/opt inputs
     for num in microwave_inputs:
