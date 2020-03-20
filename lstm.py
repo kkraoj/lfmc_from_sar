@@ -360,7 +360,7 @@ else:
 #                 dataset.drop(col, axis = 1, inplace = True)
     
 def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None, FOLDS = FOLDS):
-   
+
     if DROPCROPS:
         crop_classes = [item[0] for item in lc_dict.items() if item[1] == 'crop']
         dataset = dataset.loc[~dataset['forest_cover(t)'].isin(crop_classes)]
@@ -465,7 +465,7 @@ filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 Areg = regularizers.l2(1e-5)
 Breg = regularizers.l2(1e-3)
-Kreg = regularizers.l2(1e-15)
+Kreg = regularizers.l2(1e-10)
 Rreg = regularizers.l2(1e-15)
 
 def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
@@ -766,8 +766,33 @@ high_rmse_sites = list(set(site_rmse.index) - set(low_rmse_sites))
 
 #%% sensitivity
 os.chdir(dir_data)
+def build_model_static(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
+    
+    model = Sequential()
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                  return_sequences=True, \
+#                  kernel_regularizer= Kreg,\
+#                  activity_regularizer= Areg,\
+                  bias_regularizer= Breg))
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+                    return_sequences=True, \
+#                     kernel_regularizer= Kreg,\
+#                     activity_regularizer= Areg,\
+                    bias_regularizer= Breg))
+    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+#                    kernel_regularizer= Kreg,\
+#                    activity_regularizer= Areg,\
+                   bias_regularizer= Breg))
+#    model.add(Dense(6))
+    model.add(Dense(1))
+#    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
+#    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
+    model.compile(loss=LOSS, optimizer='Nadam')
+    # fit network
+    return model
+
 def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
-                      batch_size = BATCHSIZE, CV = True):
+                      batch_size = BATCHSIZE, CV = True, model = model):
     """
     infer importance of different static parameters
     """
@@ -777,44 +802,67 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
                               columns = range(FOLDS))
     ctr = 0
     for feature in rmse_diff.index.values:
+        feature_frame = pd.DataFrame()
         for fold in range(FOLDS):
             print('[INFO] Fitting model for all features except %s, fold %1d'%(feature, fold))
-            inputs = list(set(all_inputs)-set(feature))
+#            inputs = [x for x in all_inputs if x != feature]
+            ## remove that feature from the dataset
+#            inputs = list(set(all_inputs)-set([feature]))
+            inputs = all_inputs
+            cols = [col for col in dataset.columns if col.split('(')[0]==feature]
+            
+            trimmed_dataset = dataset.copy()
+            if feature == 'forest_cover':
+                #for forest cover
+                trimmed_dataset.loc[:,cols] = np.random.randint(0,7,size = (trimmed_dataset.loc[:,cols].shape))
+            else:
+                #for all others
+                trimmed_dataset.loc[:,cols] = np.random.uniform(size = (trimmed_dataset.loc[:,cols].shape))
             _, _, reframed, \
             train_Xr, test_Xr,train_y, test_y, _, test, test_X, \
             scaler,_ = \
-            split_train_test(dataset, int_lag = int_lag, CV = CV, fold = fold, inputs = inputs)
-            if ctr ==0:
-                model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
+            split_train_test(trimmed_dataset, int_lag = int_lag, CV = CV, fold = fold)
+            filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_without_%s_fold_%d.hdf5'%(SAVENAME, feature, fold))
+            checkpoint = ModelCheckpoint(filepath, save_best_only=True)
 
+#            if ctr ==0:
+#                model = build_model_static(input_shape=(train_Xr.shape[1], train_Xr.shape[2]))
             history = model.fit(train_Xr, train_y, epochs=retrain_epochs, \
                                 batch_size=batch_size,\
-                    validation_data=(test_Xr, test_y), verbose=0, shuffle=False, callbacks = [earlystopping])
-            ### need to add early stopping
-            _,_,_, sample_rmse, sample_r2  = predict(model, test_Xr, test_X,\
+                    validation_data=(test_Xr, test_y), verbose=0, shuffle=False, callbacks = [checkpoint, earlystopping])
+   
+            ## load best model
+            model = load_model(filepath) # once trained, load best model
+
+            _,_,pred_frame, sample_rmse, sample_r2  = predict(model, test_Xr, test_X,\
                                           test, reframed, scaler, inputs)
-            
-            rmse_diff.loc[feature, fold] = sample_rmse - rmse
-            r2_diff.loc[feature, fold] = sample_r2 - r2
-    rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
-    rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
-    rmse_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
-    rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
-    
-    r2_diff['mean'] = r2_diff.mean(axis = 'columns')
-    r2_diff['sd'] = r2_diff.drop('mean',axis = 'columns').std(axis = 'columns')
-    r2_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
-    r2_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
+            rmse_diff.loc[feature, fold] = sample_rmse
+            r2_diff.loc[feature, fold] = sample_r2
+        feature_frame = feature_frame.append(pred_frame)
+        x = feature_frame['percent(t)'].values
+        y =  feature_frame['percent(t)_hat'].values
+        feature_rmse = np.sqrt(mean_squared_error(x,y))
+        feature_r2 = r2_score(x,y)
+        print('Without %s, RMSE = %0.2f, R2 = %0.2f'%(feature, feature_rmse, feature_r2))
+#    rmse_diff['mean'] = rmse_diff.mean(axis = 'columns')
+#    rmse_diff['sd'] = rmse_diff.drop('mean',axis = 'columns').std(axis = 'columns')
+#    rmse_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
+#    rmse_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
+#    
+#    r2_diff['mean'] = r2_diff.mean(axis = 'columns')
+#    r2_diff['sd'] = r2_diff.drop('mean',axis = 'columns').std(axis = 'columns')
+#    r2_diff.drop(range(FOLDS),axis = 'columns', inplace = True)
+#    r2_diff.dropna(subset = ['mean'], inplace = True, axis = 0)
 #    print(rmse_diff)
     return rmse_diff, r2_diff
 
-#rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
+rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
 save_name = "static_variables_importance"
-rmse_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name), index_col = 1)
-r2_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
+#rmse_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name), index_col = 1)
+#r2_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
 print(rmse_diff)
 print(r2_diff)
-plot_importance(rmse_diff,rmse)
+#plot_importance(rmse_diff,rmse)
 #rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name))
 #rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
 #%% data availability bar plot across features
@@ -955,14 +1003,14 @@ if CV:
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
             scaler, encoder = split_train_test(dataset, int_lag = int_lag, CV = CV, fold = fold)
             
-        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_fold_%d.hdf5'%(SAVENAME, fold))
+        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_fold_%d_v2.hdf5'%(SAVENAME, fold))
         
         checkpoint = ModelCheckpoint(filepath, save_best_only=True)
     
         callbacks_list = [checkpoint, earlystopping]
     
         history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
-                            validation_data=(test_Xr, test_y), verbose=0, shuffle=False,\
+                            validation_data=(test_Xr, test_y), verbose=1, shuffle=False,\
                             callbacks=callbacks_list)
         model = load_model(filepath) # once trained, load best model
         inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
@@ -974,7 +1022,7 @@ if CV:
             zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
             ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
 
-    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
+#    frame.to_csv(os.path.join(dir_data,'model_predictions_all_sites.csv'))
 
 
 #%% CV with only optical data

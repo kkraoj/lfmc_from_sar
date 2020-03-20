@@ -47,68 +47,70 @@ SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratio
 filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
 
 model = load_model(filepath)
+year = 2018
+day = 15
 
-# for MoY in range(7, 8):
+for MoY in range(1, 13):
     
-#     date = '2018-%02d-01'%(MoY)
-#     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-#     fname = 'map/dynamic_maps/fmc_map_%s'%date
-#     dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
-#     # dyn.to_pickle('map/dynamic_features_%s'%date)
-#     dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
-#     # inputs.to_pickle('map/inputs_%s'%date)
-#     # static = None
-#     dyn = None
-#     # inputs = None
+     date = '%04d-%02d-%02d'%(year, MoY, day)
+     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
+     fname = 'map/dynamic_maps/fmc_map_%s'%date
+     dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
+     # dyn.to_pickle('map/dynamic_features_%s'%date)
+     dataset = static.join(dyn.drop(['latitude','longitude'], axis = 1))
+     # inputs.to_pickle('map/inputs_%s'%date)
+     # static = None
+     dyn = None
+     # inputs = None
     
-#     # dataset = pd.read_pickle('map/inputs_%s'%date)
-#     # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
-#     dataset = dataset.reindex(sorted(dataset.columns), axis=1)
+     # dataset = pd.read_pickle('map/inputs_%s'%date)
+     # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
+     dataset = dataset.reindex(sorted(dataset.columns), axis=1)
     
-#     ### add percent col to start
-#     dataset['percent(t)'] = 100 #dummy
-#     cols = list(dataset.columns.values)
-#     cols.remove('percent(t)')
-#     cols.remove('latitude')
-#     cols.remove('longitude')
-#     cols = ['latitude', 'longitude','percent(t)']+cols
-#     dataset = dataset[cols]
+     ### add percent col to start
+     dataset['percent(t)'] = 100 #dummy
+     cols = list(dataset.columns.values)
+     cols.remove('percent(t)')
+     cols.remove('latitude')
+     cols.remove('longitude')
+     cols = ['latitude', 'longitude','percent(t)']+cols
+     dataset = dataset[cols]
     
-    # #predictions only on previously trained landcovers
-    # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
-    # dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
+     #predictions only on previously trained landcovers
+     dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+     dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
     
-    # for col in dataset.columns:
-    #     if 'forest_cover' in col:
-    #         dataset[col] = dataset['forest_cover(t)']
+     for col in dataset.columns:
+         if 'forest_cover' in col:
+             dataset[col] = dataset['forest_cover(t)']
     
-    # ##scale
-    # dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
-    # dataset.dropna(inplace = True)
-    # # dataset.fillna(method = 'ffill',inplace = True)
-    # # dataset.fillna(method = 'bfill',inplace = True)
-    # scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
-    # dataset.loc[:,2:] = scaled #skip latlon
-    # dataset.drop('percent(t)',axis = 1, inplace = True)
-    # scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
-    # # np.save('map/scaled_%s.npy'%date, scaled)
+     ##scale
+     dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
+     dataset.dropna(inplace = True)
+     # dataset.fillna(method = 'ffill',inplace = True)
+     # dataset.fillna(method = 'bfill',inplace = True)
+     scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
+     dataset.loc[:,2:] = scaled #skip latlon
+     dataset.drop('percent(t)',axis = 1, inplace = True)
+     scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
+     # np.save('map/scaled_%s.npy'%date, scaled)
     
-    # yhat = model.predict(scaled)
+     yhat = model.predict(scaled)
     
-    # scaled = None
+     scaled = None
     
-    # inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-    # # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-    # yhat = None
+     inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+     # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+     yhat = None
     
-    # # dataset = pd.read_pickle('map/inputs_%s'%date)
-    # #predictions only on previously trained landcovers
-    # # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+     # dataset = pd.read_pickle('map/inputs_%s'%date)
+     #predictions only on previously trained landcovers
+     # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
     
-    # dataset['pred_fmc'] = inv_yhat
-    # dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
-    # dataset = None
-    # inv_yhat = None
+     dataset['pred_fmc'] = inv_yhat
+     dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
+     dataset = None
+     inv_yhat = None
 
 #%% fmc map
 #params = {"ytick.color" : "w",
@@ -196,26 +198,26 @@ model = load_model(filepath)
 # ax.set_ylabel('No. of pixels')
 
 #%% make color bar only
-color = 'k'
-params = {"ytick.color" : "k",
-          "xtick.color" : "k",
-          "axes.labelcolor" : "k",
-          "axes.edgecolor" : "k"}
-plt.rcParams.update(params)
-fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
-colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
-          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
-          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
-          
-cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
-plot = ax.imshow([[]],cmap = cmap,vmin = 50, vmax = 200)
-
-cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
-cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = color)
-cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
-cax.set_yticklabels(['<50','100','150','>200'], color = color) 
-
-ax.axis('off')
-plt.savefig(os.path.join(dir_figures,'colorbar.tiff'), \
-                                  dpi =300, bbox_inches="tight",transparent = True)
-plt.show()
+#color = 'k'
+#params = {"ytick.color" : "k",
+#          "xtick.color" : "k",
+#          "axes.labelcolor" : "k",
+#          "axes.edgecolor" : "k"}
+#plt.rcParams.update(params)
+#fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
+#colors = ['#703103','#945629','#ce7e45', '#df923d', '#f1b555', '#fcd163', '#99b718', \
+#          '#74a901', '#66a000', '#529400', '#3e8601', '#207401', '#056201',\
+#          '#004c00', '#023b01', '#012e01', '#011d01', '#011301']
+#          
+#cmap =  ListedColormap(sns.color_palette(colors).as_hex()) 
+#plot = ax.imshow([[]],cmap = cmap,vmin = 50, vmax = 200)
+#
+#cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
+#cax.annotate('LFMC (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = color)
+#cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
+#cax.set_yticklabels(['<50','100','150','>200'], color = color) 
+#
+#ax.axis('off')
+#plt.savefig(os.path.join(dir_figures,'colorbar.tiff'), \
+#                                  dpi =300, bbox_inches="tight",transparent = True)
+#plt.show()

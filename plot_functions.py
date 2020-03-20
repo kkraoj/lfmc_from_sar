@@ -1016,9 +1016,22 @@ def compare_with_previous_studies():
     df = frame.loc[frame.site.isin(qi)]
     r2_score(df['percent(t)'],df['percent(t)_hat'])
     mean_squared_error(df['percent(t)'],df['percent(t)_hat'])**0.5
+
+def calc_mixed_sites_error():
+    good_sites = pd.read_excel(os.path.join(dir_data,'fuel_moisture/NFMD_sites_QC.xls'), index_col = 0)
+    sub = frame.loc[frame.site.isin(good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['only 1'])),'site'])]
+    rmse = mean_squared_error(sub['percent(t)'], sub['percent(t)_hat'])**0.5
+    r2 = r2_score(sub['percent(t)'], sub['percent(t)_hat'])
+    print("For single species sites, RMSE = %0.1f%%, R2 = %0.2f"%(rmse, r2))
+    
+    sub = frame.loc[frame.site.isin(good_sites.loc[(good_sites.include==1)&(good_sites.comment.isin(['all same'])),'site'])]
+    rmse = mean_squared_error(sub['percent(t)'], sub['percent(t)_hat'])**0.5
+    r2 = r2_score(sub['percent(t)'], sub['percent(t)_hat'])
+    print("For mixed species sites with similar seasonal cycle, RMSE = %0.1f%%, R2 = %0.2f"%(rmse, r2))
     
     
-save_fig =True
+    
+save_fig =False
 def main():
     # bar_chart()
     # landcover_table()
@@ -1036,6 +1049,7 @@ def main():
     # corr_color_bar()
     # scatter_lfmc_vpd()
     # lfmc_vpd_corr_bar()
-    seasonal_errors()
+#    seasonal_errors()
+    calc_mixed_sites_error()
 if __name__ == '__main__':
     main()

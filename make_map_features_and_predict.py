@@ -12,13 +12,40 @@ import pandas as pd
 import numpy as np
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
+import pickle
+from dirs import dir_data, dir_codes,dir_figures
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from matplotlib import ticker
+from matplotlib.colors import ListedColormap
+from datetime import datetime 
+import seaborn as sns
+
+sns.set_style('ticks')
 
 
+from keras.models import load_model
 
+
+enlarge = 1
+os.chdir(dir_data)
+
+pkl_file = open('encoder.pkl', 'rb')
+encoder = pickle.load(pkl_file) 
+pkl_file.close()
+
+pkl_file = open('scaler.pkl', 'rb')
+scaler = pickle.load(pkl_file) 
+pkl_file.close()
+
+SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratios'%('1M','3M')
+filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
+
+model = load_model(filepath)
 os.chdir('D:/Krishna/projects/vwc_from_radar')
 
 ### adding different static features
-latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
+latlon = pd.read_csv(os.path.join(dir_data, 'map/map_lat_lon.csv'), index_col = 0)
 def get_value(filename, mx, my, band = 1):
     ds = gdal.Open(filename)
     gt = ds.GetGeoTransform()
@@ -26,52 +53,6 @@ def get_value(filename, mx, my, band = 1):
     px = ((mx - gt[0]) / gt[1]).astype(int) #x pixel
     py = ((my - gt[3]) / gt[5]).astype(int) #y pixel
     return data[py,px]
-
-#%% add static features
-
-#latlon = latlon[latlon.longitude !=0]
-#latlon['slope'] = get_value(os.path.join('D:\Krishna\Project\data\RS_data\Elevation\Elevation',\
-#                            'usa_slope_project.tif'), \
-#    latlon.longitude.values, latlon.latitude.values)
-#
-#### add elevation
-#latlon['elevation'] = get_value(os.path.join('D:\Krishna\Project\data\RS_data\Elevation\Elevation',\
-#                            'usa_dem.tif'), \
-#    latlon.longitude.values, latlon.latitude.values)
-#latlon['canopy_height'] = get_value(os.path.join('D:\Krishna\Project\data\RS_data\canopy_height',\
-#                            'canopy_height.tif'), \
-#    latlon.longitude.values, latlon.latitude.values)
-#
-#latlon['forest_cover'] = get_value(os.path.join('D:\Krishna\Project\data\RS_data\Forest\GLOBCOVER',\
-#                            'GLOBCOVER_L4_200901_200912_V2.3.tif'), \
-#    latlon.longitude.values, latlon.latitude.values)
-#
-#for col in ['silt','sand','clay']:   
-#    latlon['%s'%col] =\
-#      get_value(os.path.join('D:\Krishna\Project\data\RS_data\soil\NACP_MSTMIP_UNIFIED_NA_SOIL_MA_1242\data',\
-#      'Unified_NA_Soil_Map_Topsoil_%s_Fraction.tif'%col.capitalize()), \
-#        latlon.longitude.values, latlon.latitude.values)
-##
-##latlon.head()
-##latlon.to_csv('data/map/static_features.csv')
-#
-##%% cleanup latlon static features
-##latlon = pd.read_csv('data/map/static_features.csv', index_col = 0)
-#
-#latlon.loc[latlon['elevation']<0.] = 0.
-#latlon.loc[latlon['slope']<0.] = 0.
-#latlon.loc[latlon['clay']<0.] = 33.3
-#latlon.loc[latlon['silt']<0.] = 33.3
-#latlon.loc[latlon['sand']<0.] = 33.3
-#latlon.columns = latlon.columns+'(t)'
-#latlon.rename(columns = {'latitude(t)':'latitude','longitude(t)':'longitude'}, inplace = True)
-#static_features = ['elevation','slope','forest_cover','canopy_height', 'sand','silt','clay']
-#for lag in range(3, 0, -1):
-#    for feature in static_features:
-#        latlon[feature+'(t-%d)'%lag] = latlon[feature+'(t)']
-#        
-#latlon.to_csv('data/map/static_features.csv')           
-#latlon.to_pickle('data/map/static_features')
 
 #%%add dynamic features
 year = 2019
