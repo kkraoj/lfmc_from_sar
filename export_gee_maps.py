@@ -75,8 +75,9 @@ def maskCloudsAndSnow(image):
   return image.updateMask(c).addBands(image.metadata('system:time_start'));
 
 ###Filter by metadata properties.
-year = 2017
-end_date_range = ['%s-%02d-01'%(year,month) for month in range(1,5)]
+year = 2016
+day=15
+end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
 start_date_range = list((pd.to_datetime(end_date_range) + DateOffset(months = -3)).strftime('%Y-%m-%d'))
 
 for (start_date, end_date) in zip(start_date_range, end_date_range):
@@ -88,17 +89,17 @@ for (start_date, end_date) in zip(start_date_range, end_date_range):
       select(band).mosaic().clip(roi);
     
     
-#    #Create a cloud-free, most recent value composite.
-#    recentValueComposite = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').\
-#      filterDate(start_date,end_date).\
-#      filterBounds(roi).map(maskCloudsAndSnow).\
-#      qualityMosaic('system:time_start').clip(roi);
-#    
-#    out = batch.Export.image.toDrive(image= recentValueComposite.select(['B2', 'B3', 'B4', 'B5', 'B6']),
-#      description = end_date+'_cloudsnowfree_l8',
-#      scale= 500,
-#      region= roi.geometry().bounds())
-#    batch.Task.start(out)
+    #Create a cloud-free, most recent value composite.
+    recentValueComposite = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').\
+      filterDate(start_date,end_date).\
+      filterBounds(roi).map(maskCloudsAndSnow).\
+      qualityMosaic('system:time_start').clip(roi);
+    
+    out = batch.Export.image.toDrive(image= recentValueComposite.select(['B2', 'B3', 'B4', 'B5', 'B6']),
+      description = end_date+'_cloudsnowfree_l8',
+      scale= 500,
+      region= roi.geometry().bounds())
+    batch.Task.start(out)
     out = batch.Export.image.toDrive(
       image=image_sar.select(band),
       description= end_date+'_sar',
