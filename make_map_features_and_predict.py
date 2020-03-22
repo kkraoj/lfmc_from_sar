@@ -57,8 +57,8 @@ def get_value(filename, mx, my, band = 1):
 #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
 static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36'))
 #%%add dynamic features
-year = 2016
-day = 15
+year = 2019
+day = 1
 
 for MoY in range(12, 0, -1):
 #    latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
