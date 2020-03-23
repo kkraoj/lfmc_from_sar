@@ -26,3 +26,5 @@ for file in os.listdir(os.path.join(dir_data, 'map/dynamic_maps/lfmc_float')):
     output_raster = None  
     ds = None
     
+    
+
