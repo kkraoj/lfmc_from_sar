@@ -20,14 +20,16 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 ### Download maps to your computer
 
-*Option 1: Code Editor-*
+**Option 1: Code Editor-**
+
 1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/8d145a1cfc6e368fee9d11434867e2cc?noload=true)
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis. 
 1. Click on Run button at the top
 1. Click on the Tasks panel on the top right. Verify the maps that you need are set in staging. If ok, click on the Run button beside each map. The maps will be downloaded to your Google Drive in a folder called "lfmc_folder". 
 
-*Option 2: Python API-*
+**Option 2: Python API-**
+
 If you want to download many maps, consider using (GEE's python API)[https://developers.google.com/earth-engine/python_install]. It will let you download the maps without having to click the Run button for each map. In the link referred, follow the download instructions.  
 1. Once you have the python API installed, open this [script](https://github.com/kkraoj/lfmc_from_sar/blob/master/scripts/download_lfmc.py). 
 1. Modify the `start_date` and `end_date` to suit your needs
