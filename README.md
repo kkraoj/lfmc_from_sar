@@ -29,7 +29,7 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 *Option 2: Python API-*
 If you want to download many maps, consider using (GEE's python API)[https://developers.google.com/earth-engine/python_install]. It will let you download the maps without having to click the Run button for each map. In the link referred, follow the download instructions.  
-1. Once you have the python API installed, run this script. TO BE FILLED. 
+1. Once you have the python API installed, run this [script](TO BE FILLED). 
 1. The maps will be downloaded to your Google Drive in a folder called "lfmc_folder". 
 
 ## Repository details
@@ -37,15 +37,21 @@ If you want to download many maps, consider using (GEE's python API)[https://dev
 The rest of this Readme file pertains to reproducing the analysis and sharing the algorithms associated with the paper. 
 
 ### Scripts:
-The repository consists of scripts to perform the following-
+The repository consists of scripts in the "scripts" folder to perform the following-
 
-1. Download and regrid the remote sensing data (scripts available in the folder `download_and_regrid`)
-1. Perform statistical analysis such as breakpoint threshold identification and random forests regressions
-   1. Breakpoint analysis is performed right before producing the scatter plot in `plot_rwc_cwd_all()` in `plot_functions.py`
-   1. Random forest analysis is performed in `R` using the files in the folder `random_forest_analysis` - 
-      1. The `analysis_random_forest.py` script is used to compile all the downloaded and regridded data into uniform rows and columns. The output is saved in the folder `random_forest_data`.
-      1. The `rf_model_tuning.rmd` file is used to perform the random forest analysis. The output is saved in the folder `random_forest_data`.
-1. Plot the data to reproduce the figures presented in the research article using `plot_functions.py`
+1. Prepare input data and train an long-short term memory model to predict LFMC in `LSTM.py`
+1. Make plots from the manuscript using `plot_functions.py`
+1. Make LFMC maps using `make_map_features_and_predict.py`
+
+Rest of the scripts are not needed. They were used for development of the model and preliminary investigation only.
+
+### Input data
+
+The input data used for predicting LFMC can be found in a pickle object (python 3.6) in the input_data folder. It is a large dataframe with rows corresponding to training examples, and columns corresponding to input features. 
+
+### Trained model
+
+The training model saved using best model checkpoint on keras can be found in trained_model folder. 
 
 ## Prerequisites
 
@@ -54,8 +60,8 @@ The repository consists of scripts to perform the following-
 
 ## Reproducibility guide
 
-1. Clone the repository using `git clone https://github.com/kkraoj/tree_mortality_from_vod.git`
-1. Open plot_functions.py and change `CA_Dir` variable to point to the folder where `random_forest_data` folder is located
+1. Clone the repository using `git clone https://github.com/kkraoj/lfmc_from_sar.git`
+1. Change the directory addresses of `dir_data` and `dir_codes` in `dirs.py`
 1. Run `plot_functions.py` by uncommenting any of the functions at the end of the script to reproduce the figures you wish
 
 ## License
