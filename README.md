@@ -4,7 +4,7 @@ This repository contains analysis performed for the paper ``SAR-Enhanced Mapping
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
 
 ## Download LFMC maps
-![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.pdf)
+![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
 
 The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col. You can use the maps in the following ways-
 
