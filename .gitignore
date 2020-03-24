@@ -2,3 +2,4 @@
 /model_checkpoint/*
 /plots/*
 /__pycache__/*
+/not_needed/*
