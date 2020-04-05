@@ -3,6 +3,18 @@
 This repository contains analysis performed for the paper ``SAR-Enhanced Mapping of Live Fuel Moisture Content" in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
 
+## Earth Engine Web-app user guide
+
+The [web-app](https://kkraoj.users.earthengine.app/view/live-fuel-moisture) allows users to interactively explore the LFMC maps produced in the paper. The slider bar at bottom controls the time. The blue point on the map controls the location for which LFMC time series is produced from 2016 - 2019. 
+
+Interested in creating your own web-app similar to the Live Fuel Moisture Viewer? [Here](https://code.earthengine.google.com/bb0e411ff41f34149bf459f3960a05e9) is the source code for the web-app. 
+
+### FAQs
+1. Can I access more recent LFMC maps? 
+As of April 2020, maps from Jan 2016 to Dec, 2019 are available. Moving forward, the project team plans to update the maps directly in the web-app. A fixed update frequency (or a fixed latency) cannot be guaranteed at the moment. For requests related to updating maps, please contact the corresponding author of the manuscript. Do not raise a Github ``issue" for this purpose.
+1. Why are there dark green or dark brown patches on some days?
+The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask ``snow'', ``cloud'', or ``cloud shadow''. For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
+
 ## Download LFMC maps
 ![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
 
@@ -69,9 +81,9 @@ The training model saved using best model checkpoint on keras can be found in tr
 1. Run `plot_functions.py` by uncommenting any of the functions at the end of the script to reproduce the figures you wish
 
 ## License
-Data and scripts presented here are free to use. Please cite the following paper if you with to use any data or analyses from this study:
+Data and scripts presented here are free to use. Please cite the following paper if you use any data or analyses from this study:
 
-TO BE FILLED
+[TO BE FILLED AFTER PUBLISHING]
 
 ## Issues?
 
