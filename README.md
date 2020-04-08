@@ -13,7 +13,7 @@ Interested in creating your own web-app similar to the Live Fuel Moisture Viewer
 1. Can I access more recent LFMC maps? 
 As of April 2020, maps from Jan 2016 to Dec, 2019 are available. Moving forward, the project team plans to update the maps directly in the web-app. A fixed update frequency (or a fixed latency) cannot be guaranteed at the moment. For requests related to updating maps, please contact the corresponding author of the manuscript. Do not raise a Github ``issue" for this purpose.
 1. Why are there dark green or dark brown patches on some days?
-The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask ``snow'', ``cloud'', or ``cloud shadow''. For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
+The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask "snow", "cloud", or "cloud shadow". For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
 
 ## Download LFMC maps
 ![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
