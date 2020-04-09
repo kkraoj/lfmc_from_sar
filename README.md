@@ -5,7 +5,7 @@ You can view the live fuel moisture content (LFMC) maps produced by the deep lea
 
 ## Earth Engine Web-app user guide
 
-The [web-app](https://kkraoj.users.earthengine.app/view/live-fuel-moisture) allows users to interactively explore the LFMC maps produced in the paper. The slider bar at bottom controls the time. The blue point on the map controls the location for which LFMC time series is produced from 2016 - 2019. **The web-app has been tested on Google Chrome and Mozilla Firefox only.** It is a known issue that it does not work on Microsoft Internet Explorer or Microsoft Edge. 
+The [web-app](https://kkraoj.users.earthengine.app/view/live-fuel-moisture) allows users to interactively explore the LFMC maps produced in the paper. The slider bar at bottom controls the time. The blue point on the map controls the location for which LFMC time series is produced from 2016 - 2019. **The web-app has been tested on Google Chrome, Microsoft Edge and Mozilla Firefox only.** It is a known issue that it does not work on Microsoft Internet Explorer. 
 
 Interested in creating your own web-app similar to the Live Fuel Moisture Viewer? [Here](https://code.earthengine.google.com/bb0e411ff41f34149bf459f3960a05e9) is the source code for the web-app. 
 
