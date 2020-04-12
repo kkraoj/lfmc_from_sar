@@ -1,5 +1,7 @@
 # SAR-Enhanced Mapping of Live Fuel Moisture Content
 
+![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
+
 This repository contains analysis performed for the paper ``SAR-Enhanced Mapping of Live Fuel Moisture Content" in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
 
@@ -18,7 +20,6 @@ As of April 2020, maps from Jan 2016 to Dec, 2019 are available. Moving forward,
 The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask "snow", "cloud", or "cloud shadow". For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
 
 ## Download LFMC maps
-![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
 
 The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col. You can use the maps in the following ways-
 
