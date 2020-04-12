@@ -1,22 +1,25 @@
 # SAR-Enhanced Mapping of Live Fuel Moisture Content
 
+![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
+
 This repository contains analysis performed for the paper ``SAR-Enhanced Mapping of Live Fuel Moisture Content" in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
 
 ## Earth Engine Web-app user guide
 
-The [web-app](https://kkraoj.users.earthengine.app/view/live-fuel-moisture) allows users to interactively explore the LFMC maps produced in the paper. The slider bar at bottom controls the time. The blue point on the map controls the location for which LFMC time series is produced from 2016 - 2019. 
+The [web-app](https://kkraoj.users.earthengine.app/view/live-fuel-moisture) allows users to interactively explore the LFMC maps produced in the paper. The slider bar at bottom controls the time. The blue point on the map controls the location for which LFMC time series is produced from 2016 - 2019.
 
 Interested in creating your own web-app similar to the Live Fuel Moisture Viewer? [Here](https://code.earthengine.google.com/bb0e411ff41f34149bf459f3960a05e9) is the source code for the web-app. 
 
 ### FAQs
+1. The web-app seems broken?
+Make sure you are using Google Chrome, Microsoft Edge and Mozilla Firefox. It does not work on Microsoft Internet Explorer. If the web-app still doesn't work, raise an issue.  
 1. Can I access more recent LFMC maps? 
-As of April 2020, maps from Jan 2016 to Dec, 2019 are available. Moving forward, the project team plans to update the maps directly in the web-app. A fixed update frequency (or a fixed latency) cannot be guaranteed at the moment. For requests related to updating maps, please contact the corresponding author of the manuscript. Do not raise a Github ``issue" for this purpose.
+As of April 2020, maps from Jan 2016 to Dec, 2019 are available. Moving forward, the project team plans to update the maps directly in the web-app. A fixed update frequency (or a fixed latency) cannot be guaranteed at the moment. For requests related to updating maps, please contact the corresponding author of the manuscript. Do not raise a Github "issue" for this purpose.
 1. Why are there dark green or dark brown patches on some days?
-The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask ``snow'', ``cloud'', or ``cloud shadow''. For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
+The patches are caused by incorrect cloud or snow masking. The algorithm relies on the in-built quality assessment flags in the Landsat-8 product to mask "snow", "cloud", or "cloud shadow". For more information on how these quality assessment flags were developed refer to [Vermote et al., 2016](https://www.sciencedirect.com/science/article/pii/S0034425716301572).
 
 ## Download LFMC maps
-![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
 
 The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col. You can use the maps in the following ways-
 
@@ -64,6 +67,10 @@ Rest of the scripts are not needed. They were used for development of the model 
 ### Input data
 
 The input data used for predicting LFMC can be found in a pickle object (python 3.6) in the input_data folder. It is a large dataframe with rows corresponding to training examples, and columns corresponding to input features. 
+
+### Training labels
+
+The training labels can be found as a csv file in the input_data folder. Rows correspond to the examples of manually sampled live fuel moisture content, and the columns correpond to the different attributes of the samples (location, species, live fuel moisture percentage, etc.) This data was scraped from the [National Fuel Moisture Database](https://www.wfas.net/index.php/national-fuel-moisture-database-moisture-drought-103) hosted by the United State Fores Service. We are grateful to them to make this data public. 
 
 ### Trained model
 
