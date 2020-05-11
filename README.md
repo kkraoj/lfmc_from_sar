@@ -2,7 +2,7 @@
 
 ![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
 
-This repository contains analysis performed for the paper ``SAR-Enhanced Mapping of Live Fuel Moisture Content" in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
+This repository contains analysis performed for the paper [SAR-Enhanced Mapping of Live Fuel Moisture Content](https://www.sciencedirect.com/science/article/pii/S003442572030167X) in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
 
 ## Earth Engine Web-app user guide
@@ -90,7 +90,7 @@ The training model saved using best model checkpoint on keras can be found in tr
 ## License
 Data and scripts presented here are free to use. Please cite the following paper if you use any data or analyses from this study:
 
-[TO BE FILLED AFTER PUBLISHING]
+Rao, K., Williams, A.P., Fortin, J. & Konings, A.G. (2020). SAR-enhanced mapping of live fuel moisture content. Remote Sens. Environ., 245.
 
 ## Issues?
 
