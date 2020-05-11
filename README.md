@@ -1,6 +1,9 @@
 # SAR-Enhanced Mapping of Live Fuel Moisture Content
+<p align="center">
+  <img width="360" src="/figures/lfmc_2_panels_projected_annotated.gif" alt="Seasonal variation of live fuel moisture content estimated by our deep learning model.">
+</p>
 
-![Examples maps of live fuel moisture content created by the deep learning algorithm](/figures/map.png)
+_Seasonal variation of live fuel moisture content estimated by our deep learning model._
 
 This repository contains analysis performed for the paper [SAR-Enhanced Mapping of Live Fuel Moisture Content](https://www.sciencedirect.com/science/article/pii/S003442572030167X) in the Journal _Remote Sensing of Environment_ by Rao et al., 2020. 
 You can view the live fuel moisture content (LFMC) maps produced by the deep learning algorithm in this study in a web-app [here](https://kkraoj.users.earthengine.app/view/live-fuel-moisture).
