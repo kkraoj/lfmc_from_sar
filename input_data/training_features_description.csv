@@ -1,0 +1,142 @@
+index,column_name,description,time_stamp,units
+0,percent(t),Live fuel moisture content,date,percent
+1,date,Date of measurement of live fuel moisture content,date,date_time object
+2,site,Name of site where live fuel moisture content was measured. Refer to National Fuel Moisture Database https://www.wfas.net/index.php/national-fuel-moisture-database-moisture-drought-103 for map of site names,none,string
+3,slope(t),Terrain slope ,none,degrees
+4,elevation(t),Altitude above mean sea level,none,meters
+5,canopy_height(t),Height of canopy from ground level,none,meters
+6,forest_cover(t),Land cover class of live fuel moisture content measurement site from GLOBCOVER dataset,2009,category
+7,silt(t),Silt fraction of live fuel moisture content measurement site ,none,fraction
+8,sand(t),Sand fraction of live fuel moisture content measurement site ,none,fraction
+9,clay(t),Clay fraction of live fuel moisture content measurement site ,none,fraction
+10,vv(t-3),Backscatter in VV polarization,3 months before date,decibels
+11,vh(t-3),Backscatter in VH polarization,3 months before date,decibels
+12,red(t-3),Red band surface reflectance ,3 months before date,"x 10,000"
+13,green(t-3),Green band surface reflectance ,3 months before date,"x 10,000"
+14,blue(t-3),Blue band surface reflectance ,3 months before date,"x 10,000"
+15,swir(t-3),Shortwave infrared band surface reflectance ,3 months before date,"x 10,000"
+16,nir(t-3),Near infrared band surface reflectance ,3 months before date,"x 10,000"
+17,ndvi(t-3),Normalized difference vegetation index,3 months before date,fraction
+18,ndwi(t-3),Normalized difference water index,3 months before date,fraction
+19,nirv(t-3),Near infrared vegetation,3 months before date,"x 10,000"
+20,vv_red(t-3),Backscatter in VV polarization divided by red band reflectance,3 months before date,decibels
+21,vv_green(t-3),Backscatter in VV polarization divided by green band reflectance,3 months before date,decibels
+22,vv_blue(t-3),Backscatter in VV polarization divided by blue band reflectance,3 months before date,decibels
+23,vv_swir(t-3),Backscatter in VV polarization divided by SWIR band reflectance,3 months before date,decibels
+24,vv_nir(t-3),Backscatter in VV polarization divided by NIR band reflectance,3 months before date,decibels
+25,vv_ndvi(t-3),Backscatter in VV polarization divided by NDVI,3 months before date,decibels
+26,vv_ndwi(t-3),Backscatter in VV polarization divided by NDWI,3 months before date,decibels
+27,vv_nirv(t-3),Backscatter in VV polarization divided by NIRv,3 months before date,decibels
+28,vh_red(t-3),Backscatter in VH polarization divided by red band reflectance,3 months before date,decibels
+29,vh_green(t-3),Backscatter in VH polarization divided by green band reflectance,3 months before date,decibels
+30,vh_blue(t-3),Backscatter in VH polarization divided by blue band reflectance,3 months before date,decibels
+31,vh_swir(t-3),Backscatter in VH polarization divided by SWIR band reflectance,3 months before date,decibels
+32,vh_nir(t-3),Backscatter in VH polarization divided by NIR band reflectance,3 months before date,decibels
+33,vh_ndvi(t-3),Backscatter in VH polarization divided by NDVI,3 months before date,decibels
+34,vh_ndwi(t-3),Backscatter in VH polarization divided by NDWI,3 months before date,decibels
+35,vh_nirv(t-3),Backscatter in VH polarization divided by NIRv,3 months before date,decibels
+36,vh_vv(t-3),Backscatter in VH polarization divided by VV polarization,3 months before date,fraction
+37,vv(t-2),Backscatter in VV polarization,2 months before date,decibels
+38,vh(t-2),Backscatter in VH polarization,2 months before date,decibels
+39,red(t-2),Red band surface reflectance ,2 months before date,"x 10,000"
+40,green(t-2),Green band surface reflectance ,2 months before date,"x 10,000"
+41,blue(t-2),Blue band surface reflectance ,2 months before date,"x 10,000"
+42,swir(t-2),Shortwave infrared band surface reflectance ,2 months before date,"x 10,000"
+43,nir(t-2),Near infrared band surface reflectance ,2 months before date,"x 10,000"
+44,ndvi(t-2),Normalized difference vegetation index,2 months before date,fraction
+45,ndwi(t-2),Normalized difference water index,2 months before date,fraction
+46,nirv(t-2),Near infrared vegetation,2 months before date,"x 10,000"
+47,vv_red(t-2),Backscatter in VV polarization divided by red band reflectance,2 months before date,decibels
+48,vv_green(t-2),Backscatter in VV polarization divided by green band reflectance,2 months before date,decibels
+49,vv_blue(t-2),Backscatter in VV polarization divided by blue band reflectance,2 months before date,decibels
+50,vv_swir(t-2),Backscatter in VV polarization divided by SWIR band reflectance,2 months before date,decibels
+51,vv_nir(t-2),Backscatter in VV polarization divided by NIR band reflectance,2 months before date,decibels
+52,vv_ndvi(t-2),Backscatter in VV polarization divided by NDVI,2 months before date,decibels
+53,vv_ndwi(t-2),Backscatter in VV polarization divided by NDWI,2 months before date,decibels
+54,vv_nirv(t-2),Backscatter in VV polarization divided by NIRv,2 months before date,decibels
+55,vh_red(t-2),Backscatter in VH polarization divided by red band reflectance,2 months before date,decibels
+56,vh_green(t-2),Backscatter in VH polarization divided by green band reflectance,2 months before date,decibels
+57,vh_blue(t-2),Backscatter in VH polarization divided by blue band reflectance,2 months before date,decibels
+58,vh_swir(t-2),Backscatter in VH polarization divided by SWIR band reflectance,2 months before date,decibels
+59,vh_nir(t-2),Backscatter in VH polarization divided by NIR band reflectance,2 months before date,decibels
+60,vh_ndvi(t-2),Backscatter in VH polarization divided by NDVI,2 months before date,decibels
+61,vh_ndwi(t-2),Backscatter in VH polarization divided by NDWI,2 months before date,decibels
+62,vh_nirv(t-2),Backscatter in VH polarization divided by NIRv,2 months before date,decibels
+63,vh_vv(t-2),Backscatter in VH polarization divided by VV polarization,2 months before date,fraction
+64,vv(t-1),Backscatter in VV polarization,1 month before date,decibels
+65,vh(t-1),Backscatter in VH polarization,1 month before date,decibels
+66,red(t-1),Red band surface reflectance ,1 month before date,"x 10,000"
+67,green(t-1),Green band surface reflectance ,1 month before date,"x 10,000"
+68,blue(t-1),Blue band surface reflectance ,1 month before date,"x 10,000"
+69,swir(t-1),Shortwave infrared band surface reflectance ,1 month before date,"x 10,000"
+70,nir(t-1),Near infrared band surface reflectance ,1 month before date,"x 10,000"
+71,ndvi(t-1),Normalized difference vegetation index,1 month before date,fraction
+72,ndwi(t-1),Normalized difference water index,1 month before date,fraction
+73,nirv(t-1),Near infrared vegetation,1 month before date,"x 10,000"
+74,vv_red(t-1),Backscatter in VV polarization divided by red band reflectance,1 month before date,decibels
+75,vv_green(t-1),Backscatter in VV polarization divided by green band reflectance,1 month before date,decibels
+76,vv_blue(t-1),Backscatter in VV polarization divided by blue band reflectance,1 month before date,decibels
+77,vv_swir(t-1),Backscatter in VV polarization divided by SWIR band reflectance,1 month before date,decibels
+78,vv_nir(t-1),Backscatter in VV polarization divided by NIR band reflectance,1 month before date,decibels
+79,vv_ndvi(t-1),Backscatter in VV polarization divided by NDVI,1 month before date,decibels
+80,vv_ndwi(t-1),Backscatter in VV polarization divided by NDWI,1 month before date,decibels
+81,vv_nirv(t-1),Backscatter in VV polarization divided by NIRv,1 month before date,decibels
+82,vh_red(t-1),Backscatter in VH polarization divided by red band reflectance,1 month before date,decibels
+83,vh_green(t-1),Backscatter in VH polarization divided by green band reflectance,1 month before date,decibels
+84,vh_blue(t-1),Backscatter in VH polarization divided by blue band reflectance,1 month before date,decibels
+85,vh_swir(t-1),Backscatter in VH polarization divided by SWIR band reflectance,1 month before date,decibels
+86,vh_nir(t-1),Backscatter in VH polarization divided by NIR band reflectance,1 month before date,decibels
+87,vh_ndvi(t-1),Backscatter in VH polarization divided by NDVI,1 month before date,decibels
+88,vh_ndwi(t-1),Backscatter in VH polarization divided by NDWI,1 month before date,decibels
+89,vh_nirv(t-1),Backscatter in VH polarization divided by NIRv,1 month before date,decibels
+90,vh_vv(t-1),Backscatter in VH polarization divided by VV polarization,1 month before date,fraction
+91,vv(t),Backscatter in VV polarization,date,decibels
+92,vh(t),Backscatter in VH polarization,date,decibels
+93,red(t),Red band surface reflectance ,date,"x 10,000"
+94,green(t),Green band surface reflectance ,date,"x 10,000"
+95,blue(t),Blue band surface reflectance ,date,"x 10,000"
+96,swir(t),Shortwave infrared band surface reflectance ,date,"x 10,000"
+97,nir(t),Near infrared band surface reflectance ,date,"x 10,000"
+98,ndvi(t),Normalized difference vegetation index,date,fraction
+99,ndwi(t),Normalized difference water index,date,fraction
+100,nirv(t),Near infrared vegetation,date,"x 10,000"
+101,vv_red(t),Backscatter in VV polarization divided by red band reflectance,date,decibels
+102,vv_green(t),Backscatter in VV polarization divided by green band reflectance,date,decibels
+103,vv_blue(t),Backscatter in VV polarization divided by blue band reflectance,date,decibels
+104,vv_swir(t),Backscatter in VV polarization divided by SWIR band reflectance,date,decibels
+105,vv_nir(t),Backscatter in VV polarization divided by NIR band reflectance,date,decibels
+106,vv_ndvi(t),Backscatter in VV polarization divided by NDVI,date,decibels
+107,vv_ndwi(t),Backscatter in VV polarization divided by NDWI,date,decibels
+108,vv_nirv(t),Backscatter in VV polarization divided by NIRv,date,decibels
+109,vh_red(t),Backscatter in VH polarization divided by red band reflectance,date,decibels
+110,vh_green(t),Backscatter in VH polarization divided by green band reflectance,date,decibels
+111,vh_blue(t),Backscatter in VH polarization divided by blue band reflectance,date,decibels
+112,vh_swir(t),Backscatter in VH polarization divided by SWIR band reflectance,date,decibels
+113,vh_nir(t),Backscatter in VH polarization divided by NIR band reflectance,date,decibels
+114,vh_ndvi(t),Backscatter in VH polarization divided by NDVI,date,decibels
+115,vh_ndwi(t),Backscatter in VH polarization divided by NDWI,date,decibels
+116,vh_nirv(t),Backscatter in VH polarization divided by NIRv,date,decibels
+117,vh_vv(t),Backscatter in VH polarization divided by VV polarization,date,fraction
+118,slope(t-3),Exact duplicate of slope(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,degrees
+119,elevation(t-3),Exact duplicate of elevation(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+120,canopy_height(t-3),Exact duplicate of canopy_height(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+121,forest_cover(t-3),Exact duplicate of forest_cover(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,2009,category
+122,silt(t-3),Exact duplicate of silt(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+123,sand(t-3),Exact duplicate of sand(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+124,clay(t-3),Exact duplicate of clay(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+125,slope(t-2),Exact duplicate of slope(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,degrees
+126,elevation(t-2),Exact duplicate of elevation(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+127,canopy_height(t-2),Exact duplicate of canopy_height(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+128,forest_cover(t-2),Exact duplicate of forest_cover(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,2009,category
+129,silt(t-2),Exact duplicate of silt(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+130,sand(t-2),Exact duplicate of sand(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+131,clay(t-2),Exact duplicate of clay(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+132,slope(t-1),Exact duplicate of slope(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,degrees
+133,elevation(t-1),Exact duplicate of elevation(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+134,canopy_height(t-1),Exact duplicate of canopy_height(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,meters
+135,forest_cover(t-1),Exact duplicate of forest_cover(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,2009,category
+136,silt(t-1),Exact duplicate of silt(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+137,sand(t-1),Exact duplicate of sand(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+138,clay(t-1),Exact duplicate of clay(t). This variable does not change with time. It is included as a placeholder for LSTM model compatibility,none,fraction
+139,latitude,Latitude of live fuel moisture content measurement site,none,decimal degrees
+140,longitude,Longitude of live fuel moisture content measurement site,none,decimal degrees
