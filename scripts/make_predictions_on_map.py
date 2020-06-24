@@ -20,7 +20,7 @@ from datetime import datetime
 
 import seaborn as sns
 
-sns.set_style('ticks')
+sns.set(style = 'ticks',font_scale = 1.1)
 
 
 from keras.models import load_model
@@ -213,7 +213,7 @@ cmap =  ListedColormap(sns.color_palette(colors).as_hex())
 plot = ax.imshow([[]],cmap = cmap,vmin = 50, vmax = 200)
 
 cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
-cax.annotate('Forest\nWetness (%) \n', xy = (0.,0.94), ha = 'left', va = 'bottom', color = color)
+cax.annotate('Forest\nDryness (%) \n', xy = (0.,0.96), ha = 'left', va = 'bottom', color = color)
 cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(50,200,4),extend='both')
 cax.set_yticklabels(['<50','100','150','>200'], color = color) 
 

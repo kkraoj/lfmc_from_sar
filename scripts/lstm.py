@@ -28,7 +28,7 @@ from keras import regularizers, optimizers
 import matplotlib.pyplot as plt
 
 from dirs import dir_data, dir_codes
-os.chdir(dir_codes)
+os.chdir(os.path.join(dir_codes,'scripts'))
 from QC_of_sites import clean_fmc
 from fnn_smoothed_anomaly_all_sites import plot_pred_actual, plot_importance, plot_usa
 import seaborn as sns
@@ -856,12 +856,12 @@ def infer_importance(rmse, r2, iterations =1, retrain_epochs = RETRAINEPOCHS,\
 #    print(rmse_diff)
     return rmse_diff, r2_diff
 
-rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
-save_name = "static_variables_importance"
+# rmse_diff, r2_diff = infer_importance(rmse, r2,  retrain_epochs = RETRAINEPOCHS,iterations = 1)
+# save_name = "static_variables_importance"
 #rmse_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name), index_col = 1)
 #r2_diff = pd.read_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
-print(rmse_diff)
-print(r2_diff)
+# print(rmse_diff)
+# print(r2_diff)
 #plot_importance(rmse_diff,rmse)
 #rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/rmse_diff_18_feb_2020_%s.csv'%save_name))
 #rmse_diff.to_csv(os.path.join(dir_codes, 'model_checkpoint/r2_diff_18_feb_2020_%s.csv'%save_name))
