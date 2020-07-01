@@ -57,9 +57,9 @@ def get_value(filename, mx, my, band = 1):
 #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
 static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36'))
 #%%add dynamic features
-year = 2020
-day = 1
-for MoY in range(7, 0, -1):
+year = 2019
+day = 15
+for MoY in range(12, 0, -1):
 # for MoY in range(12, 0, -1):
 #    latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
 #    latlon.to_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36'))
@@ -76,8 +76,8 @@ for MoY in range(7, 0, -1):
     raw_sar_bands = ['vh','vv']
     ## check if all lag files exist
     lag_dates = [(pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d') for lag in range(3, -1, -1)]
-    file_exists = [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
-    file_exists += [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
+    file_exists = [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
+    file_exists += [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
     if all(file_exists)==False:
         print('[INFO] Skipping %s because at least 1 file does not exist'%(date))
         continue
@@ -86,7 +86,7 @@ for MoY in range(7, 0, -1):
         lag_date = (pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d')
         band_names = dict(zip(range(1,6),raw_opt_bands))
         for band in band_names.keys():
-            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\%s_cloudsnowfree_l8.tif'%lag_date),\
+            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_cloudsnowfree_l8.tif'%lag_date),\
             latlon.longitude.values, latlon.latitude.values, band = band)
         latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
         
@@ -96,7 +96,7 @@ for MoY in range(7, 0, -1):
         
         band_names = dict(zip(range(1,3),raw_sar_bands))
         for band in band_names.keys():
-            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\%s_sar.tif'%lag_date),\
+            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_sar.tif'%lag_date),\
             latlon.longitude.values, latlon.latitude.values, band = band)
         latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
         latlon['vh_vv'] = latlon.vh - latlon.vv

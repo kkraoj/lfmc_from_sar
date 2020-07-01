@@ -14,20 +14,21 @@ import datetime
 from pandas.tseries.offsets import DateOffset
 
 ########################perparing metadata for geebam upload
-files = os.listdir(os.path.join(dir_data, 'map/dynamic_maps/lfmc'))
-startdates = [file[9:-4] for file in files]
+df = pd.DataFrame(index =  os.listdir(os.path.join(dir_data, 'map/dynamic_maps/lfmc')))
+df.index.name = 'filename'
+
+startdates = [file[9:-4] for file in df.index]
 enddates = pd.to_datetime(startdates) + DateOffset(days = -1)
 enddates = [x.strftime("%Y-%m-%d") for x in enddates]
 
-for file in files:
-    print(file[:-4])
+# for file in files:
+#     print(file[:-4])
 enddates.pop(0)
-enddates.append('2019-12-31')
+enddates.append('2020-07-14')
 
-unixtimes = [time.mktime(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple()) for s in startdates]
-for t in unixtimes:
-    print(int(t*1000))
+df['system:time_start'] = [time.mktime(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple())*1000 for s in startdates]
+
     
-unixtimes = [time.mktime(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple()) for s in enddates]
-for t in unixtimes:
-    print(int(t*1000))
+df['system:time_end']= [time.mktime(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple())*1000 for s in enddates]
+df.tail()
+df.to_csv("D:/Krishna/projects/vwc_from_radar/gee-app/upload_meta_data _30_jun_2020.csv")

@@ -104,16 +104,18 @@ ax.annotate('$r^2$ = %0.2f'%r2, xy=(0.1, 0.9), xycoords='axes fraction')
 
 
 fig, ax = plt.subplots(figsize = (3,3))
+ax.errorbar(true.mean(),pred.mean(),yerr = pred.std(), xerr = true.std(), color = 'grey',linewidth = 0, elinewidth = 1, capsize = 1,zorder =-1 )
 ax.scatter(true.mean(),pred.mean(),color = 'brown',edgecolor = 'grey')
-ax.set_title('Site means')
+ax.set_title('All sites')
 ax.set_xlabel('True $\overline{LFMC}$ (%)')
 ax.set_ylabel('Predicted $\overline{LFMC}$ (%)')
+ax.set_ylabel('Predicted LFMC (%)')
 ax.set_xlim(50,250)
 ax.set_ylim(50,250)
 ticks = [50,100,150,200,250]
 ax.set_xticks(ticks)
 ax.set_yticks(ticks)
-ax.plot(ticks,ticks,'-',color = 'lightgrey',zorder = -1)
+ax.plot(ticks,ticks,'-',color = 'lightgrey',zorder = -2)
 ax.set_aspect('equal', 'box')
 
 
