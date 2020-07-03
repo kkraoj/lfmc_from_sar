@@ -184,7 +184,7 @@ for MoY in range(12, 0, -1):
     zz = xx.copy()
     u_lons = None
     u_lats = None
-    # zz[:] = -9999
+    zz[:] = -9999
     # df.dropna(inplace = True)
     zz[df.lat_index.values,df.lon_index.values] = df.pred_fmc.values
     zz[np.isnan(zz)] = -9999
