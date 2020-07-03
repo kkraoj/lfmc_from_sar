@@ -12,9 +12,13 @@ from dirs import dir_data, dir_codes,dir_figures
 import time
 import datetime
 from pandas.tseries.offsets import DateOffset
+import glob
 
 ########################perparing metadata for geebam upload
-df = pd.DataFrame(index =  os.listdir(os.path.join(dir_data, 'map/dynamic_maps/lfmc')))
+filenames =  glob.glob(os.path.join(dir_data, 'map/dynamic_maps/lfmc', '*.tif'))
+
+filenames = [filename[-4-10-4-5:] for filename in filenames]
+df = pd.DataFrame(index = filenames)
 df.index.name = 'filename'
 
 startdates = [file[9:-4] for file in df.index]

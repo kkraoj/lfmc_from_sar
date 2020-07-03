@@ -45,7 +45,7 @@ model = load_model(filepath)
 os.chdir('D:/Krishna/projects/vwc_from_radar')
 
 ### adding different static features
-latlon = pd.read_csv(os.path.join(dir_data, 'map/map_lat_lon.csv'), index_col = 0)
+# latlon = pd.read_csv(os.path.join(dir_data, 'map/map_lat_lon.csv'), index_col = 0)
 def get_value(filename, mx, my, band = 1):
     ds = gdal.Open(filename)
     gt = ds.GetGeoTransform()
@@ -55,9 +55,9 @@ def get_value(filename, mx, my, band = 1):
     return data[py,px]
 #static = pd.read_csv(os.path.join(dir_data, 'map/static_features.csv'), index_col = 0)
 #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
-static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36'))
+static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36')) #there are some bugs in static as some rows have longitude way outside west USA. 
 #%%add dynamic features
-year = 2019
+year = 2016
 day = 15
 for MoY in range(12, 0, -1):
 # for MoY in range(12, 0, -1):
@@ -114,7 +114,7 @@ for MoY in range(12, 0, -1):
 #    latlon.to_csv('data/map/map_features/dynamic_features_%s.csv'%date)
 #    rather than saving the input feature file, just do the prediction here itself to save hard disk space
     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-    fname = 'map/dynamic_maps/fmc_map_%s'%date
+    # fname = 'map/dynamic_maps/fmc_map_%s'%date
 #    dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
     # dyn.to_pickle('map/dynamic_features_%s'%date)
     dataset = static.join(latlon.drop(['latitude','longitude'], axis = 1))
@@ -137,7 +137,7 @@ for MoY in range(12, 0, -1):
     dataset = dataset[cols]
    
     #predictions only on previously trained landcovers
-    dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+    dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)]
     dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
    
     for col in dataset.columns:
@@ -169,7 +169,8 @@ for MoY in range(12, 0, -1):
    
     dataset['pred_fmc'] = inv_yhat
 #    dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
-    df = dataset[['latitude','longitude','pred_fmc']]
+    # df = dataset[['latitude','longitude','pred_fmc']]
+    df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36')).merge(dataset[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
     dataset = None
     inv_yhat = None
     print('[INFO] Saving lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
@@ -183,9 +184,10 @@ for MoY in range(12, 0, -1):
     zz = xx.copy()
     u_lons = None
     u_lats = None
-    zz[:] = -9999
+    # zz[:] = -9999
+    # df.dropna(inplace = True)
     zz[df.lat_index.values,df.lon_index.values] = df.pred_fmc.values
-           
+    zz[np.isnan(zz)] = -9999
     df = None
     array = zz.astype(int)
     zz = None
