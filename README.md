@@ -24,7 +24,7 @@ On some occassions, the LFMC maps may appear patchy. The patches are caused by i
 
 ## Download LFMC maps
 
-The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col. You can use the maps in the following ways-
+The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_24_jul_2020. You can use the maps in the following ways-
 
 1. Directly on GEE by importing the collection or 
 2. Downloading the maps to your local computer
@@ -33,14 +33,14 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 ### Use/analyse maps on GEE
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/6baadb6dc17198d7420eb9df5a4ea4b5)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/0c7992bed8b328a993ac5bf67ef347e6)
 2. The script will import the LFMC maps as an `ImageCollection` and display the mean for 2019. You can then proceed with your analysis with the imported image collection.
 
 ### Download maps to your computer
-
+s
 **Option 1: Code Editor-**
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/8d145a1cfc6e368fee9d11434867e2cc?noload=true)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/81b69312ec6873b7f8d89fe91137c235?noload=true)
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis. 
 1. Click on Run button at the top

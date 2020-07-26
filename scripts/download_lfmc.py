@@ -30,7 +30,7 @@ scale = 500 #pixel size in meters. lower pixels will consumer more memory and wi
 
 #%%#### create strings for start and end dates
 
-collection = ee.ImageCollection('users/kkraoj/lfm-mapper/lfmc_col').\
+collection = ee.ImageCollection('users/kkraoj/lfm-mapper/lfmc_col_24_jul_2020').\
                 filterDate(start_date,end_date)
                 
 n = collection.size().getInfo() # number of images to download
