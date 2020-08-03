@@ -91,7 +91,7 @@ The training model saved using best model checkpoint on keras can be found in tr
 1. Run `plot_functions.py` by uncommenting any of the functions at the end of the script to reproduce the figures you wish
 
 ## License
-Data and scripts presented here are free to use. Please cite the following paper if you use any data or analyses from this study:
+Data and scripts presented here are free to use under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) license. Please cite the following paper if you use any data or analyses from this study:
 
 Rao, K., Williams, A.P., Fortin, J. & Konings, A.G. (2020). SAR-enhanced mapping of live fuel moisture content. Remote Sens. Environ., 245.
 
