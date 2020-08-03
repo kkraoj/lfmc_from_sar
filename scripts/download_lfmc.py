@@ -24,14 +24,22 @@ ee.Initialize()
 #%%
 ### Input start and end dates
 start_date = '2016-01-01'
-end_date =  '2016-01-30'
+end_date =  '2016-01-12'
 folder_name = 'lfmc_col' # folder name in GOogle drive where files should be created
-scale = 500 #pixel size in meters. lower pixels will consumer more memory and will take longer to download. 
+scale = 250 #pixel size in meters. lower pixels will consumer more memory and will take longer to download. 
 
 #%%#### create strings for start and end dates
 
 collection = ee.ImageCollection('users/kkraoj/lfm-mapper/lfmc_col_24_jul_2020').\
                 filterDate(start_date,end_date)
+
+
+crs = ee.Image(collection.first()).projection();
+def resample(image):
+    image = image.resample('bilinear').reproject(crs= crs,scale= scale)
+    return image
+  
+collection = collection.map(resample)
                 
 n = collection.size().getInfo() # number of images to download
     
@@ -46,6 +54,7 @@ for i in range(n):
       folder=folder_name,
       description = id,
       scale= scale,
+      maxPixels=1e11
     );
     batch.Task.start(out)    
 ## process the image
