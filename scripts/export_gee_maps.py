@@ -16,6 +16,13 @@ import ee
 from ee import batch
 from pandas.tseries.offsets import DateOffset
 import pandas as pd
+import time
+import os
+
+import sys
+# insert at position 1 in the path, as 0 is the path of this file.
+sys.path.insert(1, 'D:/Krishna/projects/google_drive')
+from download_and_delete import download, delete_file
 
 ## Initialize (a ee python thing)
 
@@ -75,7 +82,7 @@ def maskCloudsAndSnow(image):
   return image.updateMask(c).addBands(image.metadata('system:time_start'));
 
 ###Filter by metadata properties.
-year = 2018
+year = 2016
 day=15
 # end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
 end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
@@ -98,16 +105,31 @@ for (start_date, end_date) in zip(start_date_range, end_date_range):
     
     out = batch.Export.image.toDrive(image= recentValueComposite.select(['B2', 'B3', 'B4', 'B5', 'B6']),
       description = end_date+'_cloudsnowfree_l8',
-      scale= 500,
-      region= roi.geometry().bounds())
+      scale= 250,
+      region= roi.geometry().bounds(),
+      maxPixels = 1e11)
     batch.Task.start(out)
-    # out = batch.Export.image.toDrive(
-    #   image=image_sar.select(band),
-    #   description= end_date+'_sar',
-    #   scale= 500,
-    #   region= roi.geometry().bounds()
-    # );
-    # batch.Task.start(out)    
+    
+    out = batch.Export.image.toDrive(
+      image=image_sar.select(band),
+      description= end_date+'_sar',
+      scale= 250,
+      region= roi.geometry().bounds(),
+      maxPixels=1e11
+    );
+    batch.Task.start(out)
+
+    # status = out.status()['state']
+    
+    # while out.status()['state']!="COMPLETED":
+    #     time.sleep(60)
+    
+    # filenames = [end_date+'_cloudsnowfree_l8.tif',end_date+'_sar.tif']
+    
+    # for filename in filenames:
+    #     service, file_id = download(filename)
+    #     delete_file(service, file_id)
+        
 ## process the image
 
 out.status()
