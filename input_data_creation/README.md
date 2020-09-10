@@ -28,6 +28,6 @@ Requirements: Python 3.6+, `gdal` and [Google Earth Engine Python API](https://d
                      -e 2020-02-27
 	```
 	Note how the script downloads data for a period of ~8 months (from `-s` to `-e`). These periods can be adjusted based on the date of LFMC measurements. It may help to extend the input features into the past as prior sattelite data may be useful to model current LFMC.
-1. Rearrange dynamic features: Use make_features.py to rearrange the dyanmic features into 1 csv file.  
+1. Rearrange dynamic features: Use `make_features.py` to rearrange the dyanmic features into 1 csv file.  
 1. Static features: Extract static features like topography, soil texture, landcover, canopy height etc. from static maps at the locations specified in the csv file mentioned above using `make_features.py`. Static maps of diffferent variables like soil texture, land cover, etc. for USA were obtained from publicly available GeoTiffs. A list of sources is provided in the Methods sections of the manuscript. If you don't wish to download them from each source on your own, and want to request the authors of the manuscript to share their downloaded versions, please contact the corresponding author of the manuscript. 
 1. Combine dynamic features, static features, and the LFMC measurements into a single dataframe to allow model training using `make_dataframe.py`.
