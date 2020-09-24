@@ -82,12 +82,14 @@ def maskCloudsAndSnow(image):
   return image.updateMask(c).addBands(image.metadata('system:time_start'));
 
 ###Filter by metadata properties.
-year = 2016
+year = 2020
 day=15
 # end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
-end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
+end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,8)]
 start_date_range = list((pd.to_datetime(end_date_range) + DateOffset(months = -3)).strftime('%Y-%m-%d'))
 
+downloaded_files = os.listdir("D:/Krishna/projects/google_drive")
+out = None
 for (start_date, end_date) in zip(start_date_range, end_date_range):
     image_sar = ee.ImageCollection('COPERNICUS/S1_GRD').\
       filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH')).\
@@ -103,21 +105,22 @@ for (start_date, end_date) in zip(start_date_range, end_date_range):
       filterBounds(roi).map(maskCloudsAndSnow).\
       qualityMosaic('system:time_start').clip(roi);
     
-    out = batch.Export.image.toDrive(image= recentValueComposite.select(['B2', 'B3', 'B4', 'B5', 'B6']),
-      description = end_date+'_cloudsnowfree_l8',
-      scale= 250,
-      region= roi.geometry().bounds(),
-      maxPixels = 1e11)
-    batch.Task.start(out)
-    
-    out = batch.Export.image.toDrive(
-      image=image_sar.select(band),
-      description= end_date+'_sar',
-      scale= 250,
-      region= roi.geometry().bounds(),
-      maxPixels=1e11
-    );
-    batch.Task.start(out)
+    if end_date+'_cloudsnowfree_l8.tif' not in downloaded_files:
+        out = batch.Export.image.toDrive(image= recentValueComposite.select(['B2', 'B3', 'B4', 'B5', 'B6']),
+          description = end_date+'_cloudsnowfree_l8',
+          scale= 250,
+          region= roi.geometry().bounds(),
+          maxPixels = 1e11)
+        batch.Task.start(out)
+    if end_date+'_sar.tif' not in downloaded_files:
+        out = batch.Export.image.toDrive(
+          image=image_sar.select(band),
+          description= end_date+'_sar',
+          scale= 250,
+          region= roi.geometry().bounds(),
+          maxPixels=1e11
+        );
+        batch.Task.start(out)
 
     # status = out.status()['state']
     

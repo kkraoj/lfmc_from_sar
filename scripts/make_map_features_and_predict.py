@@ -26,7 +26,7 @@ sns.set_style('ticks')
 
 from keras.models import load_model
 
-
+dir_data = "D:/Krishna/projects/vwc_from_radar/data"
 enlarge = 1
 os.chdir(dir_data)
 
@@ -49,21 +49,21 @@ os.chdir('D:/Krishna/projects/vwc_from_radar')
 def get_value(filename, mx, my, band = 1):
     ds = gdal.Open(filename)
     gt = ds.GetGeoTransform()
-    data = ds.GetRasterBand(band).ReadAsArray()
+    data = ds.GetRasterBand(band).ReadAsArray().astype(np.float16)
     px = ((mx - gt[0]) / gt[1]).astype(int) #x pixel
     py = ((my - gt[3]) / gt[5]).astype(int) #y pixel
     return data[py,px]
 #static = pd.read_csv(os.path.join(dir_data, 'map/static_features.csv'), index_col = 0)
 #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
-static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36')) #there are some bugs in static as some rows have longitude way outside west USA. 
+# static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m')) #there are some bugs in static as some rows have longitude way outside west USA. 
 #%%add dynamic features
-year = 2016
-day = 15
+year = 2020
+day = 1
 for MoY in range(12, 0, -1):
 # for MoY in range(12, 0, -1):
 #    latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
 #    latlon.to_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36'))
-    latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36'))
+    latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
     date = '%04d-%02d-%02d'%(year, MoY, day)
     
     if os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date)):
@@ -76,8 +76,8 @@ for MoY in range(12, 0, -1):
     raw_sar_bands = ['vh','vv']
     ## check if all lag files exist
     lag_dates = [(pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d') for lag in range(3, -1, -1)]
-    file_exists = [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
-    file_exists += [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
+    file_exists = [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
+    file_exists += [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
     if all(file_exists)==False:
         print('[INFO] Skipping %s because at least 1 file does not exist'%(date))
         continue
@@ -86,7 +86,7 @@ for MoY in range(12, 0, -1):
         lag_date = (pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d')
         band_names = dict(zip(range(1,6),raw_opt_bands))
         for band in band_names.keys():
-            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_cloudsnowfree_l8.tif'%lag_date),\
+            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_cloudsnowfree_l8.tif'%lag_date),\
             latlon.longitude.values, latlon.latitude.values, band = band)
         latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
         
@@ -96,7 +96,7 @@ for MoY in range(12, 0, -1):
         
         band_names = dict(zip(range(1,3),raw_sar_bands))
         for band in band_names.keys():
-            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs\%s_sar.tif'%lag_date),\
+            latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_sar.tif'%lag_date),\
             latlon.longitude.values, latlon.latitude.values, band = band)
         latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
         latlon['vh_vv'] = latlon.vh - latlon.vv
@@ -110,68 +110,97 @@ for MoY in range(12, 0, -1):
             latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t-%d)'%lag)
         else:
             latlon.columns=list(latlon.columns[:-21])+list(latlon.columns[-21:]+'(t)')
-    
 #    latlon.to_csv('data/map/map_features/dynamic_features_%s.csv'%date)
 #    rather than saving the input feature file, just do the prediction here itself to save hard disk space
     print('[INFO] Making lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
     # fname = 'map/dynamic_maps/fmc_map_%s'%date
 #    dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
     # dyn.to_pickle('map/dynamic_features_%s'%date)
-    dataset = static.join(latlon.drop(['latitude','longitude'], axis = 1))
+    # latlon.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True) #not removing -np.inf for some reason. 
+    latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
+    latlon = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')).join(latlon.drop(['latitude','longitude'], axis = 1)) ## 3mins
+    # exit
     # inputs.to_pickle('map/inputs_%s'%date)
     # static = None
-    latlon = None
+    # latlon = None
     # inputs = None
    
     # dataset = pd.read_pickle('map/inputs_%s'%date)
     # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
-    dataset = dataset.reindex(sorted(dataset.columns), axis=1)
+    latlon = latlon.reindex(sorted(latlon.columns), axis=1)
    
     ### add percent col to start
-    dataset['percent(t)'] = 100 #dummy
-    cols = list(dataset.columns.values)
+    latlon['percent(t)'] = 100 #dummy
+    cols = list(latlon.columns.values)
     cols.remove('percent(t)')
     cols.remove('latitude')
     cols.remove('longitude')
     cols = ['latitude', 'longitude','percent(t)']+cols
-    dataset = dataset[cols]
+    latlon = latlon[cols]
    
     #predictions only on previously trained landcovers
-    dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)]
-    dataset['forest_cover(t)'] = encoder.transform(dataset['forest_cover(t)'].values)
+    latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)]
+    latlon['forest_cover(t)'] = encoder.transform(latlon['forest_cover(t)'].values)
    
-    for col in dataset.columns:
+    for col in latlon.columns:
         if 'forest_cover' in col:
-            dataset[col] = dataset['forest_cover(t)']
+            latlon[col] = latlon['forest_cover(t)']
    
     ##scale
-    dataset.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True)
-    dataset.dropna(inplace = True)
-    # dataset.fillna(method = 'ffill',inplace = True)
-    # dataset.fillna(method = 'bfill',inplace = True)
-    scaled = scaler.transform(dataset.drop(['latitude','longitude'],axis = 1).values)
-    dataset.loc[:,2:] = scaled #skip latlon
-    dataset.drop('percent(t)',axis = 1, inplace = True)
-    scaled = dataset.drop(['latitude','longitude'],axis=1).values.reshape((dataset.shape[0], 4, 28), order = 'A') #langs x features
-    # np.save('map/scaled_%s.npy'%date, scaled)
-   
+    
+    latlon.dropna(inplace = True)
+    # latlon = pd.to_numeric(latlon, downcast = "signed")
+    # latlon = latlon.apply(pd.to_numeric,downcast='signed')
+    # latlon = latlon.apply(pd.to_numeric)
+    # latlon[latlon<=-1e5] = -1e5
+    # latlon[latlon>=1e5] = 1e5
+    
+    
+    # latlon.clip(-1e5, 1e5, inplace = True) ## too memory intensive
+    
+    
+    # latlon.fillna(method = 'ffill',inplace = True)
+    # latlon.fillna(method = 'bfill',inplace = True)
+    ################################################
+    ## adding code stack to overcome memory overflow:
+    latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon'))
+    cutoff = int(1e7)
+    for i in range(5, -1, -1):
+        print('[INFO] Operating on bucket %1d at %s'%(i,datetime.now().strftime("%H:%M:%S")))
+        if i==5:
+            latlon = latlon.iloc[cutoff*i:]
+        else:
+            latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon')).iloc[cutoff*i:cutoff*(i+1)]
+        latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
+        latlon.drop('percent(t)',axis = 1, inplace = True)
+        if i!=0:
+            latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
+        
+    for i in range(1,6):
+        latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i)))
+    print('[INFO] Export, import of blocks for scaling latlon complete at %s'%(datetime.now().strftime("%H:%M:%S")))
+    ################################################    
+    
+    scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
+        # np.save('map/scaled_%s.npy'%date, scaled)
+    latlon = latlon[['latitude','longitude']]   
     yhat = model.predict(scaled)
-   
+    # exit
     scaled = None
    
     inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
     # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
     yhat = None
    
-    # dataset = pd.read_pickle('map/inputs_%s'%date)
+    # latlon = pd.read_pickle('map/inputs_%s'%date)
     #predictions only on previously trained landcovers
-    # dataset = dataset.loc[dataset['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+    # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
    
-    dataset['pred_fmc'] = inv_yhat
-#    dataset[['latitude','longitude','pred_fmc']].to_pickle(fname)
-    # df = dataset[['latitude','longitude','pred_fmc']]
-    df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36')).merge(dataset[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
-    dataset = None
+    latlon['pred_fmc'] = inv_yhat
+#    latlon[['latitude','longitude','pred_fmc']].to_pickle(fname)
+    # df = latlon[['latitude','longitude','pred_fmc']]
+    df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(latlon[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
+    latlon = None
     inv_yhat = None
     print('[INFO] Saving lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
     df['lat_index'] = df.latitude.rank(method = 'dense', ascending = False).astype(int)-1
@@ -195,9 +224,9 @@ for MoY in range(12, 0, -1):
 #     ax.imshow(array,vmin = 50, vmax = 200)
 #     ax.set_title(date)
 #     plt.show()
-     # For each pixel I know it's latitude and longitude.
-     # As you'll see below you only really need the coordinates of
-     # one corner, and the resolution of the file.
+      # For each pixel I know it's latitude and longitude.
+      # As you'll see below you only really need the coordinates of
+      # one corner, and the resolution of the file.
      
     xmin,ymin,xmax,ymax = [xx.min(),yy.min(),xx.max(),yy.max()]
     xx = None
@@ -208,16 +237,16 @@ for MoY in range(12, 0, -1):
     geotransform=(xmin,xres,0,ymax,0, -yres)   
     # That's (top left x, w-e pixel resolution, rotation (0 if North is up), 
     #         top left y, rotation (0 if North is up), n-s pixel resolution)
-     # I don't know why rotation is in twice???
+      # I don't know why rotation is in twice???
      
     output_raster = gdal.GetDriverByName('GTiff').Create(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date),ncols, nrows, 1 ,gdal.GDT_Int16)  # Open the file
     output_raster.SetGeoTransform(geotransform)  # Specify its coordinates
     srs = osr.SpatialReference()                 # Establish its coordinate encoding
     srs.ImportFromEPSG(4326)                     # This one specifies WGS84 lat long.
                                                 # Anyone know how to specify the 
-                                                 # IAU2000:49900 Mars encoding?
+                                                  # IAU2000:49900 Mars encoding?
     output_raster.SetProjection(srs.ExportToWkt() )   # Exports the coordinate system 
-                                                       # to the file
+                                                        # to the file
     output_raster.GetRasterBand(1).WriteArray(array)   # Writes my array to the raster
     array = None
     output_raster.FlushCache()

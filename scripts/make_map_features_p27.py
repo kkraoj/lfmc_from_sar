@@ -29,7 +29,7 @@ def get_value(filename, mx, my, band = 1):
 
 #%% add static features
 
-latlon = latlon[latlon.longitude !=0]
+latlon = latlon.loc[latlon.longitude !=0]
 latlon['slope'] = get_value(os.path.join(r'D:\Krishna\projects\vod_from_mortality\codes\data\RS_data\Elevation\Elevation',\
                             'usa_slope_project.tif'), \
     latlon.longitude.values, latlon.latitude.values)
@@ -58,11 +58,11 @@ for col in ['silt','sand','clay']:
 #%% cleanup latlon static features
 #latlon = pd.read_csv('data/map/static_features.csv', index_col = 0)
 
-latlon.loc[latlon['elevation']<0.] = 0.
-latlon.loc[latlon['slope']<0.] = 0.
-latlon.loc[latlon['clay']<0.] = 33.3
-latlon.loc[latlon['silt']<0.] = 33.3
-latlon.loc[latlon['sand']<0.] = 33.3
+latlon.loc[latlon['elevation']<0.,'elevation'] = 0.
+latlon.loc[latlon['slope']<0.,'slope'] = 0.
+latlon.loc[latlon['clay']<0.,'clay'] = 33.3
+latlon.loc[latlon['silt']<0.,'silt'] = 33.3
+latlon.loc[latlon['sand']<0.,'sand'] = 33.3
 latlon.columns = latlon.columns+'(t)'
 latlon.rename(columns = {'latitude(t)':'latitude','longitude(t)':'longitude'}, inplace = True)
 static_features = ['elevation','slope','forest_cover','canopy_height', 'sand','silt','clay']
@@ -70,8 +70,24 @@ for lag in range(3, 0, -1):
     for feature in static_features:
         latlon[feature+'(t-%d)'%lag] = latlon[feature+'(t)']
         # 
+##memory saving
+cols = [col for col in latlon.columns if 'silt' in col]
+cols += [col for col in latlon.columns if 'sand' in col]
+cols += [col for col in latlon.columns if 'clay' in col]
+convert = dict(zip(cols, np.repeat("uint8", len(cols))))
+latlon = latlon.astype(convert)
+cols = [col for col in latlon.columns if 'elevation' in col]
+convert = dict(zip(cols, np.repeat("uint16", len(cols))))
+cols = ['slope(t)', 'slope(t-1)', 'slope(t-2)', 'slope(t-3)']
+convert = dict(zip(cols, np.repeat("float16", len(cols))))
+latlon = latlon.astype(convert)
+cols = ['latitude','longitude']
+convert = dict(zip(cols, np.repeat("float32", len(cols))))
+latlon = latlon.astype(convert)
+
+
 # latlon.to_csv('data/map/static_features.csv')           
-latlon.to_pickle('data/map/static_features_p36_250m')
+latlon.to_pickle('data/map/static_features_p36_250m_latlon_float32')
 
 #%%add dynamic features
 # year = 2019
