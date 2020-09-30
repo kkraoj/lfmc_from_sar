@@ -7,7 +7,7 @@ Created on Wed Feb 13 05:13:21 2019
 
 ## add slope ### py 2.7 script
 from osgeo import gdal, osr
-import os 
+import os ,argparse
 import pandas as pd
 import numpy as np
 from mpl_toolkits.basemap import Basemap
@@ -20,6 +20,7 @@ from matplotlib import ticker
 from matplotlib.colors import ListedColormap
 from datetime import datetime 
 import seaborn as sns
+    
 
 sns.set_style('ticks')
 
@@ -28,27 +29,29 @@ from keras.models import load_model
 
 def getArgs():
 
-   # setup parser
-   parser = argparse.ArgumentParser(
+    # setup parser
+    parser = argparse.ArgumentParser(
     description = '''Script allows to make LFMC maps from inputs''',
     epilog = '''post bug reports to the github repository''')
-   parser.add_argument('-y',
-                       '--year',
-                       help = 'Year of LFMC maps to be made,
-                       required = True)
+    parser.add_argument('-y',
+                        '--year',
+                        type = int,
+                        help = 'Year of LFMC maps to be made',
+                        required = True)
                        
-   parser.add_argument('-d',
-                       '--day',
-                       help = 'Day of LFMC to be made. Must be 1 or 15.',
-                       required = True)
-   # put arguments in dictionary with
-   # keys being the argument names given above
-   return parser.parse_args()
+    parser.add_argument('-d',
+                        '--day',
+                        type = int,
+                        help = 'Day of LFMC to be made. Must be 1 or 15.',
+                        required = True)
+    # put arguments in dictionary with
+    # keys being the argument names given above
+    return parser.parse_args()
 
 if __name__ == "__main__":
     args = getArgs()
     
-    
+
     
     dir_data = "D:/Krishna/projects/vwc_from_radar/data"
     enlarge = 1
@@ -81,7 +84,8 @@ if __name__ == "__main__":
     #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
     # static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m')) #there are some bugs in static as some rows have longitude way outside west USA. 
     #%%add dynamic features
-    cache_cutoff = int(1e7)
+    cache_cutoff = int(2e7)
+    memory_cutoff = int(2e7)
     year = args.year
     day = args.day
     for MoY in range(12, 0, -1):
@@ -189,29 +193,28 @@ if __name__ == "__main__":
         ################################################
         ## adding code stack to overcome memory overflow:
         # print('[INFO] Export, import of blocks for scaling latlon started at %s'%(datetime.now().strftime("%H:%M:%S")))
-        latlon.loc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
-        latlon.drop('percent(t)',axis = 1, inplace = True)
-        # if latlon.shape[0]>cache_cutoff:
-        #     ## if input size is too large to do scalar transforms, break them into buckets
-        #     latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon'))
-        #     cache_buckets = int(np.floor(latlon.shape[0]/cache_cutoff))
-        #     for i in range(cache_buckets, -1, -1):
-        #         # print('[INFO] Operating on bucket %1d at %s'%(i,datetime.now().strftime("%H:%M:%S")))
-        #         if i==cache_buckets:
-        #             latlon = latlon.iloc[cache_cutoff*i:]
-        #         else:
-        #             latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon')).iloc[cache_cutoff*i:cache_cutoff*(i+1)]
-        #         latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
-        #         latlon.drop('percent(t)',axis = 1, inplace = True)
-        #         if i!=0:
-        #             latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
+        
+        if latlon.shape[0]>=memory_cutoff:
+            ## if input size is too large to do scalar transforms, break them into buckets
+            latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon'))
+            cache_buckets = int(np.floor(latlon.shape[0]/cache_cutoff))
+            for i in range(cache_buckets, -1, -1):
+                print('[INFO] Operating on bucket %1d at %s'%(i,datetime.now().strftime("%H:%M:%S")))
+                if i==cache_buckets:
+                    latlon = latlon.iloc[cache_cutoff*i:]
+                else:
+                    latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon')).iloc[cache_cutoff*i:cache_cutoff*(i+1)]
+                latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
+                latlon.drop('percent(t)',axis = 1, inplace = True)
+                if i!=0:
+                    latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
                 
-        #     for i in range(1,6):
-        #         latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i)))
-        # else:
-        #     ##else, just operate as normal
-        #     latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
-        #     latlon.drop('percent(t)',axis = 1, inplace = True)
+            for i in range(1,cache_buckets):
+                latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i)))
+        else:
+            ##else, just operate as normal
+            latlon.loc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
+            latlon.drop('percent(t)',axis = 1, inplace = True)
         
         ################################################    
         
