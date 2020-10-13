@@ -84,8 +84,8 @@ if __name__ == "__main__":
     #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
     # static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m')) #there are some bugs in static as some rows have longitude way outside west USA. 
     #%%add dynamic features
-    cache_cutoff = int(2e7)
-    memory_cutoff = int(2e7)
+    cache_cutoff = int(1e7)
+    memory_cutoff = int(4e7)
     year = args.year
     day = args.day
     for MoY in range(12, 0, -1):
@@ -209,7 +209,7 @@ if __name__ == "__main__":
                 if i!=0:
                     latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
                 
-            for i in range(1,cache_buckets):
+            for i in range(1,cache_buckets+1):
                 latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i)))
         else:
             ##else, just operate as normal
