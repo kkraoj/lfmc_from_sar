@@ -54,6 +54,10 @@ If you want to download many maps, consider using [GEE's python API](https://dev
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis.
 1. Run the script. The maps will be downloaded to your Google Drive in a folder called "lfmc_folder". 
 
+**Option 3: Manual-**
+
+250m resolution GeoTiff maps from April 2016 to Oct 2020 have been archived at [Google Drive](https://drive.google.com/file/d/1XxxeaD9AsOYrwVnLMW6X1JWFZaJDQ_Ut/view?usp=sharing).
+
 ## Repository details
 
 The rest of this Readme file pertains to reproducing the analysis and sharing the algorithms associated with the paper. 
