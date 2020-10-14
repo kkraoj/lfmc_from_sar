@@ -40,7 +40,7 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 **Option 1: Code Editor-**
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/b5a7780bae384edff30e512981a9552e?noload=true)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/3410f192118672eeaf05d909719e8da9?noload=true)
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis. 
 1. Click on Run button at the top
