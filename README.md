@@ -33,14 +33,14 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 ### Use/analyse maps on GEE
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/0c7992bed8b328a993ac5bf67ef347e6)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/35c74b98d091c27abd196da4572db605)
 2. The script will import the LFMC maps as an `ImageCollection` and display the mean for 2019. You can then proceed with your analysis with the imported image collection.
 
 ### Download maps to your computer
 
 **Option 1: Code Editor-**
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/57312357fd09a9a132a3702e41bcc4f7?noload=true)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/b5a7780bae384edff30e512981a9552e?noload=true)
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis. 
 1. Click on Run button at the top
@@ -67,13 +67,11 @@ The repository consists of scripts in the "scripts" folder to perform the follow
 
 Rest of the scripts are not needed. They were used for development of the model and preliminary investigation only.
 
-### Input data
+### Training data
 
-The input data used for predicting LFMC can be found in a pickle object (python 3.6) in the input_data folder. It is a large dataframe with rows corresponding to training examples, and columns corresponding to input features. 
+The training data along with the labels can be found on [Radiant MLHub](https://registry.mlhub.earth/10.1016/j.rse.2020.111797/). The documentation corresponding to the training data and meaning of the column names can be found [here](https://radiant-mlhub.s3-us-west-2.amazonaws.com/su-sar-moisture-content/documentation.pdf). 
 
-### Training labels
-
-The training labels can be found as a csv file in the input_data folder. Rows correspond to the examples of manually sampled live fuel moisture content, and the columns correpond to the different attributes of the samples (location, species, live fuel moisture percentage, etc.) This data was scraped from the [National Fuel Moisture Database](https://www.wfas.net/index.php/national-fuel-moisture-database-moisture-drought-103) hosted by the United State Fores Service. We are grateful to them to make this data public. 
+Training labels were scraped from the [National Fuel Moisture Database](https://www.wfas.net/index.php/national-fuel-moisture-database-moisture-drought-103) hosted by the United State Fores Service. We are grateful to them to make this data public. 
 
 ### Trained model
 
