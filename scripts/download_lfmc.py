@@ -23,14 +23,14 @@ ee.Initialize()
 
 #%%
 ### Input start and end dates
-start_date = '2016-01-01'
-end_date =  '2016-01-12'
+start_date = '2016-04-01'
+end_date =  '2020-10-02'
 folder_name = 'lfmc_folder' # folder name in GOogle drive where files should be created
 scale = 250 #pixel size in meters. lower pixels will consumer more memory and will take longer to download. 
 
 #%%#### create strings for start and end dates
 
-collection = ee.ImageCollection('users/kkraoj/lfm-mapper/lfmc_col_24_jul_2020').\
+collection = ee.ImageCollection('users/kkraoj/lfm-mapper/lfmc_col_12_oct_2020').\
                 filterDate(start_date,end_date)
 
 
@@ -38,8 +38,9 @@ crs = ee.Image(collection.first()).projection();
 def resample(image):
     image = image.resample('bilinear').reproject(crs= crs,scale= scale)
     return image
-  
-collection = collection.map(resample)
+
+if scale!=250: #if user requested resolution is different than native resolution (250m), resample to new resolution
+    collection = collection.map(resample)
                 
 n = collection.size().getInfo() # number of images to download
     
