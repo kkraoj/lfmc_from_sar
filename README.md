@@ -24,7 +24,7 @@ On some occassions, the LFMC maps may appear patchy. The patches are caused by i
 
 ## Download LFMC maps
 
-The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_24_jul_2020. You can use the maps in the following ways-
+The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_23_oct_2020. You can use the maps in the following ways-
 
 1. Directly on GEE by importing the collection or 
 2. Downloading the maps to your local computer

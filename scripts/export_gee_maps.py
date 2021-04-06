@@ -85,7 +85,7 @@ def maskCloudsAndSnow(image):
 year = 2020
 day=15
 # end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
-end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(9,10)]
+end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(10,13)]
 start_date_range = list((pd.to_datetime(end_date_range) + DateOffset(months = -3)).strftime('%Y-%m-%d'))
 
 downloaded_files = os.listdir("D:/Krishna/projects/google_drive")

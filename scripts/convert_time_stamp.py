@@ -38,4 +38,4 @@ df['system:time_start'] = [calendar.timegm(datetime.datetime.strptime(s, "%Y-%m-
     
 df['system:time_end']= [calendar.timegm(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple())*1000 for s in enddates]
 df.tail()
-df.to_csv("D:/Krishna/projects/vwc_from_radar/gee-app/upload_meta_data_12_oct_2020.csv")
+# df.to_csv("D:/Krishna/projects/vwc_from_radar/gee-app/upload_meta_data_12_oct_2020.csv")
