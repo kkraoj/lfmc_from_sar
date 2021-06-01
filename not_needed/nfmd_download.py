@@ -53,3 +53,24 @@ for s1 in range(1, len(d1.options)):
                     d5.select_by_index(s5)
                     time.sleep(pause) 
                     driver.find_element_by_css_selector("#myFormD > table > tbody > tr:nth-child(2) > td > input").click()
+
+# d1 = Select(driver.find_element_by_css_selector(level[1]))
+# d1.select_by_index(10)
+# time.sleep(pause) 
+# d2 = Select(driver.find_element_by_css_selector(level[2]))
+# for s2 in range(1, len(d2.options)):
+#     d2.select_by_index(s2)
+#     time.sleep(pause) 
+#     d3 = Select(driver.find_element_by_css_selector(level[3]))
+#     for s3 in range(1, len(d3.options)):
+#         d3.select_by_index(s3)
+#         time.sleep(pause) 
+#         d4 = Select(driver.find_element_by_css_selector(level[4]))
+#         for s4 in range(1, len(d4.options)):
+#             d4.select_by_index(s4)
+#             time.sleep(pause) 
+#             d5 = Select(driver.find_element_by_css_selector(level[5]))
+#             for s5 in range(1, len(d5.options)):
+#                 d5.select_by_index(s5)
+#                 time.sleep(pause) 
+#                 driver.find_element_by_css_selector("#myFormD > table > tbody > tr:nth-child(2) > td > input").click()

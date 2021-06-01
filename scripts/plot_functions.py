@@ -21,10 +21,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Polygon, Patch
 
-import cartopy.crs as ccrs
+# import cartopy.crs as ccrs
 from osgeo import gdal, osr, gdal_array
-from cartopy.feature import ShapelyFeature 
-from cartopy.io.shapereader import Reader
+# from cartopy.feature import ShapelyFeature 
+# from cartopy.io.shapereader import Reader
 
 
 from sklearn.metrics import mean_squared_error, r2_score
@@ -635,9 +635,100 @@ def nfmd_sites():
     
 
     plt.show()
-    print('[INFO] Mean MAP in West USA = %d mm/yr, in sites = %d mm/yr'%(np.nanmean(p), latlon.ppt.mean()))
-    print('[INFO] Mean MAT in West USA = %d C, in sites = %d C'%(np.nanmean(t), latlon.temp.mean()))
-    print('[INFO] Mean Elevation in West USA = %d m, in sites = %d m'%(np.nanmean(e), latlon.elevation.mean()))
+
+def nfmd_all_sites():
+    ################################################################################
+    
+    
+    fig, ax1 = plt.subplots(figsize = (6,6))
+    
+    
+    # fig, _ = plt.subplots(2,3,figsize=(0.67*DC, SC), constrained_layout = True)
+    # cols = 5
+    # grid = plt.GridSpec(2,cols, wspace=-0,hspace= 0.2  , figure = fig)
+    
+    # ax1 = plt.subplot(grid[0:,0:cols-1])
+    # ax2 = plt.subplot(grid[0, cols-1])
+    # ax3 = plt.subplot(grid[1, cols-1]) 
+    
+    dir_data = "D:/Krishna/projects/vwc_from_radar/data/fuel_moisture"
+    os.chdir(dir_data)
+
+    ##############################################################################
+    ### plot of data record
+    os.chdir('D:/Krishna/projects/vwc_from_radar')
+    df = pd.read_pickle('data/df_sar_vwc_all')
+    df.residual = df.residual.abs()
+    # df = df.loc[df.residual<=2, :]
+    #df = df.loc[df.data_points>=10, :]
+    latlon = pd.read_csv('data/fuel_moisture/nfmd_spatial.csv', index_col = 0)
+    ### import 50 sites
+    # selected_sites = pd.read_pickle('data/lstm_input_data_pure+all_same_28_may_2019_res_SM_gap_3M').site.unique()
+    # selected_sites = list(frame.site.unique())
+    # selected_sites.remove('Baker Park') # This is in south dakota
+    selected_states = ["CA","OR","WA","WY","MT","NV","CO","AZ","UT","TX","NM","ID"]
+    latlon = latlon.loc[latlon.State.isin(selected_states)]
+    latlon['color'] = 'maroon'
+    # latlon.loc[selected_sites,'color'] = 'maroon'
+    # latlon = latlon.loc[selected_sites] # plotting only red sites for IGARSS
+    # latlon.sort_values('color', inplace = True)
+    # latlon['data_points'] = df.groupby('Site').obs_date.count()
+    latlon.sort_values('observations',inplace = True, ascending = False)
+    #latlon = latlon.loc[latlon.data_points>=10,:]
+    sns.set_style('ticks')
+    alpha = 1
+    
+    m = Basemap(llcrnrlon=-119,llcrnrlat=22.8,urcrnrlon=-92,urcrnrlat=52,
+            projection='lcc',lat_1=33,lat_2=45,lon_0=-95, ax = ax1)
+    m.drawmapboundary(fill_color='lightcyan',zorder = 0.9)
+    #-----------------------------------------------------------------------
+    # load the shapefile, use the name 'states'
+    m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True)
+    statenames=[]
+    for shapedict in m.states_info:
+        statename = shapedict['NAME']
+        statenames.append(statename)
+    for nshape,seg in enumerate(m.states): 
+        poly = Polygon(seg,facecolor='papayawhip',edgecolor='k', zorder  = 2,alpha = 0.6)
+        ax1.add_patch(poly)
+    ### adding ndvi
+    plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
+                   s=30,c=latlon.color.values,edgecolor = 'lightgrey',linewidth = 0.5,\
+                        marker='o',alpha = 0.7,latlon = True, zorder = 4,\
+                        )
+    #################
+    ds = gdal.Open(r"D:\Krishna\projects\vwc_from_radar\data\usa_shapefile\west_usa_ndvi.tif")
+    data = ds.ReadAsArray()
+    data = np.ma.masked_where(data<=0,data)
+    x = np.linspace(-134.4, -134.4+0.1*data.shape[1]-0.1,data.shape[1]) #from raster.GetGeoTransform()
+    y  = np.linspace(52.0,52.0-0.1*data.shape[0]+0.1,data.shape[0]) 
+    xx, yy = np.meshgrid(x, y)  
+    m.pcolormesh(xx, yy, data, cmap = 'YlGn',vmin =0,vmax = 250,\
+                 zorder = 1,latlon=True) 
+    m1 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=0.2*100)
+    m2 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=0.2*500)
+    m3 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
+                     linewidth = 0.5, s=0.2*1000)
+    legend_markers = [m1, m2,m3]
+
+    labels =['100','500','1000']
+
+    # legend = ax1.legend(handles=legend_markers, labels=labels, loc='upper center',
+        # scatterpoints=1,title = 'No. of Measurements',ncol = 3,\
+        # handletextpad=0,bbox_to_anchor = (0.5,0.01),fontsize = 'large',borderpad = 0.5)
+    # plt.setp(legend.get_title(),fontsize='large')
+    ###############
+    m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
+                    name='states', drawbounds=True)
+    plt.setp(ax1.spines.values(), color='w')
+
+    # print(len(latlon.site.unique()))
+
+    plt.show()
+
 def rmsd(df):
     df.index = df.date
     df = df.groupby('fuel').resample('1d').asfreq()['percent'].interpolate()
@@ -1037,6 +1128,7 @@ def main():
     # landcover_table()
 #     microwave_importance()
     # nfmd_sites()
+    nfmd_all_sites()
 #     scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
@@ -1050,6 +1142,6 @@ def main():
     # scatter_lfmc_vpd()
     # lfmc_vpd_corr_bar()
 #    seasonal_errors()
-    calc_mixed_sites_error()
+    # calc_mixed_sites_error()
 if __name__ == '__main__':
     main()

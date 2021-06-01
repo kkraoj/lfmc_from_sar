@@ -35,7 +35,7 @@ os.chdir(dir_data)
 #           "axes.labelcolor" : "w",
 #           "axes.edgecolor" : "w"}
 # plt.rcParams.update(params)
-date = '2018-07-01'
+date = '2021-05-01'
 fname = 'map/dynamic_maps/lfmc/lfmc_map_%s.tif'%date
 
 ds = gdal.Open(fname)

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Feb 13 05:13:21 2019
-
 @author: kkrao
 """
 
 ## add slope ### py 2.7 script
-from dirs import dir_data, dir_codes,dir_figures
 from osgeo import gdal, osr
 import os ,argparse
 import pandas as pd
@@ -14,133 +12,19 @@ import numpy as np
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import pickle
+from dirs import dir_data, dir_codes,dir_figures
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib import ticker
 from matplotlib.colors import ListedColormap
 from datetime import datetime 
 import seaborn as sns
-from keras.models import load_model
+    
 
 sns.set_style('ticks')
 
 
-cols = ['latitude',
- 'longitude',
- 'percent(t)',
- 'blue(t)',
- 'blue(t-1)',
- 'blue(t-2)',
- 'blue(t-3)',
- 'canopy_height(t)',
- 'canopy_height(t-1)',
- 'canopy_height(t-2)',
- 'canopy_height(t-3)',
- 'clay(t)',
- 'clay(t-1)',
- 'clay(t-2)',
- 'clay(t-3)',
- 'elevation(t)',
- 'elevation(t-1)',
- 'elevation(t-2)',
- 'elevation(t-3)',
- 'forest_cover(t)',
- 'forest_cover(t-1)',
- 'forest_cover(t-2)',
- 'forest_cover(t-3)',
- 'green(t)',
- 'green(t-1)',
- 'green(t-2)',
- 'green(t-3)',
- 'ndvi(t)',
- 'ndvi(t-1)',
- 'ndvi(t-2)',
- 'ndvi(t-3)',
- 'ndwi(t)',
- 'ndwi(t-1)',
- 'ndwi(t-2)',
- 'ndwi(t-3)',
- 'nir(t)',
- 'nir(t-1)',
- 'nir(t-2)',
- 'nir(t-3)',
- 'nirv(t)',
- 'nirv(t-1)',
- 'nirv(t-2)',
- 'nirv(t-3)',
- 'red(t)',
- 'red(t-1)',
- 'red(t-2)',
- 'red(t-3)',
- 'sand(t)',
- 'sand(t-1)',
- 'sand(t-2)',
- 'sand(t-3)',
- 'silt(t)',
- 'silt(t-1)',
- 'silt(t-2)',
- 'silt(t-3)',
- 'slope(t)',
- 'slope(t-1)',
- 'slope(t-2)',
- 'slope(t-3)',
- 'swir(t)',
- 'swir(t-1)',
- 'swir(t-2)',
- 'swir(t-3)',
- 'vh(t)',
- 'vh(t-1)',
- 'vh(t-2)',
- 'vh(t-3)',
- 'vh_blue(t)',
- 'vh_blue(t-1)',
- 'vh_blue(t-2)',
- 'vh_blue(t-3)',
- 'vh_green(t)',
- 'vh_green(t-1)',
- 'vh_green(t-2)',
- 'vh_green(t-3)',
- 'vh_nir(t)',
- 'vh_nir(t-1)',
- 'vh_nir(t-2)',
- 'vh_nir(t-3)',
- 'vh_red(t)',
- 'vh_red(t-1)',
- 'vh_red(t-2)',
- 'vh_red(t-3)',
- 'vh_swir(t)',
- 'vh_swir(t-1)',
- 'vh_swir(t-2)',
- 'vh_swir(t-3)',
- 'vh_vv(t)',
- 'vh_vv(t-1)',
- 'vh_vv(t-2)',
- 'vh_vv(t-3)',
- 'vv(t)',
- 'vv(t-1)',
- 'vv(t-2)',
- 'vv(t-3)',
- 'vv_blue(t)',
- 'vv_blue(t-1)',
- 'vv_blue(t-2)',
- 'vv_blue(t-3)',
- 'vv_green(t)',
- 'vv_green(t-1)',
- 'vv_green(t-2)',
- 'vv_green(t-3)',
- 'vv_nir(t)',
- 'vv_nir(t-1)',
- 'vv_nir(t-2)',
- 'vv_nir(t-3)',
- 'vv_red(t)',
- 'vv_red(t-1)',
- 'vv_red(t-2)',
- 'vv_red(t-3)',
- 'vv_swir(t)',
- 'vv_swir(t-1)',
- 'vv_swir(t-2)',
- 'vv_swir(t-3)']
-
+from keras.models import load_model
 
 def getArgs():
 
@@ -197,14 +81,7 @@ if __name__ == "__main__":
         return data[py,px]
     #static = pd.read_csv(os.path.join(dir_data, 'map/static_features.csv'), index_col = 0)
     #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
-    static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')) #there are some bugs in static as some rows have longitude way outside west USA. 
-    static = static.loc[static['forest_cover(t)'].astype(int).isin(encoder.classes_)]
-    static['forest_cover(t)'] = encoder.transform(static['forest_cover(t)'].values)
-    
-    for col in static.columns:
-            if 'forest_cover' in col:
-                static[col] = static['forest_cover(t)']
-                
+    # static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m')) #there are some bugs in static as some rows have longitude way outside west USA. 
     #%%add dynamic features
     cache_cutoff = int(1e7)
     memory_cutoff = int(4e7)
@@ -268,8 +145,8 @@ if __name__ == "__main__":
     #    dyn = pd.read_csv('map/map_features/dynamic_features_%s.csv'%date, index_col = 0)
         # dyn.to_pickle('map/dynamic_features_%s'%date)
         # latlon.replace([np.inf, -np.inf], [1e5, -1e5],inplace = True) #not removing -np.inf for some reason. 
-        # latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
-        # latlon = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')).join(latlon.drop(['latitude','longitude'], axis = 1)) ## 3mins
+        latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
+        latlon = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')).join(latlon.drop(['latitude','longitude'], axis = 1)) ## 3mins
         # exit
         # inputs.to_pickle('map/inputs_%s'%date)
         # static = None
@@ -278,25 +155,28 @@ if __name__ == "__main__":
        
         # dataset = pd.read_pickle('map/inputs_%s'%date)
         # dataset.drop(['latitude', 'longitude'], axis = 1, inplace = True)
-        # latlon = latlon.reindex(sorted(latlon.columns), axis=1)
+        latlon = latlon.reindex(sorted(latlon.columns), axis=1)
        
         ### add percent col to start
-        # latlon['percent(t)'] = 100 #dummy
-        
-        
-        # latlon = latlon[cols]
+        latlon['percent(t)'] = 100 #dummy
+        cols = list(latlon.columns.values)
+        cols.remove('percent(t)')
+        cols.remove('latitude')
+        cols.remove('longitude')
+        cols = ['latitude', 'longitude','percent(t)']+cols
+        latlon = latlon[cols]
        
-        # #predictions only on previously trained landcovers
-        # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)]
-        # latlon['forest_cover(t)'] = encoder.transform(latlon['forest_cover(t)'].values)
+        #predictions only on previously trained landcovers
+        latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)]
+        latlon['forest_cover(t)'] = encoder.transform(latlon['forest_cover(t)'].values)
        
-        # for col in latlon.columns:
-        #     if 'forest_cover' in col:
-        #         latlon[col] = latlon['forest_cover(t)']
+        for col in latlon.columns:
+            if 'forest_cover' in col:
+                latlon[col] = latlon['forest_cover(t)']
        
         ##scale
         
-        # latlon.dropna(inplace = True)
+        latlon.dropna(inplace = True)
         # latlon = pd.to_numeric(latlon, downcast = "signed")
         # latlon = latlon.apply(pd.to_numeric,downcast='signed')
         # latlon = latlon.apply(pd.to_numeric)
@@ -323,48 +203,15 @@ if __name__ == "__main__":
                     latlon = latlon.iloc[cache_cutoff*i:]
                 else:
                     latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon')).iloc[cache_cutoff*i:cache_cutoff*(i+1)]
-            
-                ## combining static here to save memory
-                latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
-                latlon.dropna(inplace = True)
-                latlon = latlon.merge(static, on = ['latitude','longitude'], how = "inner") ## 3mins
-                latlon['percent(t)'] = 100 #dummy
-                latlon = latlon[cols]
-                
-                #############
                 latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
                 latlon.drop('percent(t)',axis = 1, inplace = True)
                 if i!=0:
                     latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
-                # scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
-                #     # np.save('map/scaled_%s.npy'%date, scaled)
-                # latlon = latlon[['latitude','longitude']]   
-                # print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-                # yhat = model.predict(scaled)
-                # # exit
-                # scaled = None
-               
-                # inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-                # # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-                # yhat = None
-               
-                # # latlon = pd.read_pickle('map/inputs_%s'%date)
-                # #predictions only on previously trained landcovers
-                # # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
-               
-                # latlon['pred_fmc'] = inv_yhat
-                
-                
                 
             for i in range(1,cache_buckets+1):
-                latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))).astype(np.float32)
+                latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i)))
         else:
             ##else, just operate as normal
-            latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
-            latlon.dropna(inplace = True)
-            latlon = static.join(latlon.drop(['latitude','longitude'], axis = 1)) ## 3mins
-            latlon = latlon[cols]
-
             latlon.loc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
             latlon.drop('percent(t)',axis = 1, inplace = True)
         
@@ -434,4 +281,3 @@ if __name__ == "__main__":
         array = None
         output_raster.FlushCache()
         output_raster = None  
-    

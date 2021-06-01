@@ -27,121 +27,124 @@ sns.set_style('ticks')
 
 cols = ['latitude',
  'longitude',
- 'percent(t)',
- 'blue(t)',
- 'blue(t-1)',
- 'blue(t-2)',
- 'blue(t-3)',
- 'canopy_height(t)',
- 'canopy_height(t-1)',
- 'canopy_height(t-2)',
- 'canopy_height(t-3)',
- 'clay(t)',
- 'clay(t-1)',
- 'clay(t-2)',
- 'clay(t-3)',
- 'elevation(t)',
- 'elevation(t-1)',
- 'elevation(t-2)',
- 'elevation(t-3)',
- 'forest_cover(t)',
- 'forest_cover(t-1)',
- 'forest_cover(t-2)',
- 'forest_cover(t-3)',
- 'green(t)',
- 'green(t-1)',
- 'green(t-2)',
- 'green(t-3)',
- 'ndvi(t)',
- 'ndvi(t-1)',
- 'ndvi(t-2)',
- 'ndvi(t-3)',
- 'ndwi(t)',
- 'ndwi(t-1)',
- 'ndwi(t-2)',
- 'ndwi(t-3)',
- 'nir(t)',
- 'nir(t-1)',
- 'nir(t-2)',
- 'nir(t-3)',
- 'nirv(t)',
- 'nirv(t-1)',
- 'nirv(t-2)',
- 'nirv(t-3)',
- 'red(t)',
- 'red(t-1)',
- 'red(t-2)',
- 'red(t-3)',
- 'sand(t)',
- 'sand(t-1)',
- 'sand(t-2)',
- 'sand(t-3)',
- 'silt(t)',
- 'silt(t-1)',
- 'silt(t-2)',
- 'silt(t-3)',
  'slope(t)',
- 'slope(t-1)',
- 'slope(t-2)',
+ 'elevation(t)',
+ 'canopy_height(t)',
+ 'forest_cover(t)',
+ 'silt(t)',
+ 'sand(t)',
+ 'clay(t)',
+ 'elevation(t-3)',
  'slope(t-3)',
- 'swir(t)',
- 'swir(t-1)',
- 'swir(t-2)',
+ 'forest_cover(t-3)',
+ 'canopy_height(t-3)',
+ 'sand(t-3)',
+ 'silt(t-3)',
+ 'clay(t-3)',
+ 'elevation(t-2)',
+ 'slope(t-2)',
+ 'forest_cover(t-2)',
+ 'canopy_height(t-2)',
+ 'sand(t-2)',
+ 'silt(t-2)',
+ 'clay(t-2)',
+ 'elevation(t-1)',
+ 'slope(t-1)',
+ 'forest_cover(t-1)',
+ 'canopy_height(t-1)',
+ 'sand(t-1)',
+ 'silt(t-1)',
+ 'clay(t-1)',
+ 'blue(t-3)',
+ 'green(t-3)',
+ 'red(t-3)',
+ 'nir(t-3)',
  'swir(t-3)',
- 'vh(t)',
- 'vh(t-1)',
- 'vh(t-2)',
+ 'ndvi(t-3)',
+ 'ndwi(t-3)',
+ 'nirv(t-3)',
  'vh(t-3)',
- 'vh_blue(t)',
- 'vh_blue(t-1)',
- 'vh_blue(t-2)',
- 'vh_blue(t-3)',
- 'vh_green(t)',
- 'vh_green(t-1)',
- 'vh_green(t-2)',
- 'vh_green(t-3)',
- 'vh_nir(t)',
- 'vh_nir(t-1)',
- 'vh_nir(t-2)',
- 'vh_nir(t-3)',
- 'vh_red(t)',
- 'vh_red(t-1)',
- 'vh_red(t-2)',
- 'vh_red(t-3)',
- 'vh_swir(t)',
- 'vh_swir(t-1)',
- 'vh_swir(t-2)',
- 'vh_swir(t-3)',
- 'vh_vv(t)',
- 'vh_vv(t-1)',
- 'vh_vv(t-2)',
- 'vh_vv(t-3)',
- 'vv(t)',
- 'vv(t-1)',
- 'vv(t-2)',
  'vv(t-3)',
- 'vv_blue(t)',
- 'vv_blue(t-1)',
- 'vv_blue(t-2)',
+ 'vh_vv(t-3)',
+ 'vh_blue(t-3)',
+ 'vh_green(t-3)',
+ 'vh_red(t-3)',
+ 'vh_nir(t-3)',
+ 'vh_swir(t-3)',
  'vv_blue(t-3)',
- 'vv_green(t)',
- 'vv_green(t-1)',
- 'vv_green(t-2)',
  'vv_green(t-3)',
- 'vv_nir(t)',
- 'vv_nir(t-1)',
- 'vv_nir(t-2)',
- 'vv_nir(t-3)',
- 'vv_red(t)',
- 'vv_red(t-1)',
- 'vv_red(t-2)',
  'vv_red(t-3)',
- 'vv_swir(t)',
- 'vv_swir(t-1)',
+ 'vv_nir(t-3)',
+ 'vv_swir(t-3)',
+ 'blue(t-2)',
+ 'green(t-2)',
+ 'red(t-2)',
+ 'nir(t-2)',
+ 'swir(t-2)',
+ 'ndvi(t-2)',
+ 'ndwi(t-2)',
+ 'nirv(t-2)',
+ 'vh(t-2)',
+ 'vv(t-2)',
+ 'vh_vv(t-2)',
+ 'vh_blue(t-2)',
+ 'vh_green(t-2)',
+ 'vh_red(t-2)',
+ 'vh_nir(t-2)',
+ 'vh_swir(t-2)',
+ 'vv_blue(t-2)',
+ 'vv_green(t-2)',
+ 'vv_red(t-2)',
+ 'vv_nir(t-2)',
  'vv_swir(t-2)',
- 'vv_swir(t-3)']
-
-
+ 'blue(t-1)',
+ 'green(t-1)',
+ 'red(t-1)',
+ 'nir(t-1)',
+ 'swir(t-1)',
+ 'ndvi(t-1)',
+ 'ndwi(t-1)',
+ 'nirv(t-1)',
+ 'vh(t-1)',
+ 'vv(t-1)',
+ 'vh_vv(t-1)',
+ 'vh_blue(t-1)',
+ 'vh_green(t-1)',
+ 'vh_red(t-1)',
+ 'vh_nir(t-1)',
+ 'vh_swir(t-1)',
+ 'vv_blue(t-1)',
+ 'vv_green(t-1)',
+ 'vv_red(t-1)',
+ 'vv_nir(t-1)',
+ 'vv_swir(t-1)',
+ 'blue(t)',
+ 'green(t)',
+ 'red(t)',
+ 'nir(t)',
+ 'swir(t)',
+ 'ndvi(t)',
+ 'ndwi(t)',
+ 'nirv(t)',
+ 'vh(t)',
+ 'vv(t)',
+ 'vh_vv(t)',
+ 'vh_blue(t)',
+ 'vh_green(t)',
+ 'vh_red(t)',
+ 'vh_nir(t)',
+ 'vh_swir(t)',
+ 'vv_blue(t)',
+ 'vv_green(t)',
+ 'vv_red(t)',
+ 'vv_nir(t)',
+ 'vv_swir(t)',
+ 'percent(t)']
+# cols = list(latlon.columns.values)
+cols.remove('percent(t)')
+cols.remove('latitude')
+cols.remove('longitude')
+cols = ['latitude', 'longitude','percent(t)']+cols ## correct column order
 def getArgs():
 
     # setup parser
@@ -198,6 +201,7 @@ if __name__ == "__main__":
     #static = pd.read_csv(os.path.join(dir_data, 'map/static_features.csv'), index_col = 0)
     #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
     static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')) #there are some bugs in static as some rows have longitude way outside west USA. 
+    static = static.iloc[:10000]
     static = static.loc[static['forest_cover(t)'].astype(int).isin(encoder.classes_)]
     static['forest_cover(t)'] = encoder.transform(static['forest_cover(t)'].values)
     
@@ -210,16 +214,18 @@ if __name__ == "__main__":
     memory_cutoff = int(4e7)
     year = args.year
     day = args.day
-    for MoY in range(12, 0, -1):
+    for MoY in range(12, 11, -1):
     # for MoY in range(12, 0, -1):
     #    latlon = pd.read_csv('data/map/map_lat_lon.csv', index_col = 0)
     #    latlon.to_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36'))
         latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
+        latlon = latlon.iloc[:10000]
+        
         date = '%04d-%02d-%02d'%(year, MoY, day)
         
-        if os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date)):
-            print('[INFO] Skipping %s because LFMC map already exists.'%(date))
-            continue
+        # if os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date)):
+            # print('[INFO] Skipping %s because LFMC map already exists.'%(date))
+            # continue
         
         print('[INFO] Making feature file for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
         ####sar
@@ -370,68 +376,68 @@ if __name__ == "__main__":
         
         ################################################    
         
-        scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
-            # np.save('map/scaled_%s.npy'%date, scaled)
-        latlon = latlon[['latitude','longitude']]   
-        print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-        yhat = model.predict(scaled)
-        # exit
-        scaled = None
+    #     scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
+    #         # np.save('map/scaled_%s.npy'%date, scaled)
+    #     latlon = latlon[['latitude','longitude']]   
+    #     print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
+    #     yhat = model.predict(scaled)
+    #     # exit
+    #     scaled = None
        
-        inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-        # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-        yhat = None
+    #     inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+    #     # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+    #     yhat = None
        
-        # latlon = pd.read_pickle('map/inputs_%s'%date)
-        #predictions only on previously trained landcovers
-        # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+    #     # latlon = pd.read_pickle('map/inputs_%s'%date)
+    #     #predictions only on previously trained landcovers
+    #     # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
        
-        latlon['pred_fmc'] = inv_yhat
-    #    latlon[['latitude','longitude','pred_fmc']].to_pickle(fname)
-        # df = latlon[['latitude','longitude','pred_fmc']]
-        df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(latlon[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
-        latlon = None
-        inv_yhat = None
-        print('[INFO] Saving lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-        df['lat_index'] = df.latitude.rank(method = 'dense', ascending = False).astype(int)-1
-        df['lon_index'] = df.longitude.rank(method = 'dense', ascending = True).astype(int)-1
+    #     latlon['pred_fmc'] = inv_yhat
+    # #    latlon[['latitude','longitude','pred_fmc']].to_pickle(fname)
+    #     # df = latlon[['latitude','longitude','pred_fmc']]
+    #     df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(latlon[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
+    #     latlon = None
+    #     inv_yhat = None
+    #     print('[INFO] Saving lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
+    #     df['lat_index'] = df.latitude.rank(method = 'dense', ascending = False).astype(int)-1
+    #     df['lon_index'] = df.longitude.rank(method = 'dense', ascending = True).astype(int)-1
        
       
-        u_lons = np.sort(df.longitude.unique())
-        u_lats = np.sort(df.latitude.unique())[::-1]
-        xx, yy = np.meshgrid(u_lons,u_lats)
-        zz = xx.copy()
-        u_lons = None
-        u_lats = None
-        zz[:] = -9999
-        # df.dropna(inplace = True)
-        zz[df.lat_index.values,df.lon_index.values] = df.pred_fmc.values
-        zz[np.isnan(zz)] = -9999
-        df = None
-        array = zz.astype(int)
-        zz = None
+    #     u_lons = np.sort(df.longitude.unique())
+    #     u_lats = np.sort(df.latitude.unique())[::-1]
+    #     xx, yy = np.meshgrid(u_lons,u_lats)
+    #     zz = xx.copy()
+    #     u_lons = None
+    #     u_lats = None
+    #     zz[:] = -9999
+    #     # df.dropna(inplace = True)
+    #     zz[df.lat_index.values,df.lon_index.values] = df.pred_fmc.values
+    #     zz[np.isnan(zz)] = -9999
+    #     df = None
+    #     array = zz.astype(int)
+    #     zz = None
          
-        xmin,ymin,xmax,ymax = [xx.min(),yy.min(),xx.max(),yy.max()]
-        xx = None
-        yy = None
-        nrows,ncols = np.shape(array)
-        xres = (xmax-xmin)/float(ncols)
-        yres = (ymax-ymin)/float(nrows)
-        geotransform=(xmin,xres,0,ymax,0, -yres)   
-        # That's (top left x, w-e pixel resolution, rotation (0 if North is up), 
-        #         top left y, rotation (0 if North is up), n-s pixel resolution)
-          # I don't know why rotation is in twice???
+    #     xmin,ymin,xmax,ymax = [xx.min(),yy.min(),xx.max(),yy.max()]
+    #     xx = None
+    #     yy = None
+    #     nrows,ncols = np.shape(array)
+    #     xres = (xmax-xmin)/float(ncols)
+    #     yres = (ymax-ymin)/float(nrows)
+    #     geotransform=(xmin,xres,0,ymax,0, -yres)   
+    #     # That's (top left x, w-e pixel resolution, rotation (0 if North is up), 
+    #     #         top left y, rotation (0 if North is up), n-s pixel resolution)
+    #       # I don't know why rotation is in twice???
          
-        output_raster = gdal.GetDriverByName('GTiff').Create(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date),ncols, nrows, 1 ,gdal.GDT_Int16)  # Open the file
-        output_raster.SetGeoTransform(geotransform)  # Specify its coordinates
-        srs = osr.SpatialReference()                 # Establish its coordinate encoding
-        srs.ImportFromEPSG(4326)                     # This one specifies WGS84 lat long.
-                                                    # Anyone know how to specify the 
-                                                      # IAU2000:49900 Mars encoding?
-        output_raster.SetProjection(srs.ExportToWkt() )   # Exports the coordinate system 
-                                                            # to the file
-        output_raster.GetRasterBand(1).WriteArray(array)   # Writes my array to the raster
-        array = None
-        output_raster.FlushCache()
-        output_raster = None  
+    #     output_raster = gdal.GetDriverByName('GTiff').Create(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date),ncols, nrows, 1 ,gdal.GDT_Int16)  # Open the file
+    #     output_raster.SetGeoTransform(geotransform)  # Specify its coordinates
+    #     srs = osr.SpatialReference()                 # Establish its coordinate encoding
+    #     srs.ImportFromEPSG(4326)                     # This one specifies WGS84 lat long.
+    #                                                 # Anyone know how to specify the 
+    #                                                   # IAU2000:49900 Mars encoding?
+    #     output_raster.SetProjection(srs.ExportToWkt() )   # Exports the coordinate system 
+    #                                                         # to the file
+    #     output_raster.GetRasterBand(1).WriteArray(array)   # Writes my array to the raster
+    #     array = None
+    #     output_raster.FlushCache()
+    #     output_raster = None  
     

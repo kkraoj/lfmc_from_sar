@@ -82,10 +82,10 @@ def maskCloudsAndSnow(image):
   return image.updateMask(c).addBands(image.metadata('system:time_start'));
 
 ###Filter by metadata properties.
-year = 2020
-day=15
+year = 2021
+day=1
 # end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,13)]
-end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(10,13)]
+end_date_range = ['%s-%02d-%02d'%(year,month,day) for month in range(1,6)]
 start_date_range = list((pd.to_datetime(end_date_range) + DateOffset(months = -3)).strftime('%Y-%m-%d'))
 
 downloaded_files = os.listdir("D:/Krishna/projects/google_drive")

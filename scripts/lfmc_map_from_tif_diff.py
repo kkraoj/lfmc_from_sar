@@ -35,8 +35,8 @@ os.chdir(dir_data)
 #           "axes.labelcolor" : "w",
 #           "axes.edgecolor" : "w"}
 # plt.rcParams.update(params)
-date = '2019-07-01'
-fname = 'map/dynamic_maps/lfmc_pre_cloud_filter/lfmc_map_%s.tif'%date
+date = '2021-05-01'
+fname = 'map/dynamic_maps/lfmc/lfmc_map_%s.tif'%date
 
 ds = gdal.Open(fname)
 gt = ds.GetGeoTransform()
@@ -44,8 +44,8 @@ gt = ds.GetGeoTransform()
 data = ds.GetRasterBand(1).ReadAsArray().astype(float)
 data[data<0] = np.nan
 
-date = '2020-07-01'
-fname = 'map/dynamic_maps/lfmc_pre_cloud_filter/lfmc_map_%s.tif'%date
+date = '2020-05-01'
+fname = 'map/dynamic_maps/lfmc/lfmc_map_%s.tif'%date
 
 ds = gdal.Open(fname)
 data2 = ds.GetRasterBand(1).ReadAsArray().astype(float)
@@ -62,9 +62,9 @@ x, y = np.meshgrid(x, y)
 x.shape
 y.shape
 data.shape
-latlon = pd.read_pickle("map/map_lat_lon_p36")
+# latlon = pd.read_pickle("map/map_lat_lon_p36")
 
-plt.ioff()
+# plt.ioff()
 fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
 
 m = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-92,urcrnrlat=53,
@@ -99,8 +99,6 @@ plot=m.scatter(x,y, zorder = 2,
 m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
                     name='states', drawbounds=True, linewidth = 0.5)
 ax.axis('off')
-# plt.show()
-# fig, ax = plt.subplots(figsize=(3*enlarge,3*enlarge))
 
 cax = fig.add_axes([0.7, 0.45, 0.03, 0.3])
     
@@ -109,6 +107,6 @@ cb0 = fig.colorbar(plot,ax=ax,cax=cax,ticks = np.linspace(-20,20,5),extend='both
 cax.set_yticklabels(['<-20','-10','0','10','>20']) 
 
 
-plt.savefig(os.path.join(dir_figures,'diff_Jun_2020_2019.jpg'), \
+plt.savefig(os.path.join(dir_figures,'diff_May_2021_2020.jpg'), \
                                   dpi =300, bbox_inches="tight")
-# plt.show()
+plt.show()

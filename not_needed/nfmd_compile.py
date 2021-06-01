@@ -13,7 +13,7 @@ from dirs import dir_data
 
 os.chdir(dir_data)
 df = pd.DataFrame()
-date = '24_may_2019'
+date = 'CA_03_may_2021'
 for file in os.listdir('fuel_moisture/raw_%s'%date):
     df = df.append([pd.read_table('fuel_moisture/raw_%s/'%date+file)], ignore_index = True)
 df.drop('Unnamed: 7', axis = 1, inplace = True)
