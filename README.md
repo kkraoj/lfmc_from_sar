@@ -24,7 +24,9 @@ On some occassions, the LFMC maps may appear patchy. The patches are caused by i
 
 ## Download LFMC maps
 
+
 The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_23_oct_2020. You can use the maps in the following ways-
+
 
 1. Directly on GEE by importing the collection or 
 2. Downloading the maps to your local computer
@@ -40,7 +42,7 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 **Option 1: Code Editor-**
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/b5a7780bae384edff30e512981a9552e?noload=true)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/3410f192118672eeaf05d909719e8da9?noload=true)
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis. 
 1. Click on Run button at the top
@@ -53,6 +55,10 @@ If you want to download many maps, consider using [GEE's python API](https://dev
 1. Modify the `start_date` and `end_date` to suit your needs
 1. Modify `scale` to set pixel resolution of output maps. The native resolution of the maps are 250m but you can rescale to whatever resolution you want to suit your analysis.
 1. Run the script. The maps will be downloaded to your Google Drive in a folder called "lfmc_folder". 
+
+**Option 3: Manual-**
+
+250m resolution GeoTiff maps from April 2016 to Oct 2020 have been archived at [Google Drive](https://drive.google.com/file/d/1XxxeaD9AsOYrwVnLMW6X1JWFZaJDQ_Ut/view?usp=sharing).
 
 ## Repository details
 
