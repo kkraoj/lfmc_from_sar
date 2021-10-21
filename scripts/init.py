@@ -4,10 +4,12 @@ Created on Mon May 21 20:34:43 2018
 
 @author: kkrao
 """
-
-dir_data = "D:/Krishna/projects/vwc_from_radar/data"
+#%% Directory where code and data is saved. Change this to point to path
+## after downloading from github.
 dir_codes=  "D:/Krishna/projects/vwc_from_radar/codes"
-dir_figures = "D:/Krishna/projects/vwc_from_radar/figures"
+dir_data = "D:/Krishna/projects/vwc_from_radar/codes/input_data"
+
+#%% Leave these alone. 
 lc_dict = {14: 'crop',
             20: 'crop',
             30: 'crop',

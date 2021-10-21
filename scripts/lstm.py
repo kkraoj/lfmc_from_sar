@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Apr 28 00:32:04 2019
+Created on SOct 20 2021
 
 @author: kkrao
 """
@@ -37,6 +37,34 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2019-05-31', \
                 resolution = '1M',window = '1M', max_gap = '4M'):
+    """
+    Interpolates data within df. This is used for interpolating LSTM data 
+    because RNN needs LSTM at regular intervals, but LSTM is not measured
+    at regular intervals in NFMD.
+
+    Parameters
+    ----------
+    df : TYPE
+        DESCRIPTION.
+    var : TYPE, optional
+        DESCRIPTION. The default is 'percent'.
+    ts_start : TYPE, optional
+        DESCRIPTION. The default is '2015-01-01'.
+    ts_end : TYPE, optional
+        DESCRIPTION. The default is '2019-05-31'.
+    resolution : TYPE, optional
+        DESCRIPTION. The default is '1M'.
+    window : TYPE, optional
+        DESCRIPTION. The default is '1M'.
+    max_gap : TYPE, optional
+        DESCRIPTION. The default is '4M'.
+
+    Returns
+    -------
+    df : TYPE
+        DESCRIPTION.
+
+    """
     df = df.copy()
     df.index = df.date
     df = df.resample(resolution).mean()
@@ -56,6 +84,24 @@ def interpolate(df, var = 'percent', ts_start='2015-01-01', ts_end='2019-05-31',
     return  df
 
 def reindex(df, resolution = '1M'):
+    """
+    This is al alternate to interpolation. Rather than filling the gaps
+    with bilinear method, this does by nerest neighbour (copies the LSTM of
+     the nearest measured label)
+
+    Parameters
+    ----------
+    df : TYPE
+        DESCRIPTION.
+    resolution : TYPE, optional
+        DESCRIPTION. The default is '1M'.
+
+    Returns
+    -------
+    df : TYPE
+        DESCRIPTION.
+
+    """
     site = df.site.values[0]
     # if resolution == '1M':
     #     df.date = pd.to_datetime(df['date'], format="%Y%m") + MonthEnd(1)
@@ -72,7 +118,34 @@ def reindex(df, resolution = '1M'):
     return df
 
 
-def make_df(inputs, quality = 'pure+all same',resolution = 'SM', max_gap = '3M', lag = '3M'):
+def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
+            max_gap = '3M', lag = '3M'):
+    """
+    Make input training dataframe from raw LFMC measurements downloaded 
+    from NFMD. Dataframe has features and ground-truths.
+
+    Parameters
+    ----------
+    inputs : TYPE
+        DESCRIPTION.
+    quality : TYPE, optional
+        DESCRIPTION. The default is 'pure+all same'.
+    resolution : TYPE, optional
+        DESCRIPTION. The default is 'SM'.
+    max_gap : TYPE, optional
+        DESCRIPTION. The default is '3M'.
+    lag : TYPE, optional
+        DESCRIPTION. The default is '3M'.
+
+  
+    Returns
+    -------
+    new : TYPE
+        DESCRIPTION.
+    int_lag : TYPE
+        DESCRIPTION.
+
+    """
     ####FMC
     df = pd.read_pickle('fmc_24_may_2019')
     df = clean_fmc(df, quality = quality)
@@ -214,6 +287,56 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM', max_gap = '3M',
 
 
 def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None, FOLDS = 3, DROPCROPS = False, TRAINRATIO = 0.7):
+    """
+    Split data into training and testing
+
+    Parameters
+    ----------
+    dataset : TYPE
+        DESCRIPTION.
+    inputs : TYPE, optional
+        DESCRIPTION. The default is None.
+    int_lag : TYPE, optional
+        DESCRIPTION. The default is None.
+    CV : TYPE, optional
+        DESCRIPTION. The default is False.
+    fold : TYPE, optional
+        DESCRIPTION. The default is None.
+    FOLDS : TYPE, optional
+        DESCRIPTION. The default is 3.
+    DROPCROPS : TYPE, optional
+        DESCRIPTION. The default is False.
+    TRAINRATIO : TYPE, optional
+        DESCRIPTION. The default is 0.7.
+
+    Returns
+    -------
+    dataset : TYPE
+        DESCRIPTION.
+    rescaled : TYPE
+        DESCRIPTION.
+    reframed : TYPE
+        DESCRIPTION.
+    train_Xr : TYPE
+        DESCRIPTION.
+    test_Xr : TYPE
+        DESCRIPTION.
+    train_y : TYPE
+        DESCRIPTION.
+    test_y : TYPE
+        DESCRIPTION.
+    train : TYPE
+        DESCRIPTION.
+    test : TYPE
+        DESCRIPTION.
+    test_X : TYPE
+        DESCRIPTION.
+    scaler : TYPE
+        DESCRIPTION.
+    encoder : TYPE
+        DESCRIPTION.
+
+    """
 
     if DROPCROPS:
         crop_classes = [item[0] for item in lc_dict.items() if item[1] == 'crop']
@@ -312,6 +435,40 @@ def build_model(input_shape, filepath):
 #%% 
 #Predictions
 def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
+    """
+    Predict LFMC with a trained model on the test set.
+
+    Parameters
+    ----------
+    model : TYPE
+        DESCRIPTION.
+    test_Xr : TYPE
+        DESCRIPTION.
+    test_X : TYPE
+        DESCRIPTION.
+    test : TYPE
+        DESCRIPTION.
+    reframed : TYPE
+        DESCRIPTION.
+    scaler : TYPE
+        DESCRIPTION.
+    inputs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    inv_y : TYPE
+        DESCRIPTION.
+    inv_yhat : TYPE
+        DESCRIPTION.
+    pred_frame : TYPE
+        DESCRIPTION.
+    rmse : TYPE
+        DESCRIPTION.
+    r2 : TYPE
+        DESCRIPTION.
+
+    """
     
     yhat = model.predict(test_Xr)
     #test_X = test_X.reshape((test_X.shape[0], (LAG+1)*test_X.shape[2]))
@@ -332,6 +489,16 @@ def predict(model, test_Xr, test_X, test, reframed, scaler, inputs):
     return inv_y, inv_yhat, pred_frame, rmse, r2
 
 def main():
+    """
+    Bring everything together. 
+    Allows you to create input data to a LSTM, train it, or predict LFMC 
+    using it.
+
+    Returns
+    -------
+    None.
+
+    """
     #%%  
     ###############################################################################
     ##input options 
@@ -363,7 +530,7 @@ def main():
     kf = KFold(n_splits=FOLDS, random_state = SEED)
     int_lag = int(LAG[0])
     
-    os.chdir(dir_data)
+    # os.chdir(dir_data)
     # convert series to supervised learning
     pd.set_option('display.max_columns', 10)
     if RESOLUTION =='SM':
@@ -371,7 +538,7 @@ def main():
         
         
         
-    filepath = os.path.join(dir_codes,'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
+    filepath = os.path.join(dir_codes,'trained_model/%s.hdf5'%SAVENAME)
         
     microwave_inputs = ['vv','vh']
     optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']
@@ -385,7 +552,7 @@ def main():
     inputs = all_inputs
         
     if RELOADINPUT:
-        dataset= pd.read_pickle(INPUTNAME)
+        dataset= pd.read_pickle(os.path.join(dir_data, INPUTNAME))
     else:
         if os.path.isfile(INPUTNAME) and not(OVERWRITEINPUT):
             raise  Exception('[INFO] Input File already exists. Try different INPUTNAME')
