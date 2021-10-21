@@ -502,18 +502,34 @@ def main():
     #%%  
     ###############################################################################
     ##input options 
+    # seed for random generator. Do not change.
     SEED = 0
     np.random.seed(SEED)
+    # Reload already available input as pickle format (in INPUTNAME) or make new?
     RELOADINPUT = True
+    # If RELOADINPUT is FALSE, Should I overwrite if file by INPUTNAME already exists?
     OVERWRITEINPUT = False
+    # Load trained model or make a new model and train? model name in SAVENAME
     LOAD_MODEL = True
+    # If LOAD_MODEL is False, should I overwrite new model if model named SAVENAME already exists at path?
     OVERWRITE = False
+    # If LOAD_MODEL is True, should I train more epochs?
     RETRAIN = False
+    # Should figures be saved to disk?
     SAVEFIG = False
+    # 
     DROPCROPS = True
+    # Use 15-day inputs or 1 month inputs?
     RESOLUTION = 'SM'
+    # What is the max gap allowed between input fatures (sattelite data) to use
+    # as training features? Remember, SAR is absent many times. If the parameter
+    # is decreased, input quality will increase, but quantity will decrease 
+    # (because it will be a more severe constraint on the input data resulting
+    # in less data)
     MAXGAP = '3M'
+    # Name of input data for LSTM model. This is pickle object.
     INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+    # Name of LSTM model
     SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
     
     ##modeling options
