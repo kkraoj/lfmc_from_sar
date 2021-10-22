@@ -119,7 +119,9 @@ def reindex(df, resolution = '1M'):
 
 
 def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
-            max_gap = '3M', lag = '3M'):
+            max_gap = '3M', lag = '3M', spatial_resolution = 500,\
+            microwave_inputs = ['vv','vh'],\
+            optical_inputs = ['red','green','blue','swir','nir', 'ndvi', 'ndwi','nirv']):
     """
     Make input training dataframe from raw LFMC measurements downloaded 
     from NFMD. Dataframe has features and ground-truths.
@@ -147,7 +149,7 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
 
     """
     ####FMC
-    df = pd.read_pickle('fmc_24_may_2019')
+    df = pd.read_pickle(os.path.join(dir_codes, "input_data_creation",'fmc_24_may_2019'))
     df = clean_fmc(df, quality = quality)
     master = pd.DataFrame()
     no_inputs_sites = []
@@ -158,13 +160,11 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
         # df_sub = interpolate(df_sub, 'percent', resolution = resolution, max_gap = max_gap)
         master = master.append(df_sub, ignore_index = True, sort = False)
     ## static inputs    
-    static_features_all = pd.read_csv('static_features.csv',dtype = {'site':str}, index_col = 0)
-    if not(static_inputs is None):
-        static_features_subset = static_features_all.loc[:,static_inputs]
-        master = master.join(static_features_subset, on = 'site') 
+    static_features_all = pd.read_csv(os.path.join(dir_codes, "input_data_creation",'static_features.csv'),dtype = {'site':str}, index_col = 0)
+    master = master.join(static_features_all, on = 'site') 
     ### optical
     
-    df = pd.read_pickle('landsat8_500m_cloudless')
+    df =pd.read_pickle(os.path.join(dir_codes, "input_data_creation",f'opt_{spatial_resolution}m.pickle'))
 
     opt = pd.DataFrame()
     uncer = pd.DataFrame()
@@ -186,12 +186,12 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
                 print('[INFO]\tsite skipped :\t%s'%site)
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')         
-    uncer.to_csv(os.path.join(dir_data,'optical_uncertainty.csv'))
-    sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
-    print(sum_diffs.sum()/uncer['n'].sum())
+    # uncer.to_csv(os.path.join(dir_data,'optical_uncertainty.csv'))
+    # sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
+    # print(sum_diffs.sum()/uncer['n'].sum())
     ## 6.7% with respect to max range
     ### sar
-    df = pd.read_pickle('sar_ascending_30_apr_2019')
+    df =pd.read_pickle(os.path.join(dir_codes, "input_data_creation",f'sar_{spatial_resolution}m.pickle'))
     # for var in microwave_inputs:
     micro = pd.DataFrame()
     uncer = pd.DataFrame()
@@ -213,16 +213,21 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
                 print('[INFO]\tsite skipped :\t%s'%site)
                 no_inputs_sites.append(site)
         # master = pd.merge(master,feature, on=['date','site'], how = 'outer')          
-    uncer.to_csv(os.path.join(dir_data,'microwave_uncertainty.csv'))    
-    sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
-    print(sum_diffs.sum()/uncer['n'].sum())
+    # uncer.to_csv(os.path.join(dir_data,'microwave_uncertainty.csv'))    
+    # sum_diffs = uncer.drop('n', axis = 1).multiply(uncer.loc[:,'n'], axis = 0)
+    # print(sum_diffs.sum()/uncer['n'].sum())
     # 3.0% with respect to max range
+
     dyn = pd.merge(opt,micro, on=['date','site'], how = 'outer')
     ## micro/opt inputs
     for num in microwave_inputs:
         for den in optical_inputs:
             dyn['%s_%s'%(num, den)] = dyn[num]/dyn[den]
     dyn['vh_vv'] = dyn['vh']-dyn['vv']
+    
+    mixed_inputs =  ['vv_%s'%den for den in optical_inputs] + \
+        ['vh_%s'%den for den in optical_inputs] + ['vh_vv']
+    dynamic_inputs = microwave_inputs + optical_inputs + mixed_inputs
     
     dyn = dyn[dynamic_inputs+['date','site']]
     dyn = dyn.dropna()
@@ -255,7 +260,7 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
     new = new.rename(columns = {'date(t)':'date','site(t)':'site'})
     count=0        
     for index, row in master.iterrows():
-        dyn_sub = dyn.loc[dyn.site==row.site]
+        dyn_sub = dyn.loc[dyn.site==row.site].copy()
         dyn_sub['delta'] = row.date - dyn_sub.date
         if resolution == '1M':
             dyn_sub['steps'] = (dyn_sub['delta'] /np.timedelta64(30, 'D')).astype('int')
@@ -283,7 +288,6 @@ def make_df(inputs, quality = 'pure+all same',resolution = 'SM',\
     return new , int_lag       
 
 
-#%%modeling
 
 
 def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = None, FOLDS = 3, DROPCROPS = False, TRAINRATIO = 0.7):
@@ -349,6 +353,9 @@ def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = 
         cols.remove(col)
     cols = ['percent(t)','site','date']+cols
     dataset = dataset[cols]
+    # remove lat lon
+    dataset = dataset[[col for col in dataset.columns if "latitude" not in col]]
+    dataset = dataset[[col for col in dataset.columns if "longitude" not in col]]
     dataset['forest_cover(t)'] = encoder.fit_transform(dataset['forest_cover(t)'].values)
     for col in dataset.columns:
         if 'forest_cover' in col:
@@ -527,8 +534,10 @@ def main():
     # (because it will be a more severe constraint on the input data resulting
     # in less data)
     MAXGAP = '3M'
+    #spatial resolution of input data to fetch
+    SPATIAL_RESOLUTION = 30
     # Name of input data for LSTM model. This is pickle object.
-    INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
+    INPUTNAME = f"input_data_{SPATIAL_RESOLUTION}m.pickle"
     # Name of LSTM model
     SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
     
@@ -568,12 +577,14 @@ def main():
     inputs = all_inputs
         
     if RELOADINPUT:
-        dataset= pd.read_pickle(os.path.join(dir_data, INPUTNAME))
+        dataset= pd.read_pickle(os.path.join(dir_codes, "input_data_creation",INPUTNAME))
     else:
         if os.path.isfile(INPUTNAME) and not(OVERWRITEINPUT):
             raise  Exception('[INFO] Input File already exists. Try different INPUTNAME')
-        dataset, int_lag = make_df(resolution = RESOLUTION, max_gap = MAXGAP, lag = LAG, inputs = inputs)    
-        dataset.to_pickle(INPUTNAME)
+        dataset, int_lag = make_df(resolution = RESOLUTION, max_gap = MAXGAP, \
+                                   lag = LAG, inputs = inputs, \
+                                      spatial_resolution = SPATIAL_RESOLUTION)    
+        dataset.to_pickle(os.path.join(dir_codes, "input_data_creation",INPUTNAME))
         
     dataset, rescaled, reframed, \
         train_Xr, test_Xr,train_y, test_y, train, test, test_X, \

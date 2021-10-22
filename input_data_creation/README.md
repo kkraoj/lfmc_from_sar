@@ -11,9 +11,9 @@ Requirements: Python 3.6+, `gdal` and [Google Earth Engine Python API](https://d
 	```
 	python download_landsat.py -p LANDSAT/LC08/C01/T1_SR \
 	                -b B1 B2 B3 B4 B5 B6 B7 pixel_qa  \
-	                -s "2019-06-01" \
-	                -e "2020-02-27" \
-	                -f "nfmd_queried_trial.csv" \
+	                -s "2015-01-01" \
+	                -e "2021-10-21" \
+	                -f "nfmd_queried_latlon.csv" \
 	                -sc 500 \
 	                -d "L8_500m"
 	```
@@ -21,11 +21,11 @@ Requirements: Python 3.6+, `gdal` and [Google Earth Engine Python API](https://d
 	```
 	python download_sentinel.py -p "COPERNICUS/S1_GRD" \
                      -b "VH" \
-                     -f "nfmd_queried_trial.csv" \
-                     -d "500m_ascending_VH_9-9-2020" \
+                     -f "nfmd_queried_latlon.csv" \
+                     -d "S1_500m" \
                      -sc 500 \
-                     -s 2019-06-01 \
-                     -e 2020-02-27
+                     -s "2015-01-01" \
+	                 -e "2021-10-21"
 	```
 	Note how the script downloads data for a period of ~8 months (from `-s` to `-e`). These periods can be adjusted based on the date of LFMC measurements. It may help to extend the input features into the past as prior sattelite data may be useful to model current LFMC.
 1. Rearrange dynamic features: Use `make_features.py` to rearrange the dyanmic features into 1 csv file.  
