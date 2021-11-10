@@ -417,7 +417,7 @@ def split_train_test(dataset, inputs = None, int_lag = None, CV = False, fold = 
 
 
 
-def build_model(input_shape, filepath):
+def build_model(input_shape, filepath, dropout, loss):
     """Define keras model.
     """
     Areg = regularizers.l2(1e-5)
@@ -426,16 +426,16 @@ def build_model(input_shape, filepath):
     Rreg = regularizers.l2(1e-15)
     
     model = Sequential()
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+    model.add(LSTM(10, input_shape=input_shape, dropout = dropout,recurrent_dropout=dropout,\
                   return_sequences=True, \
                   bias_regularizer= Breg))
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+    model.add(LSTM(10, input_shape=input_shape, dropout = dropout,recurrent_dropout=dropout,\
                     return_sequences=True, \
                     bias_regularizer= Breg))
-    model.add(LSTM(10, input_shape=input_shape, dropout = DROPOUT,recurrent_dropout=DROPOUT,\
+    model.add(LSTM(10, input_shape=input_shape, dropout = dropout,recurrent_dropout=dropout,\
                    bias_regularizer= Breg))
     model.add(Dense(1))
-    model.compile(loss=LOSS, optimizer='Nadam')
+    model.compile(loss=loss, optimizer='Nadam')
     return model
 
 
@@ -517,11 +517,11 @@ def main():
     # If RELOADINPUT is FALSE, Should I overwrite if file by INPUTNAME already exists?
     OVERWRITEINPUT = False
     # Load trained model or make a new model and train? model name in SAVENAME
-    LOAD_MODEL = True
+    LOAD_MODEL = False
     # If LOAD_MODEL is False, should I overwrite new model if model named SAVENAME already exists at path?
-    OVERWRITE = False
+    OVERWRITE = True
     # If LOAD_MODEL is True, should I train more epochs?
-    RETRAIN = False
+    RETRAIN = True
     # Should figures be saved to disk?
     SAVEFIG = False
     # 
@@ -535,7 +535,7 @@ def main():
     # in less data)
     MAXGAP = '3M'
     #spatial resolution of input data to fetch
-    SPATIAL_RESOLUTION = 30
+    SPATIAL_RESOLUTION = 250
     # Name of input data for LSTM model. This is pickle object.
     INPUTNAME = f"input_data_{SPATIAL_RESOLUTION}m.pickle"
     # Name of LSTM model
@@ -596,10 +596,9 @@ def main():
     
     
     checkpoint = ModelCheckpoint(filepath, save_best_only=True)
-    earlystopping=EarlyStopping(patience=1000, verbose=1, mode='auto')
+    earlystopping=EarlyStopping(patience=200, verbose=1, mode='auto')
+    
     callbacks_list = [checkpoint, earlystopping]
-    
-    
     
     if  LOAD_MODEL&os.path.isfile(filepath):
         model = load_model(filepath)
@@ -613,11 +612,11 @@ def main():
                 raise  Exception('[INFO] File path already exists. Try Overwrite = True or change file name')
             print('[INFO] \t Retraining Model...')
         model = build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2]),\
-                        filepath = filepath)
+                        filepath = filepath, dropout = DROPOUT, loss = LOSS)
     
     if RETRAIN or not(LOAD_MODEL):
         history = model.fit(train_Xr, train_y, epochs=EPOCHS, batch_size=BATCHSIZE,\
-                            validation_data=(test_Xr, test_y), verbose=2, shuffle=False,\
+                            validation_data=(test_Xr, test_y), verbose=2, shuffle=True,\
                             callbacks=callbacks_list)
         model = load_model(filepath) # once trained, load best model
     
