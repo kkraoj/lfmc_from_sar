@@ -25,7 +25,7 @@ On some occassions, the LFMC maps may appear patchy. The patches are caused by i
 ## Download LFMC maps
 
 
-The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_23_oct_2020. You can use the maps in the following ways-
+The LFMC maps are hosted on Google Earth Engine (GEE) which is a free platform for largescale image visualization and analysis. The maps can be found in an `ee.ImageCollection()` object as a public asset at the following link: https://code.earthengine.google.com/?asset=users/kkraoj/lfm-mapper/lfmc_col_25_may_2021. You can use the maps in the following ways-
 
 
 1. Directly on GEE by importing the collection or 
@@ -35,7 +35,7 @@ Both options need a GEE account [signup here](https://earthengine.google.com/). 
 
 ### Use/analyse maps on GEE
 
-1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/35c74b98d091c27abd196da4572db605)
+1. Once you have your GEE account, open this [script](https://code.earthengine.google.com/e4c7d3ec5a456d818b9c16c0be6d6bd1)
 2. The script will import the LFMC maps as an `ImageCollection` and display the mean for 2019. You can then proceed with your analysis with the imported image collection.
 
 ### Download maps to your computer
