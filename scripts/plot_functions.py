@@ -46,11 +46,11 @@ from QC_of_sites import clean_fmc
 
 
 #%% Plot control settings
-ZOOM=1.0
+ZOOM=10.0
 FS=10*ZOOM
 PPT = 0
 DPI = 300
-sns.set_style('ticks')
+# sns.set_style('ticks')
 #%% fix plot dims
 mpl.rcParams['font.size'] = FS
 SC = 3.54331
@@ -252,7 +252,7 @@ def landcover_table():
     # table.to_excel('model_performance_by_lc.xls')
     # table.to_latex(os.path.join(dir_figures,'model_performance_by_lc.tex'))
 
-#%% prediction scatter plots after CV
+# %% prediction scatter plots after CV
 def plot_pred_actual(test_y, pred_y, weights = None, \
                      cmap = ListedColormap(sns.cubehelix_palette().as_hex()), \
                      axis_lim = [-25,50],\
@@ -466,9 +466,15 @@ def microwave_importance():
     plt.show() 
 def nfmd_sites():
     ################################################################################
+    label_size = 100
+    mpl.rcParams['xtick.labelsize'] = label_size 
+    mpl.rcParams['ytick.labelsize'] = label_size 
+    mpl.rcParams['font.size'] =  label_size
+    # sns.set_style('ticks')
+    # plt.style.use('seaborn-ticks')
+
     
-    
-    fig = plt.figure(constrained_layout=True,figsize=(0.67*DC, 3))
+    fig = plt.figure(constrained_layout=True,figsize=(0.67*DC*10, 3*10))
     widths = [2, 1]
     heights = [1,1]
     spec = mpl.gridspec.GridSpec(ncols=2, nrows=2, width_ratios=widths,\
@@ -530,16 +536,17 @@ def nfmd_sites():
     latlon.sort_values('data_points',inplace = True, ascending = False)
     #latlon = latlon.loc[latlon.data_points>=10,:]
     cmap = 'magma'
-    sns.set_style('ticks')
+    
     alpha = 1
     
     m = Basemap(llcrnrlon=-119,llcrnrlat=22.8,urcrnrlon=-92,urcrnrlat=52,
             projection='lcc',lat_1=33,lat_2=45,lon_0=-95, ax = ax1)
     m.drawmapboundary(fill_color='lightcyan',zorder = 0.9)
+    m.drawmapscale(-115, 27,-115, 27, 500, barstyle='fancy', fontsize = 50)
     #-----------------------------------------------------------------------
     # load the shapefile, use the name 'states'
     m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
-                    name='states', drawbounds=True)
+                    name='states', drawbounds=True, linewidth = 5)
     statenames=[]
     for shapedict in m.states_info:
         statename = shapedict['NAME']
@@ -549,7 +556,7 @@ def nfmd_sites():
         ax1.add_patch(poly)
     ### adding ndvi
     plot=m.scatter(latlon.longitude.values, latlon.latitude.values, 
-                   s=2*latlon.data_points,c=latlon.color.values,edgecolor = 'lightgrey',linewidth = 0.5,\
+                   s=2*latlon.data_points*100,c=latlon.color.values,edgecolor = 'lightgrey',linewidth = 0.5*10,\
                         marker='o',alpha = 0.9,latlon = True, zorder = 4,\
                         )
     #################
@@ -562,19 +569,20 @@ def nfmd_sites():
     m.pcolormesh(xx, yy, data, cmap = 'YlGn',vmin =0,vmax = 250,\
                  zorder = 1,latlon=True) 
     m1 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
-                     linewidth = 0.5, s=2*10)
+                     linewidth = 0.5*10, s=2*10*100)
     m2 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
-                     linewidth = 0.5, s=2*50)
+                     linewidth = 0.5*10, s=2*50*100)
     m3 = ax1.scatter([],[], color = 'maroon',edgecolor = 'lightgrey',\
-                     linewidth = 0.5, s=2*100)
+                     linewidth = 0.5*10, s=2*100*100)
     legend_markers = [m1, m2,m3]
 
     labels =['10','50','100']
 
     legend = ax1.legend(handles=legend_markers, labels=labels, loc='upper center',
         scatterpoints=1,title = 'No. of Measurements',ncol = 3,\
-        handletextpad=0,bbox_to_anchor = (0.5,0.01),fontsize = 'small',borderpad = 0.5)
+        handletextpad=0,bbox_to_anchor = (0.5,0.01),fontsize = 'small',borderpad = 0.5,)
     plt.setp(legend.get_title(),fontsize='small')
+    legend.get_frame().set_linewidth(5)
     ###############
     m.readshapefile('D:/Krishna/projects/vwc_from_radar/data/usa_shapefile/west_usa/cb_2017_us_state_500k', 
                     name='states', drawbounds=True)
@@ -598,23 +606,23 @@ def nfmd_sites():
                linewidths=0.1,norm=mpl.colors.LogNorm(vmin=0.8, vmax=10000))
     ax2.set_xlim(-1,25)
     ax2.set_ylim(-200,4200)
-    ax2.set_ylabel('MAP (mm.yr$^{-1}$)')
+    ax2.set_ylabel('MAP (mm.yr$^{-1}$)', fontsize = label_size)
     ax2.set_xticks([0,10,20])
     ax2.set_xticklabels([])
     ax2.set_ylim(top = 4200)
 
     ax2.scatter(latlon.temp, latlon.ppt, marker = 'o', color = 'maroon',\
-                s = 8,linewidth = 0.5,edgecolor = 'w',label = '_nolegend_')
+                s = 8*100,linewidth = 0.5*5,edgecolor = 'w',label = '_nolegend_')
     # ax2.set_ylim(-150,3000)
 
     ax3.hexbin(t.flatten(),e.flatten(),cmap ='Greys',gridsize = (20,14),\
                linewidths=0.1,norm=mpl.colors.LogNorm(vmin=1, vmax=10000),label = '_nolegend_')
     ax3.set_xlim(-1,25)
     ax3.set_ylim(-200,4200)
-    ax3.set_xlabel('MAT ($^o$C)')
-    ax3.set_ylabel('Elevation (m)')
+    ax3.set_xlabel('MAT ($^o$C)', fontsize = label_size)
+    ax3.set_ylabel('Elevation (m)', fontsize = label_size)
     ax3.scatter(latlon.temp, latlon.elevation, marker = 'o', color = 'maroon',\
-                s = 8,linewidth = 0.5,edgecolor = 'w', label = 'Sites')
+                s = 8*100,linewidth = 0.5*5,edgecolor = 'w', label = 'Sites')
     ax3.set_xticks([0,10,20])
     
     
@@ -626,14 +634,15 @@ def nfmd_sites():
                 ha='left',va='bottom', weight = 'bold')
     
     
-    ax3.scatter([],[],label = 'West USA',marker = 'h',s=10,color = 'grey')    
-    ax3.legend(prop={'size': FS-3},frameon = False,handletextpad =-0.3,\
-               borderpad=0.2,bbox_to_anchor = (1.02,1.02))
+    ax3.scatter([],[],label = 'West USA',marker = 'h',s=10*100,color = 'grey')    
+    ax3.legend(prop={'size': FS-30},frameon = False,handletextpad =-0.3,\
+               borderpad=0.2)
     if save_fig:
         plt.savefig(os.path.join(dir_figures,'sites.jpg'), \
                                  dpi =DPI, bbox_inches="tight")
     
-
+    plt.savefig(r"C:\Users\kkrao\Dropbox\meetingsKrishna\Figures\lfmc_form_sar\sites_high_res.eps",\
+                dpi =DPI, bbox_inches="tight")
     plt.show()
 
 def nfmd_all_sites():
@@ -1127,8 +1136,8 @@ def main():
     # bar_chart()
     # landcover_table()
 #     microwave_importance()
-    # nfmd_sites()
-    nfmd_all_sites()
+    nfmd_sites()
+    # nfmd_all_sites()
 #     scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
