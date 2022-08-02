@@ -206,12 +206,12 @@ if __name__ == "__main__":
                 static[col] = static['forest_cover(t)']
                 
     #%%add dynamic features
-    cache_cutoff = int(0.5e7)
+    cache_cutoff = int(1e7)
     memory_cutoff = int(4e7)
     year = args.year
     # day = args.day
     for MoY in range(12, 0, -1):
-        for day in [15]:
+        for day in [15, 1]:
             latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
             date = '%04d-%02d-%02d'%(year, MoY, day)
             
