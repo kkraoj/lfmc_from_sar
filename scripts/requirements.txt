@@ -14,7 +14,7 @@ google-resumable-media==0.5.0
 googleapis-common-protos==1.51.0
 tabulate==0.8.7
 scikit-learn==0.19.1
-osgeo==3010200
+gdal==3.0.4
 matplotlib==3.2.1
 Keras==2.2.2
 Keras-Applications==1.0.4

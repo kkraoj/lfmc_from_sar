@@ -206,12 +206,12 @@ if __name__ == "__main__":
                 static[col] = static['forest_cover(t)']
                 
     #%%add dynamic features
-    cache_cutoff = int(1e7)
+    cache_cutoff = int(0.5e7)
     memory_cutoff = int(4e7)
     year = args.year
     # day = args.day
     for MoY in range(12, 0, -1):
-        for day in [15,1]:
+        for day in [15]:
             latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
             date = '%04d-%02d-%02d'%(year, MoY, day)
             
@@ -315,6 +315,7 @@ if __name__ == "__main__":
                 ## if input size is too large to do scalar transforms, break them into buckets
                 latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon'))
                 cache_buckets = int(np.floor(latlon.shape[0]/cache_cutoff))
+                preds = pd.DataFrame()
                 for i in range(cache_buckets, -1, -1):
                     print('[INFO] Operating on bucket %1d at %s'%(i,datetime.now().strftime("%H:%M:%S")))
                     if i==cache_buckets:
@@ -332,30 +333,32 @@ if __name__ == "__main__":
                     #############
                     latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
                     latlon.drop('percent(t)',axis = 1, inplace = True)
-                    if i!=0:
-                        latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
-                    # scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
+                    # if i!=0:
+                        # latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
+                    scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
                     #     # np.save('map/scaled_%s.npy'%date, scaled)
-                    # latlon = latlon[['latitude','longitude']]   
-                    # print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-                    # yhat = model.predict(scaled)
+                    latlon = latlon[['latitude','longitude']]   
+                    print(f'[INFO] Making predictions for {date}, file number {cache_buckets - i} out of {cache_buckets} at {datetime.now().strftime("%H:%M:%S")}')
+                    yhat = model.predict(scaled)
                     # # exit
-                    # scaled = None
+                    scaled = None
                    
-                    # inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+                    inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
                     # # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-                    # yhat = None
+                    yhat = None
                    
                     # # latlon = pd.read_pickle('map/inputs_%s'%date)
                     # #predictions only on previously trained landcovers
                     # # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
                    
-                    # latlon['pred_fmc'] = inv_yhat
+                    latlon['pred_fmc'] = inv_yhat
+                    inv_yhat = None
+                    preds = preds.append(latlon)
+                df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(preds[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
+                preds = None
                     
-                    
-                    
-                for i in range(1,cache_buckets+1):
-                    latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))).astype(np.float32)
+                # for i in range(1,cache_buckets+1):
+                    # latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))).astype(np.float32)
             else:
                 ##else, just operate as normal
                 latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
@@ -366,30 +369,29 @@ if __name__ == "__main__":
                 latlon.loc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
                 latlon.drop('percent(t)',axis = 1, inplace = True)
             
-            ################################################    
+                ################################################    
             
-            scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
-                # np.save('map/scaled_%s.npy'%date, scaled)
-            latlon = latlon[['latitude','longitude']]   
-            print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
-            yhat = model.predict(scaled)
-            # exit
-            scaled = None
-           
-            inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
-            # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
-            yhat = None
-           
-            # latlon = pd.read_pickle('map/inputs_%s'%date)
-            #predictions only on previously trained landcovers
-            # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
-           
-            latlon['pred_fmc'] = inv_yhat
-        #    latlon[['latitude','longitude','pred_fmc']].to_pickle(fname)
-            # df = latlon[['latitude','longitude','pred_fmc']]
-            df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(latlon[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
-            latlon = None
-            inv_yhat = None
+                scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
+                    # np.save('map/scaled_%s.npy'%date, scaled)
+                latlon = latlon[['latitude','longitude']]   
+                print('[INFO] Making predictions for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
+                yhat = model.predict(scaled)
+                # exit
+                scaled = None
+               
+                inv_yhat = yhat/scaler.scale_[0]+scaler.min_[0]
+                # np.save('map/inv_yhat_%s.npy'%date, inv_yhat)
+                yhat = None
+               
+                # latlon = pd.read_pickle('map/inputs_%s'%date)
+                #predictions only on previously trained landcovers
+                # latlon = latlon.loc[latlon['forest_cover(t)'].astype(int).isin(encoder.classes_)] 
+               
+                latlon['pred_fmc'] = inv_yhat
+
+                df = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')).merge(latlon[['latitude','longitude','pred_fmc']], how = "left", on = ['latitude','longitude'])
+                latlon = None
+                inv_yhat = None
             print('[INFO] Saving lfmc map for %s at %s'%(date,datetime.now().strftime("%H:%M:%S")))
             df['lat_index'] = df.latitude.rank(method = 'dense', ascending = False).astype(int)-1
             df['lon_index'] = df.longitude.rank(method = 'dense', ascending = True).astype(int)-1
