@@ -87,7 +87,7 @@ RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 # SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_10_apr_2023_res_%s_gap_%s_site_split_early_stopping_on_train_set'%(RESOLUTION, MAXGAP)
+SAVENAME = f'quality_pure+all_same_10_apr_2023_res_{RESOLUTION}_gap_{MAXGAP}_site_split'
 
 ##modeling options
 EPOCHS = int(5e3)
