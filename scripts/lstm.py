@@ -87,10 +87,10 @@ RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
 # SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_10_apr_2023_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_10_apr_2023_res_%s_gap_%s_site_split_early_stopping_on_train_set'%(RESOLUTION, MAXGAP)
 
 ##modeling options
-EPOCHS = int(20e3)
+EPOCHS = int(5e3)
 BATCHSIZE = int(2e5)
 DROPOUT = 0.05
 TRAINRATIO = 0.80
@@ -285,7 +285,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     return model
 
 checkpoint = ModelCheckpoint(filepath, save_best_only=True)
-earlystopping=EarlyStopping(patience=1000, verbose=1, mode='auto')
+earlystopping=EarlyStopping(patience=1000, verbose=1, mode='auto', monitor="loss")
 callbacks_list = [checkpoint, earlystopping]
 
 
