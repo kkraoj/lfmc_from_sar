@@ -314,21 +314,22 @@ SEED = 0
 np.random.seed(SEED)
 RELOADINPUT = True
 OVERWRITEINPUT = False
-LOAD_MODEL = True
-OVERWRITE = False
+LOAD_MODEL = False
+OVERWRITE = True
 RETRAIN = False
 SAVEFIG = False
 DROPCROPS = True
 RESOLUTION = 'SM'
 MAXGAP = '3M'
 INPUTNAME = 'lstm_input_data_pure+all_same_28_may_2019_res_%s_gap_%s'%(RESOLUTION, MAXGAP)
-SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+# SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split'%(RESOLUTION, MAXGAP)
+SAVENAME = 'quality_pure+all_same_27_mar_2023_res_%s_gap_%s_site_split_SEED_%d'%(RESOLUTION, MAXGAP, SEED)
 
 ##modeling options
 EPOCHS = int(20e3)
 BATCHSIZE = int(2e5)
 DROPOUT = 0.05
-TRAINRATIO = 0.70
+TRAINRATIO = 0.80
 LOSS = 'mse'
 LAG = '3M'
 RETRAINEPOCHS = int(5e3)
@@ -513,7 +514,7 @@ def build_model(input_shape=(train_Xr.shape[1], train_Xr.shape[2])):
     #model.add(LSTM(10, input_shape=(train_Xr.shape[1], train_Xr.shape[2]), dropout = 0.3))
     # model.add(Dense(6))
     model.add(Dense(1))
-#    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
+    optim = optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True)
 #    optim = optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0, amsgrad=False)
     model.compile(loss=LOSS, optimizer='Nadam')
     # fit network
@@ -999,11 +1000,12 @@ if CV:
     # model = build_model()
     for fold in range(FOLDS):
         print('[INFO] Fold: %1d'%fold)
+        model = build_model()
         dataset, rescaled, reframed, \
             train_Xr, test_Xr,train_y, test_y, train, test, test_X, \
             scaler, encoder = split_train_test(dataset, int_lag = int_lag, CV = CV, fold = fold)
             
-        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_fold_%d_v2.hdf5'%(SAVENAME, fold))
+        filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s_fold_%d_weights_reinitialized.hdf5'%(SAVENAME, fold))
         
         checkpoint = ModelCheckpoint(filepath, save_best_only=True)
     
@@ -1015,6 +1017,9 @@ if CV:
         model = load_model(filepath) # once trained, load best model
         inv_y, inv_yhat, pred_frame, rmse, r2  = predict(model, test_Xr, test_X, test, reframed, scaler, inputs)
         frame = frame.append(pred_frame)
+        plot_pred_actual( pred_frame['percent(t)'].values, pred_frame['percent(t)_hat'].values,  np.corrcoef(inv_y, inv_yhat)[0,1]**2, rmse, ms = 30,\
+            zoom = 1.,dpi = 200,axis_lim = [0,300], xlabel = "Actual LFMC", \
+            ylabel = "Predicted LFMC",mec = 'grey', mew = 0, test_r2 = False, bias = True)
     x = frame['percent(t)'].values
     y =  frame['percent(t)_hat'].values
     rmse = np.sqrt(mean_squared_error(x,y))

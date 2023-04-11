@@ -46,7 +46,7 @@ from QC_of_sites import clean_fmc
 
 
 #%% Plot control settings
-ZOOM=10.0
+ZOOM=1.5
 FS=10*ZOOM
 PPT = 0
 DPI = 300
@@ -96,6 +96,80 @@ def change_width(ax, new_value) :
 
         # we recenter the bar
         patch.set_x(patch.get_x() + diff * .5)
+
+def bar_chart_california():
+    rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
+    rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
+    rmse['Landcover'] = encoder.inverse_transform(rmse['Landcover'].values)
+    rmse['Landcover'] = rmse['Landcover'].map(lc_dict)
+    rmse['ubrmse'] = frame.groupby('site').apply(\
+      lambda df: ubrmse(df['percent(t)'],df['percent(t)_hat']))
+    rmse["site"] = frame.groupby("site").apply(lambda df: df["site"].values[0]).values
+    rmse["elevation"] = frame.groupby("site")["elevation(t)"].mean()
+    ### mean rmse values store
+    lc_rmse = frame.groupby('forest_cover(t)').apply(\
+        lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat'])))
+    lc_rmse.index = encoder.inverse_transform(lc_rmse.index.astype(int))
+    lc_rmse.index =  lc_rmse.index.map(lc_dict)
+    lc_rmse.index.name = 'Landcover'
+    lc_rmse.name = 'lc_rmse'
+    rmse = pd.merge(rmse, lc_rmse, on = 'Landcover')
+    lc_simplify = {"Closed broadleaf deciduous":"Forest",
+                   "Closed needleleaf evergreen":"Forest",
+                   "Mixed forest":"Forest",
+                   "Shrub/grassland":"Shrub",
+                   "Shrubland":"Shrub",
+                   "Grassland":"Grass"}
+    rmse.Landcover = rmse.Landcover.map(lc_simplify)
+    ## filter to california only
+    sites = pd.read_excel(r"D:\Krishna\projects\vwc_from_radar\data\fuel_moisture\all_sites_fmc_28-apr-2019.xls")
+    sites = sites.loc[sites.state == "CA","site"].unique()
+    rmse = rmse.loc[rmse.site.isin(sites),:]
+    
+    ### sort by landcover then ascending
+    lc_order = rmse.groupby("Landcover").RMSE.mean().sort_values()
+    lc_order.loc[:] = range(len(lc_order))
+    rmse['lc_order'] = rmse['Landcover'].map(lc_order)
+    rmse.sort_values(by=['lc_order','RMSE'], inplace = True)
+    rmse['Sites'] = range(len(rmse))
+    
+    
+    count = (rmse['ubrmse']<=0.5*rmse['RMSE']).mean()
+    
+    fig, ax1 = plt.subplots(1,1, figsize = (4,4))   
+    color_dict = {"Forest":"darkgreen",
+                  "Shrub":"darkgoldenrod",
+                  "Grass":"lime"}
+    colors = lc_order.index.map(color_dict)
+    sns.barplot(x="Sites", y="RMSE", data=rmse, ax = ax1, hue = 'Landcover', \
+                dodge = False,palette=sns.color_palette(colors),\
+                edgecolor = 'w',linewidth = 0.04,
+                )
+    ## plot ubrmse
+    ax1.plot(rmse.Sites, rmse.ubrmse,'D',color = 'k',ms = 1.5,\
+             label = '_nolegend_',zorder = 2,mew = 0)
+    ax1.plot([], [],'D',color = 'k',ms = 2.5,\
+             label = 'ubRMSE',zorder = 2,mew = 0)
+    # ax1.set_xticklabels(range(len(rmse)))
+    ax1.set_xticks([])
+    ax1.set_yticks([0,20,40,60,80])
+    ax1.set_ylabel('RMSE (%)')
+    # ax1.set_xticklabels([0,25,50,75,100,124])
+    change_width(ax1, 1)
+    ax1.set_ylim(0,80)
+
+    ##### plotting 
+    handles, labels = ax1.get_legend_handles_labels()
+    handles.append(handles.pop(0))
+    labels.append(labels.pop(0))
+    # handles.append(handles.pop(0))
+    # labels.append(labels.pop(0))
+    ax1.legend(handles, labels, loc = 'upper left',prop={'size': 7},frameon = False)
+    
+    print(rmse.groupby("Landcover").RMSE.mean())
+    rmse["elevation_bin"] = pd.cut(rmse.elevation, [0,1000,3200])
+    print(rmse.groupby('elevation_bin').RMSE.mean())
+    
 def bar_chart():
     rmse = pd.DataFrame({'RMSE':frame.groupby('site').apply(lambda df: np.sqrt(mean_squared_error(df['percent(t)'],df['percent(t)_hat']))).sort_values()})
     rmse['Landcover'] = frame.groupby('site').apply(lambda df: df['forest_cover(t)'].astype(int).values[0])
@@ -1134,11 +1208,12 @@ def calc_mixed_sites_error():
 save_fig =False
 def main():
     # bar_chart()
+    bar_chart_california()
     # landcover_table()
 #     microwave_importance()
-    nfmd_sites()
+    # nfmd_sites()
     # nfmd_all_sites()
-#     scatter_plot_all_3()
+    # scatter_plot_all_3()
     # rmse_vs_climatology()
     # g=2
     # sites_QC()
