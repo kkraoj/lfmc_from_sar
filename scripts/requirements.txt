@@ -2,7 +2,7 @@
 
 earthengine-api==0.1.283
 pandas==1.1.5
-tqdm==4.47.0
+tqdm==4.66.3
 google-api-core==1.21.0
 google-api-python-client==1.12.8
 google-auth==1.18.0
