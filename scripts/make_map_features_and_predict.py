@@ -7,20 +7,24 @@ Created on Wed Feb 13 05:13:21 2019
 
 ## add slope ### py 2.7 script
 from dirs import dir_data, dir_codes,dir_figures
-from osgeo import gdal, osr
+import rasterio
+from rasterio.transform import from_origin
+from rasterio.crs import CRS
 import os ,argparse
 import pandas as pd
 import numpy as np
-from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import pickle
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-from matplotlib import ticker
-from matplotlib.colors import ListedColormap
-from datetime import datetime 
+import sklearn.preprocessing._label
+import sklearn.preprocessing._data
+import sys
+sys.modules['sklearn.preprocessing.label'] = sklearn.preprocessing._label
+sys.modules['sklearn.preprocessing.data'] = sklearn.preprocessing._data
+from datetime import datetime
 import seaborn as sns
-from keras.models import load_model
+import os
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+from tf_keras.models import load_model
 
 sns.set_style('ticks')
 
@@ -189,12 +193,12 @@ if __name__ == "__main__":
     ### adding different static features
     # latlon = pd.read_csv(os.path.join(dir_data, 'map/map_lat_lon.csv'), index_col = 0)
     def get_value(filename, mx, my, band = 1):
-        ds = gdal.Open(filename)
-        gt = ds.GetGeoTransform()
-        data = ds.GetRasterBand(band).ReadAsArray().astype(np.float16)
-        px = ((mx - gt[0]) / gt[1]).astype(int) #x pixel
-        py = ((my - gt[3]) / gt[5]).astype(int) #y pixel
-        return data[py,px]
+        with rasterio.open(filename) as ds:
+            t = ds.transform
+            data = ds.read(band).astype(np.float16)
+        px = ((mx - t.c) / t.a).astype(int)
+        py = ((my - t.f) / t.e).astype(int)
+        return data[py, px]
     #static = pd.read_csv(os.path.join(dir_data, 'map/static_features.csv'), index_col = 0)
     #static.to_pickle(os.path.join(dir_data, 'map/static_features_p36'))
     static = pd.read_pickle(os.path.join(dir_data, 'map/static_features_p36_250m_latlon_float32')) #there are some bugs in static as some rows have longitude way outside west USA. 
@@ -420,16 +424,11 @@ if __name__ == "__main__":
             #         top left y, rotation (0 if North is up), n-s pixel resolution)
               # I don't know why rotation is in twice???
              
-            output_raster = gdal.GetDriverByName('GTiff').Create(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date),ncols, nrows, 1 ,gdal.GDT_Int16)  # Open the file
-            output_raster.SetGeoTransform(geotransform)  # Specify its coordinates
-            srs = osr.SpatialReference()                 # Establish its coordinate encoding
-            srs.ImportFromEPSG(4326)                     # This one specifies WGS84 lat long.
-                                                        # Anyone know how to specify the 
-                                                          # IAU2000:49900 Mars encoding?
-            output_raster.SetProjection(srs.ExportToWkt() )   # Exports the coordinate system 
-                                                                # to the file
-            output_raster.GetRasterBand(1).WriteArray(array)   # Writes my array to the raster
+            out_path = os.path.join(dir_data, 'map/dynamic_maps/lfmc/lfmc_map_%s.tif'%date)
+            transform = from_origin(xmin, ymax, xres, yres)
+            with rasterio.open(out_path, 'w', driver='GTiff', height=nrows, width=ncols,
+                               count=1, dtype='int16', crs=CRS.from_epsg(4326),
+                               transform=transform) as dst:
+                dst.write(array, 1)
             array = None
-            output_raster.FlushCache()
-            output_raster = None  
         
