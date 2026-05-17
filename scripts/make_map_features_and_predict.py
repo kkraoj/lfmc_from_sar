@@ -172,7 +172,6 @@ if __name__ == "__main__":
     
 
     
-    dir_data = "D:/Krishna/projects/vwc_from_radar/data"
     enlarge = 1
     os.chdir(dir_data)
     
@@ -188,7 +187,6 @@ if __name__ == "__main__":
     filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
     
     model = load_model(filepath)
-    os.chdir('D:/Krishna/projects/vwc_from_radar')
     
     ### adding different static features
     # latlon = pd.read_csv(os.path.join(dir_data, 'map/map_lat_lon.csv'), index_col = 0)
@@ -219,7 +217,7 @@ if __name__ == "__main__":
             latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
             date = '%04d-%02d-%02d'%(year, MoY, day)
             
-            if os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\lfmc\lfmc_map_%s.tif'%date)):
+            if os.path.exists(os.path.join(dir_data, 'map', 'dynamic_maps', 'lfmc', 'lfmc_map_%s.tif'%date)):
                 print('[INFO] Skipping %s because LFMC map already exists.'%(date))
                 continue
             
@@ -229,8 +227,8 @@ if __name__ == "__main__":
             raw_sar_bands = ['vh','vv']
             ## check if all lag files exist
             lag_dates = [(pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d') for lag in range(3, -1, -1)]
-            file_exists = [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
-            file_exists += [os.path.exists(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
+            file_exists = [os.path.exists(os.path.join(dir_data, 'map', 'dynamic_maps', 'inputs_250m', '%s_cloudsnowfree_l8.tif'%lag_date)) for lag_date in lag_dates]
+            file_exists += [os.path.exists(os.path.join(dir_data, 'map', 'dynamic_maps', 'inputs_250m', '%s_sar.tif'%lag_date)) for lag_date in lag_dates]   
             if all(file_exists)==False:
                 print('[INFO] Skipping %s because at least 1 file does not exist'%(date))
                 continue
@@ -239,7 +237,7 @@ if __name__ == "__main__":
                 lag_date = (pd.to_datetime(date) - pd.DateOffset(months = lag)).strftime('%Y-%m-%d')
                 band_names = dict(zip(range(1,6),raw_opt_bands))
                 for band in band_names.keys():
-                    latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_cloudsnowfree_l8.tif'%lag_date),\
+                    latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map', 'dynamic_maps', 'inputs_250m', '%s_cloudsnowfree_l8.tif'%lag_date),
                     latlon.longitude.values, latlon.latitude.values, band = band)
                 latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
                 
@@ -249,7 +247,7 @@ if __name__ == "__main__":
                 
                 band_names = dict(zip(range(1,3),raw_sar_bands))
                 for band in band_names.keys():
-                    latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map\dynamic_maps\inputs_250m\%s_sar.tif'%lag_date),\
+                    latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map', 'dynamic_maps', 'inputs_250m', '%s_sar.tif'%lag_date),
                     latlon.longitude.values, latlon.latitude.values, band = band)
                 latlon.update(latlon.filter(raw_sar_bands).clip(upper = 0))
                 latlon['vh_vv'] = latlon.vh - latlon.vv
