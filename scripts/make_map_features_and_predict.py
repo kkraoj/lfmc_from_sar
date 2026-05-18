@@ -180,8 +180,10 @@ if __name__ == "__main__":
     pkl_file.close()
     
     pkl_file = open('scaler.pkl', 'rb')
-    scaler = pickle.load(pkl_file) 
+    scaler = pickle.load(pkl_file)
     pkl_file.close()
+    if not hasattr(scaler, 'clip'):
+        scaler.clip = False
     
     SAVENAME = 'quality_pure+all_same_28_may_2019_res_%s_gap_%s_site_split_raw_ratios'%('1M','3M')
     filepath = os.path.join(dir_codes, 'model_checkpoint/LSTM/%s.hdf5'%SAVENAME)
@@ -329,10 +331,12 @@ if __name__ == "__main__":
                     latlon.dropna(inplace = True)
                     latlon = latlon.merge(static, on = ['latitude','longitude'], how = "inner") ## 3mins
                     latlon['percent(t)'] = 100 #dummy
-                    latlon = latlon[cols]
-                    
+                    latlon = latlon[cols].astype(np.float64)
+                    latlon.replace([np.inf, -np.inf], [1e5, -1e5], inplace=True)
+                    latlon.dropna(inplace=True)
+
                     #############
-                    latlon.loc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values) 
+                    latlon.iloc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values)
                     latlon.drop('percent(t)',axis = 1, inplace = True)
                     if i!=0:
                         latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
@@ -357,7 +361,7 @@ if __name__ == "__main__":
                     
                     
                 for i in range(1,cache_buckets+1):
-                    latlon = latlon.append(pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))).astype(np.float32)
+                    latlon = pd.concat([latlon, pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))], ignore_index=True).astype(np.float32)
             else:
                 ##else, just operate as normal
                 latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
@@ -365,7 +369,7 @@ if __name__ == "__main__":
                 latlon = static.join(latlon.drop(['latitude','longitude'], axis = 1)) ## 3mins
                 latlon = latlon[cols]
     
-                latlon.loc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
+                latlon.iloc[:,2:] = (latlon.drop(['latitude','longitude'],axis = 1) - scaler.data_min_)/(scaler.data_max_ - scaler.data_min_)
                 latlon.drop('percent(t)',axis = 1, inplace = True)
             
             ################################################    

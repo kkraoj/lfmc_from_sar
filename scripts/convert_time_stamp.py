@@ -48,4 +48,4 @@ enddates.pop(0)
 df['system:time_start'] = [calendar.timegm(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple())*1000 for s in startdates]
 df['system:time_end']= [calendar.timegm(datetime.datetime.strptime(s, "%Y-%m-%d").timetuple())*1000 for s in enddates]
 df.tail()
-df.to_csv("D:/Krishna/projects/vwc_from_radar/gee-app/upload_meta_data.csv")
+df.to_csv(os.path.join(dir_data, "map/dynamic_maps/lfmc/upload_meta_data.csv"))
