@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Exports Sentinel-1 SAR and Landsat-8 images from Google Earth Engine to Google Drive.
+Exports Sentinel-1 SAR and Landsat-8 images from Google Earth Engine to GCS.
 
 Usage:
     # Export all 1st and 15th of each month for a year:
@@ -9,13 +9,18 @@ Usage:
     # Export specific dates:
     python export_gee_maps.py --dates 2025-01-01 2025-02-01 2025-03-01
 
+    # Export and block until all tasks complete:
+    python export_gee_maps.py --year 2025 --poll
+
 Each exported date uses a 3-month lookback window for SAR (mosaic) and Landsat
-(most-recent-value composite). Output files land in Google Drive as:
-    YYYY-MM-DD_cloudsnowfree_l8.tif
-    YYYY-MM-DD_sar.tif
+(most-recent-value composite). Output files land in GCS as:
+    inputs_250m/YYYY-MM-DD_cloudsnowfree_l8.tif
+    inputs_250m/YYYY-MM-DD_sar.tif
 """
 
 import ee
+import time
+from datetime import date
 from ee import batch
 from pandas.tseries.offsets import DateOffset
 import pandas as pd
@@ -49,16 +54,48 @@ def maskCloudsAndSnow(image):
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Export SAR + Landsat maps from GEE to Google Drive')
+    parser = argparse.ArgumentParser(description='Export SAR + Landsat maps from GEE to GCS')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--year', type=int, help='Export all 1st and 15th dates for this year')
     group.add_argument('--dates', nargs='+', help='Specific end dates to export (YYYY-MM-DD)')
+    parser.add_argument('--bucket', default='ee-kkraoj-inputs', help='GCS bucket name')
+    parser.add_argument('--poll', action='store_true', help='Block until all tasks complete')
     return parser.parse_args()
 
 
-def export_dates(end_date_range):
+def poll_tasks(descriptions, interval=30):
+    """Poll by description against getTaskList (more reliable than getTaskStatus,
+    which sometimes returns stale state for IDs generated client-side)."""
+    submitted_at_ms = int(time.time() * 1000) - 10 * 60 * 1000  # 10 min ago, safety margin
+    pending = set(descriptions)
+    seen = set()
+    while pending:
+        tasks = ee.data.getTaskList()
+        latest = {}
+        for t in tasks:
+            desc = t.get('description')
+            if desc not in pending: continue
+            ts = t.get('creation_timestamp_ms', 0)
+            if ts < submitted_at_ms: continue
+            if desc not in latest or latest[desc].get('creation_timestamp_ms', 0) < ts:
+                latest[desc] = t
+        for desc, t in latest.items():
+            state = t['state']
+            if state in ('COMPLETED', 'FAILED', 'CANCELLED') and desc not in seen:
+                err = t.get('error_message', '')
+                suffix = f" — {err}" if err else ''
+                print(f"  Task {desc}: {state}{suffix}")
+                pending.discard(desc)
+                seen.add(desc)
+        if pending:
+            print(f"  {len(pending)} tasks still running...")
+            time.sleep(interval)
+    print('[INFO] All tasks finished.')
+
+
+def export_dates(end_date_range, bucket, do_poll):
     start_date_range = list((pd.to_datetime(end_date_range) + DateOffset(months=-3)).strftime('%Y-%m-%d'))
-    out = None
+    descriptions = []
     for start_date, end_date in zip(start_date_range, end_date_range):
         print(f'[INFO] Queuing export for {end_date} (window: {start_date} to {end_date})')
 
@@ -78,30 +115,46 @@ def export_dates(end_date_range):
             .multiply(0.0000275).add(-0.2) \
             .rename(['B2', 'B3', 'B4', 'B5', 'B6'])
 
-        out = batch.Export.image.toDrive(
+        out = batch.Export.image.toCloudStorage(
             image=optical,
             description=end_date + '_cloudsnowfree_l8',
+            bucket=bucket,
+            fileNamePrefix='inputs_250m/' + end_date + '_cloudsnowfree_l8',
             scale=250,
             region=roi.geometry().bounds(),
-            maxPixels=1e11)
+            maxPixels=1e11,
+            fileFormat='GeoTIFF',
+        )
         batch.Task.start(out)
+        descriptions.append(end_date + '_cloudsnowfree_l8')
 
-        out = batch.Export.image.toDrive(
+        out = batch.Export.image.toCloudStorage(
             image=image_sar.select(band),
             description=end_date + '_sar',
+            bucket=bucket,
+            fileNamePrefix='inputs_250m/' + end_date + '_sar',
             scale=250,
             region=roi.geometry().bounds(),
-            maxPixels=1e11)
+            maxPixels=1e11,
+            fileFormat='GeoTIFF',
+        )
         batch.Task.start(out)
+        descriptions.append(end_date + '_sar')
 
-    print('[INFO] All tasks sent to GEE. Monitor progress in the Tasks panel.')
+    print(f'[INFO] {len(descriptions)} tasks sent to GEE.')
+    if do_poll:
+        poll_tasks(descriptions)
+    else:
+        print('[INFO] Monitor progress in the GEE Tasks panel or re-run with --poll.')
 
 
 if __name__ == '__main__':
     args = get_args()
     if args.year:
+        today = date.today().strftime('%Y-%m-%d')
         end_date_range = ['%s-%02d-%02d' % (args.year, month, day)
-                          for month in range(1, 13) for day in [1, 15]]
+                          for month in range(1, 13) for day in [1, 15]
+                          if '%s-%02d-%02d' % (args.year, month, day) <= today]
     else:
         end_date_range = args.dates
-    export_dates(end_date_range)
+    export_dates(end_date_range, args.bucket, args.poll)

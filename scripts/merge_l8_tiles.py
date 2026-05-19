@@ -1,15 +1,18 @@
 """
 Merges split Landsat-8 GeoTiff tiles exported from GEE into single files.
 GEE splits large exports with suffixes like -0000000000-0000000000.tif.
-Run this after downloading from Google Drive, before running inference.
+Run this after downloading from GCS, before running inference.
 """
 
 import glob
 import os
+import sys
 import rasterio
 from rasterio.merge import merge
 
-INPUTS_DIR = "D:/Krishna/projects/vwc_from_radar/data/map/dynamic_maps/inputs_250m"
+sys.path.insert(0, os.path.dirname(__file__))
+from dirs import dir_data
+INPUTS_DIR = os.path.join(dir_data, 'map/dynamic_maps/inputs_250m')
 
 tile0_files = sorted(glob.glob(os.path.join(INPUTS_DIR, '*-0000000000-0000000000.tif')))
 
