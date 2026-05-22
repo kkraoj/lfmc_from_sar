@@ -152,19 +152,11 @@ def getArgs():
     parser = argparse.ArgumentParser(
     description = '''Script allows to make LFMC maps from inputs''',
     epilog = '''post bug reports to the github repository''')
-    parser.add_argument('-y',
-                        '--year',
-                        type = int,
-                        help = 'Year of LFMC maps to be made',
-                        required = True)
-                       
-    # parser.add_argument('-d',
-    #                     '--day',
-    #                     type = int,
-    #                     help = 'Day of LFMC to be made. Must be 1 or 15.',
-    #                     required = True)
-    # put arguments in dictionary with
-    # keys being the argument names given above
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-y', '--year', type=int,
+                       help='Year of LFMC maps to be made (iterates all 1st/15th dates)')
+    group.add_argument('-d', '--date', type=str,
+                       help='Single date YYYY-MM-DD (day must be 01 or 15)')
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -212,10 +204,18 @@ if __name__ == "__main__":
     #%%add dynamic features
     cache_cutoff = int(1e7)
     memory_cutoff = int(4e7)
-    year = args.year
-    # day = args.day
-    for MoY in range(12, 0, -1):
-        for day in [15,1]:
+    TMP_TAG = os.environ.get('SLURM_JOB_ID') or str(os.getpid())
+    if args.date:
+        y, m, d = [int(p) for p in args.date.split('-')]
+        year = y
+        moy_iter = [m]
+        day_iter = [d]
+    else:
+        year = args.year
+        moy_iter = range(12, 0, -1)
+        day_iter = [15, 1]
+    for MoY in moy_iter:
+        for day in day_iter:
             latlon = pd.read_pickle(os.path.join(dir_data, 'map/map_lat_lon_p36_250m_latlon_float32')) #do not cast to float 16. high precision required here. 
             date = '%04d-%02d-%02d'%(year, MoY, day)
             
@@ -242,7 +242,8 @@ if __name__ == "__main__":
                     latlon[band_names[band]] = get_value(os.path.join(dir_data, 'map', 'dynamic_maps', 'inputs_250m', '%s_cloudsnowfree_l8.tif'%lag_date),
                     latlon.longitude.values, latlon.latitude.values, band = band)
                 latlon.update(latlon.filter(raw_opt_bands).clip(lower = 0))
-                
+                latlon[raw_opt_bands] = latlon[raw_opt_bands] * 10000  # convert fractional reflectance (0-1) to DN scale (0-10000) expected by scaler
+
                 latlon['ndvi'] = (latlon.nir - latlon.red)/(latlon.nir + latlon.red)
                 latlon['ndwi'] = (latlon.nir - latlon.swir)/(latlon.nir + latlon.swir)
                 latlon['nirv'] = latlon.nir*latlon.ndvi
@@ -317,14 +318,14 @@ if __name__ == "__main__":
             
             if latlon.shape[0]>=memory_cutoff:
                 ## if input size is too large to do scalar transforms, break them into buckets
-                latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon'))
+                latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_%s'%TMP_TAG))
                 cache_buckets = int(np.floor(latlon.shape[0]/cache_cutoff))
                 for i in range(cache_buckets, -1, -1):
                     print('[INFO] Operating on bucket %1d at %s'%(i,datetime.now().strftime("%H:%M:%S")))
                     if i==cache_buckets:
                         latlon = latlon.iloc[cache_cutoff*i:]
                     else:
-                        latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon')).iloc[cache_cutoff*i:cache_cutoff*(i+1)]
+                        latlon = pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_%s'%TMP_TAG)).iloc[cache_cutoff*i:cache_cutoff*(i+1)]
                 
                     ## combining static here to save memory
                     latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins
@@ -339,7 +340,7 @@ if __name__ == "__main__":
                     latlon.iloc[:,2:] = scaler.transform(latlon.drop(['latitude','longitude'],axis = 1).values)
                     latlon.drop('percent(t)',axis = 1, inplace = True)
                     if i!=0:
-                        latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))
+                        latlon.to_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%s_%d'%(TMP_TAG, i)))
                     # scaled = latlon.drop(['latitude','longitude'],axis=1).values.reshape((latlon.shape[0], 4, 28), order = 'A') #langs x features
                     #     # np.save('map/scaled_%s.npy'%date, scaled)
                     # latlon = latlon[['latitude','longitude']]   
@@ -361,7 +362,7 @@ if __name__ == "__main__":
                     
                     
                 for i in range(1,cache_buckets+1):
-                    latlon = pd.concat([latlon, pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%d'%i))], ignore_index=True).astype(np.float32)
+                    latlon = pd.concat([latlon, pd.read_pickle(os.path.join(dir_data, 'map/temporary_latlon_scaled_%s_%d'%(TMP_TAG, i)))], ignore_index=True).astype(np.float32)
             else:
                 ##else, just operate as normal
                 latlon.clip(-1e5, 1e5, inplace = True) ##appprox 2 mins

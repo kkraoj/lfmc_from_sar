@@ -38,18 +38,24 @@ All data lives under `$SCRATCH/vwc_from_radar/data/` (set by `SHERLOCK=1` in `di
 
 ## Running inference
 
+For a single date:
 ```bash
-mkdir -p $SCRATCH/lfmc_logs
-LFMC_YEAR=2025 sbatch $SCRATCH/lfmc_from_sar/scripts/run_lfmc.sh
+LFMC_DATE=2025-04-15 sbatch /scratch/users/kkrao/lfmc_from_sar/scripts/run_lfmc.sh
+```
+
+For a full year (iterates all 1st/15th dates):
+```bash
+LFMC_YEAR=2025 sbatch /scratch/users/kkrao/lfmc_from_sar/scripts/run_lfmc.sh
 ```
 
 Output: `$SCRATCH/vwc_from_radar/data/map/dynamic_maps/lfmc/lfmc_map_YYYY-MM-DD.tif`
 
-Only dates where all 4 lag months of inputs exist will produce a map. For the 2025
-run with Jan–Apr inputs, only `2025-04-01` produces output.
+Only dates where all 4 lag months of inputs exist will produce a map.
 
-**Resource requirements:** 128 GB RAM, ~45 min total runtime (8 min loading,
+**Resource requirements:** 256 GB RAM, ~45 min total runtime (8 min loading,
 ~10 min bucket processing, ~20 min LSTM prediction, ~5 min saving).
+128 GB is sufficient for Jan–Aug 2025 dates (smaller SAR files ~830 MB), but
+Sep 2025 onward uses ~1.5 GB SAR files per lag and OOM-kills at 128 GB.
 
 ## Bugs fixed (May 2025)
 

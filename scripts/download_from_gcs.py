@@ -47,11 +47,12 @@ def main():
         print(f'[INFO] {year}: found {len(blobs)} blobs with prefix {prefix}')
         for blob in blobs:
             local_path = os.path.join(LOCAL_DIR, os.path.basename(blob.name))
-            if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
+            if os.path.exists(local_path) and os.path.getsize(local_path) == blob.size:
                 skipped += 1
                 continue
             size_gb = (blob.size or 0) / 1e9
-            print(f'  Downloading {blob.name} ({size_gb:.1f} GB)...')
+            tag = 'Re-downloading (size mismatch)' if os.path.exists(local_path) else 'Downloading'
+            print(f'  {tag} {blob.name} ({size_gb:.1f} GB)...')
             blob.download_to_filename(local_path)
             downloaded += 1
 
