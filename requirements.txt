@@ -1,0 +1,14 @@
+earthengine-api==1.6.15
+google-cloud-storage==3.9.0
+google-auth==2.50.0
+tensorflow==2.18.0
+tf-keras==2.20.1
+numpy==2.0.2
+pandas==2.3.1
+rasterio==1.4.3
+scikit-learn==1.6.1
+scipy==1.13.1
+seaborn==0.13.2
+statsmodels==0.14.5
+affine==2.4.0
+matplotlib==3.9.4
