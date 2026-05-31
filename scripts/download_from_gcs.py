@@ -12,24 +12,23 @@ import os
 import sys
 
 import ee
-import google.auth.transport.requests
+from google.oauth2 import service_account
 from google.cloud import storage
 
 sys.path.insert(0, os.path.dirname(__file__))
 from dirs import dir_data
+
+KEY_FILE = '/oak/stanford/groups/konings/projects/rao_2020/code/env/gcp_service_account.json'
+SERVICE_ACCOUNT = 'lfmc-103@project-3af726f4-b7ec-4b39-ae4.iam.gserviceaccount.com'
+PROJECT = 'project-3af726f4-b7ec-4b39-ae4'
 
 LOCAL_DIR = os.path.join(dir_data, 'map/dynamic_maps/inputs_250m')
 os.makedirs(LOCAL_DIR, exist_ok=True)
 
 
 def gcs_client():
-    ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
-    state = ee.data._get_state()
-    creds = state.credentials
-    creds.expiry = None
-    req = google.auth.transport.requests.Request()
-    creds.refresh(req)
-    return storage.Client(project='project-3af726f4-b7ec-4b39-ae4', credentials=creds)
+    creds = service_account.Credentials.from_service_account_file(KEY_FILE)
+    return storage.Client(project=PROJECT, credentials=creds)
 
 
 def main():

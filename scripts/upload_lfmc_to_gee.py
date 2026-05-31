@@ -18,11 +18,15 @@ import sys
 import time
 
 import ee
-import google.auth.transport.requests
+from google.oauth2 import service_account
 from google.cloud import storage
 
 sys.path.insert(0, os.path.dirname(__file__))
 from dirs import dir_data
+
+KEY_FILE = '/oak/stanford/groups/konings/projects/rao_2020/code/env/gcp_service_account.json'
+SERVICE_ACCOUNT = 'lfmc-103@project-3af726f4-b7ec-4b39-ae4.iam.gserviceaccount.com'
+PROJECT = 'project-3af726f4-b7ec-4b39-ae4'
 
 DEFAULT_COLLECTION = 'projects/earthengine-legacy/assets/users/kkraoj/lfm-mapper/lfmc_col_25_may_2021'
 DEFAULT_BUCKET = 'lfmc-inputs'
@@ -32,11 +36,9 @@ DATE_RE = re.compile(r'lfmc_map_(\d{4}-\d{2}-\d{2})\.tif$')
 
 
 def get_clients():
-    ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
-    state = ee.data._get_state()
-    state.credentials.expiry = None
-    state.credentials.refresh(google.auth.transport.requests.Request())
-    storage_client = storage.Client(project='project-3af726f4-b7ec-4b39-ae4', credentials=state.credentials)
+    ee.Initialize(credentials=ee.ServiceAccountCredentials(SERVICE_ACCOUNT, KEY_FILE))
+    gcs_creds = service_account.Credentials.from_service_account_file(KEY_FILE)
+    storage_client = storage.Client(project=PROJECT, credentials=gcs_creds)
     return storage_client
 
 

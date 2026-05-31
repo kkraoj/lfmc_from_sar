@@ -26,7 +26,10 @@ from pandas.tseries.offsets import DateOffset
 import pandas as pd
 import argparse
 
-ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
+KEY_FILE = '/oak/stanford/groups/konings/projects/rao_2020/code/env/gcp_service_account.json'
+SERVICE_ACCOUNT = 'lfmc-103@project-3af726f4-b7ec-4b39-ae4.iam.gserviceaccount.com'
+
+ee.Initialize(credentials=ee.ServiceAccountCredentials(SERVICE_ACCOUNT, KEY_FILE))
 
 roi = ee.FeatureCollection('users/kkraoj/west_usa')
 band = ['VH', 'VV']
