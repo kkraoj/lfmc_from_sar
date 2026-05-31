@@ -4,17 +4,16 @@
 #SBATCH --time=4:00:00
 #SBATCH --mem=256G
 #SBATCH --cpus-per-task=4
-#SBATCH --output=/scratch/users/kkrao/lfmc_logs/%j.out
-#SBATCH --error=/scratch/users/kkrao/lfmc_logs/%j.err
+#SBATCH --output=$HOME/lfmc_logs/%j.out
+#SBATCH --error=$HOME/lfmc_logs/%j.err
 
 export SHERLOCK=1
+source /oak/stanford/groups/konings/projects/rao_2020/code/env/activate_lfmc.sh
+export PATH=/oak/stanford/groups/konings/projects/rao_2020/code/env/envs/lfmc/bin:$PATH
 
-source "$HOME/miniconda3/etc/profile.d/conda.sh"
-conda activate lfmc
+mkdir -p $HOME/lfmc_logs /oak/stanford/groups/konings/projects/rao_2020/data/lfmc_maps
 
-mkdir -p /scratch/users/kkrao/vwc_from_radar/data/map/dynamic_maps/lfmc
-
-cd /scratch/users/kkrao/lfmc_from_sar/scripts
+cd /oak/stanford/groups/konings/projects/rao_2020/code/lfmc_from_sar/scripts
 if [ -n "$LFMC_DATE" ]; then
     python -u make_map_features_and_predict.py --date "$LFMC_DATE"
 else

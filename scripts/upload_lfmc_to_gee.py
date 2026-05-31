@@ -25,18 +25,18 @@ sys.path.insert(0, os.path.dirname(__file__))
 from dirs import dir_data
 
 DEFAULT_COLLECTION = 'projects/earthengine-legacy/assets/users/kkraoj/lfm-mapper/lfmc_col_25_may_2021'
-DEFAULT_BUCKET = 'ee-kkraoj-inputs'
+DEFAULT_BUCKET = 'lfmc-inputs'
 LFMC_DIR = os.path.join(dir_data, 'map/dynamic_maps/lfmc')
 
 DATE_RE = re.compile(r'lfmc_map_(\d{4}-\d{2}-\d{2})\.tif$')
 
 
 def get_clients():
-    ee.Initialize(project='ee-kkraoj')
+    ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
     state = ee.data._get_state()
     state.credentials.expiry = None
     state.credentials.refresh(google.auth.transport.requests.Request())
-    storage_client = storage.Client(project='ee-kkraoj', credentials=state.credentials)
+    storage_client = storage.Client(project='project-3af726f4-b7ec-4b39-ae4', credentials=state.credentials)
     return storage_client
 
 

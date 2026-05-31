@@ -26,7 +26,7 @@ from pandas.tseries.offsets import DateOffset
 import pandas as pd
 import argparse
 
-ee.Initialize(project='ee-kkraoj')
+ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
 
 roi = ee.FeatureCollection('users/kkraoj/west_usa')
 band = ['VH', 'VV']
@@ -58,7 +58,7 @@ def get_args():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--year', type=int, help='Export all 1st and 15th dates for this year')
     group.add_argument('--dates', nargs='+', help='Specific end dates to export (YYYY-MM-DD)')
-    parser.add_argument('--bucket', default='ee-kkraoj-inputs', help='GCS bucket name')
+    parser.add_argument('--bucket', default='lfmc-inputs', help='GCS bucket name')
     parser.add_argument('--poll', action='store_true', help='Block until all tasks complete')
     return parser.parse_args()
 

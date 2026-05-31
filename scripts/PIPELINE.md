@@ -36,8 +36,8 @@ fortnight date lands, giving GEE time to ingest fresh imagery):
 
 | Path | Description |
 |------|-------------|
-| `gs://ee-kkraoj-inputs/inputs_250m/YYYY-MM-DD_cloudsnowfree_l8*.tif` | Landsat 8 composite (5 bands: B2–B6) exported from GEE |
-| `gs://ee-kkraoj-inputs/inputs_250m/YYYY-MM-DD_sar*.tif` | Sentinel-1 SAR composite (VH, VV) exported from GEE |
+| `gs://lfmc-inputs/inputs_250m/YYYY-MM-DD_cloudsnowfree_l8*.tif` | Landsat 8 composite (5 bands: B2–B6) exported from GEE |
+| `gs://lfmc-inputs/inputs_250m/YYYY-MM-DD_sar*.tif` | Sentinel-1 SAR composite (VH, VV) exported from GEE |
 
 GEE splits large exports into numbered chunks (`…0000000000-0000000000.tif`).
 `merge_l8_tiles.py` stitches these into single files after download.

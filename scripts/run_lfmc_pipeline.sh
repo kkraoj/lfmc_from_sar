@@ -4,8 +4,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --mem=256G
 #SBATCH --cpus-per-task=4
-#SBATCH --output=/scratch/users/kkrao/lfmc_logs/pipeline_%j.out
-#SBATCH --error=/scratch/users/kkrao/lfmc_logs/pipeline_%j.err
+#SBATCH --output=$HOME/lfmc_logs/pipeline_%j.out
+#SBATCH --error=$HOME/lfmc_logs/pipeline_%j.err
 #
 # Full LFMC pipeline: GEE export → GCS download → L8 merge → inference.
 #
@@ -19,15 +19,15 @@
 
 set -euo pipefail
 
-SCRIPTS=/scratch/users/kkrao/lfmc_from_sar/scripts
-INPUTS=/scratch/users/kkrao/vwc_from_radar/data/map/dynamic_maps/inputs_250m
-LFMC_OUT=/scratch/users/kkrao/vwc_from_radar/data/map/dynamic_maps/lfmc
+SCRIPTS=/oak/stanford/groups/konings/projects/rao_2020/code/lfmc_from_sar/scripts
+INPUTS=/oak/stanford/groups/konings/projects/rao_2020/data/inputs_250m
+LFMC_OUT=/oak/stanford/groups/konings/projects/rao_2020/data/lfmc_maps
 
 export SHERLOCK=1
-source "$HOME/miniconda3/etc/profile.d/conda.sh"
-conda activate lfmc
+source /oak/stanford/groups/konings/projects/rao_2020/code/env/activate_lfmc.sh
+export PATH=/oak/stanford/groups/konings/projects/rao_2020/code/env/envs/lfmc/bin:$PATH
 
-mkdir -p "$INPUTS" "$LFMC_OUT" /scratch/users/kkrao/lfmc_logs
+mkdir -p "$INPUTS" "$LFMC_OUT" $HOME/lfmc_logs
 
 # ── Resolve TARGET_DATE ──────────────────────────────────────────────────────
 # If not provided, default to the most recent 1st or 15th on or before today.
@@ -74,8 +74,8 @@ NEED_EXPORT=()
 for d in $LAG_DATES; do
     # "Present" means at least one l8 file AND at least one sar file exist
     # (covers both merged single-file and multi-chunk cases)
-    l8_count=$(ls "$INPUTS"/${d}_cloudsnowfree_l8*.tif 2>/dev/null | wc -l)
-    sar_count=$(ls "$INPUTS"/${d}_sar*.tif 2>/dev/null | wc -l)
+    l8_count=$(find "$INPUTS" -maxdepth 1 -name "${d}_cloudsnowfree_l8*.tif" 2>/dev/null | wc -l)
+    sar_count=$(find "$INPUTS" -maxdepth 1 -name "${d}_sar*.tif" 2>/dev/null | wc -l)
     if [ "$l8_count" -gt 0 ] && [ "$sar_count" -gt 0 ]; then
         echo "[INFO] $d — inputs present locally, skipping GEE export."
     else

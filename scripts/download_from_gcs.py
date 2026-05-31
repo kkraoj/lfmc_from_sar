@@ -4,7 +4,7 @@ Downloads GEE-exported input files from GCS to the local inputs directory.
 Usage:
     SHERLOCK=1 python download_from_gcs.py --year 2025
     SHERLOCK=1 python download_from_gcs.py --year 2025 --year 2026
-    SHERLOCK=1 python download_from_gcs.py --year 2025 --bucket ee-kkraoj-inputs
+    SHERLOCK=1 python download_from_gcs.py --year 2025 --bucket lfmc-inputs
 """
 
 import argparse
@@ -23,23 +23,24 @@ os.makedirs(LOCAL_DIR, exist_ok=True)
 
 
 def gcs_client():
-    ee.Initialize(project='ee-kkraoj')
+    ee.Initialize(project='project-3af726f4-b7ec-4b39-ae4')
     state = ee.data._get_state()
     creds = state.credentials
     creds.expiry = None
     req = google.auth.transport.requests.Request()
     creds.refresh(req)
-    return storage.Client(project='ee-kkraoj', credentials=creds)
+    return storage.Client(project='project-3af726f4-b7ec-4b39-ae4', credentials=creds)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--year', type=int, action='append', required=True)
-    parser.add_argument('--bucket', default='ee-kkraoj-inputs')
+    parser.add_argument('--bucket', default='lfmc-inputs')
     args = parser.parse_args()
 
     client = gcs_client()
-    downloaded, skipped = 0, 0
+    downloaded_blobs = []
+    skipped = 0
 
     for year in args.year:
         prefix = f'inputs_250m/{year}-'
@@ -54,9 +55,16 @@ def main():
             tag = 'Re-downloading (size mismatch)' if os.path.exists(local_path) else 'Downloading'
             print(f'  {tag} {blob.name} ({size_gb:.1f} GB)...')
             blob.download_to_filename(local_path)
-            downloaded += 1
+            downloaded_blobs.append(blob)
 
-    print(f'[INFO] Done: {downloaded} downloaded, {skipped} skipped.')
+    print(f'[INFO] Done: {len(downloaded_blobs)} downloaded, {skipped} skipped.')
+
+    if downloaded_blobs:
+        print('[INFO] Deleting downloaded blobs from GCS bucket...')
+        for blob in downloaded_blobs:
+            blob.delete()
+            print(f'  Deleted gs://{args.bucket}/{blob.name}')
+        print(f'[INFO] Deleted {len(downloaded_blobs)} blobs.')
 
 
 if __name__ == '__main__':
