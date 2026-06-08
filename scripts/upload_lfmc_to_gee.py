@@ -30,7 +30,7 @@ PROJECT = 'project-3af726f4-b7ec-4b39-ae4'
 
 DEFAULT_COLLECTION = 'projects/earthengine-legacy/assets/users/kkraoj/lfm-mapper/lfmc_col_25_may_2021'
 DEFAULT_BUCKET = 'lfmc-inputs'
-LFMC_DIR = os.path.join(dir_data, 'map/dynamic_maps/lfmc')
+LFMC_DIR = os.path.join(dir_data, 'lfmc_maps')
 
 DATE_RE = re.compile(r'lfmc_map_(\d{4}-\d{2}-\d{2})\.tif$')
 
@@ -47,13 +47,15 @@ def main():
     parser.add_argument('--collection', default=DEFAULT_COLLECTION)
     parser.add_argument('--bucket', default=DEFAULT_BUCKET)
     parser.add_argument('--gcs-prefix', default='lfmc')
+    parser.add_argument('--date', default=None, help='Only upload this date (YYYY-MM-DD)')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
     storage_client = get_clients()
     bucket = storage_client.bucket(args.bucket)
 
-    tifs = sorted(glob.glob(os.path.join(LFMC_DIR, 'lfmc_map_*.tif')))
+    pattern = f'lfmc_map_{args.date}.tif' if args.date else 'lfmc_map_*.tif'
+    tifs = sorted(glob.glob(os.path.join(LFMC_DIR, pattern)))
     print(f'[INFO] Found {len(tifs)} LFMC TIFs in {LFMC_DIR}')
 
     pairs = []
